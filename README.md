@@ -36,12 +36,12 @@ Dự án được cấu trúc theo dạng Decoupled (Tách rời Front/Back) tro
    "ApiKeys": {
      "WaqiToken": "YOUR_WAQI_TOKEN_HERE"
    }
-### 3. Mở **Package Manager Console** (Tools > NuGet Package Manager), đặt Default Project là `AirQuality.Server` và chạy lệnh cập nhật CSDL:
+3. Mở **Package Manager Console** (Tools > NuGet Package Manager), đặt Default Project là `AirQuality.Server` và chạy lệnh cập nhật CSDL:
    ```bash
    Update-Database
    ```
 
-### Cài đặt Frontend (React/Vite)
+### 3. Cài đặt Frontend (React/Vite)
 1. Trong Visual Studio, chuột phải vào project `airquality.client` -> Chọn **Open in Terminal**.
 2. Chạy lệnh cài đặt các gói thư viện Node:
    ```bash
