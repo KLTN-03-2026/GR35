@@ -36,13 +36,12 @@ Dự án được cấu trúc theo dạng Decoupled (Tách rời Front/Back) tro
    "ApiKeys": {
      "WaqiToken": "YOUR_WAQI_TOKEN_HERE"
    }
-   ```
-3. Mở **Package Manager Console** (Tools > NuGet Package Manager), đặt Default Project là `AirQuality.Server` và chạy lệnh cập nhật CSDL:
+### 3. Mở **Package Manager Console** (Tools > NuGet Package Manager), đặt Default Project là `AirQuality.Server` và chạy lệnh cập nhật CSDL:
    ```bash
    Update-Database
    ```
 
-### 3. Cài đặt Frontend (React/Vite)
+### Cài đặt Frontend (React/Vite)
 1. Trong Visual Studio, chuột phải vào project `airquality.client` -> Chọn **Open in Terminal**.
 2. Chạy lệnh cài đặt các gói thư viện Node:
    ```bash
@@ -65,6 +64,4 @@ Dự án được cấu trúc theo dạng Decoupled (Tách rời Front/Back) tro
 Dự án được phân phối dưới giấy phép MIT. Xem file `LICENSE.txt` để biết thêm chi tiết.
 ```
 
----
 
-**Mẹo nhỏ sau khi đăng lên GitHub:** Ở phần `Tính năng cốt lõi`, sau này khi bạn làm xong giao diện, hãy chụp lại màn hình web (Ảnh bản đồ nhiệt, ảnh biểu đồ AI, ảnh chụp màn hình Zalo nổ tin nhắn cảnh báo) và chèn vào file `README.md` này bằng cú pháp `![Mô tả ảnh](link-ảnh)`. Các nhà tuyển dụng rất thích những repository có minh họa trực quan thay vì chỉ toàn chữ!
