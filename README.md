@@ -16,7 +16,7 @@
 
 ---
 
-## Hướng dẫn Cài đặt (Installation & Setup)
+## 🚀 Hướng dẫn Cài đặt (Installation & Setup)
 
 Dự án được cấu trúc theo dạng Decoupled (Tách rời Front/Back) trong cùng một Solution của Visual Studio 2022.
 
@@ -36,30 +36,29 @@ Dự án được cấu trúc theo dạng Decoupled (Tách rời Front/Back) tro
    "ApiKeys": {
      "WaqiToken": "YOUR_WAQI_TOKEN_HERE"
    }
+   ```
 3. Mở **Package Manager Console** (Tools > NuGet Package Manager), đặt Default Project là `AirQuality.Server` và chạy lệnh cập nhật CSDL:
    ```bash
    Update-Database
-   
+   ```
 
 ### 3. Cài đặt Frontend (React/Vite)
 1. Trong Visual Studio, chuột phải vào project `airquality.client` -> Chọn **Open in Terminal**.
 2. Chạy lệnh cài đặt các gói thư viện Node:
    ```bash
    npm install
-   
+   ```
 3. Cấp quyền chứng chỉ SSL cục bộ để trình duyệt không chặn kết nối API (Quan trọng):
    ```bash
    dotnet dev-certs https --trust
-   
+   ```
 
 ### 4. Khởi chạy Hệ thống
 - Chỉ cần bấm nút **Start (F5)** trên Visual Studio 2022.
 - Hệ thống sẽ tự động build Backend, khởi chạy Proxy và mở trình duyệt web tại `http://localhost:5173`.
 
 ---
-```
 
 
 ## 📝 Giấy phép (License)
 Dự án được phân phối dưới giấy phép MIT. Xem file `LICENSE.txt` để biết thêm chi tiết.
-
