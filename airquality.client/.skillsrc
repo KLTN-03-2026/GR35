@@ -1,0 +1,21 @@
+registry: https://github.com/HoangNguyen0403/agent-skills-standard
+agents: []
+skills:
+  react:
+    ref: react-v1.2.1
+    exclude:
+      - styling
+      - state-management
+      - testing
+  typescript:
+    ref: typescript-v1.2.1
+  javascript:
+    ref: javascript-v1.2.1
+  common:
+    ref: common-v1.8.1
+    exclude:
+      - observability
+      - mobile-animation
+      - mobile-ux-core
+custom_overrides: []
+workflows: false
