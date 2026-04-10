@@ -6,8 +6,7 @@ function App() {
         userName: '',
         email: '',
         password: '',
-        confirmPassword: '',
-        verificationCode: ''
+        confirmPassword: ''
     });
     const [message, setMessage] = useState('');
     const [loginForm, setLoginForm] = useState({
@@ -15,14 +14,13 @@ function App() {
         password: ''
     });
     const [loginMessage, setLoginMessage] = useState('');
-    const [isSentCode, setIsSentCode] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     return (
         <div className="page-container">
             <div className="register-container">
                 <h1>Đăng ký tài khoản</h1>
-                <p>Nhập thông tin và xác thực email để hoàn tất đăng ký.</p>
+                <p>Nhập thông tin để hoàn tất đăng ký.</p>
 
                 <div className="form-group">
                     <label>Tên đăng nhập</label>
@@ -63,26 +61,9 @@ function App() {
                     />
                 </div>
 
-                <button disabled={isLoading} onClick={sendVerificationCode}>
-                    Gửi mã xác thực
+                <button disabled={isLoading} onClick={registerAccount}>
+                    Đăng ký
                 </button>
-
-                {isSentCode && (
-                    <>
-                        <div className="form-group">
-                            <label>Mã xác thực</label>
-                            <input
-                                value={form.verificationCode}
-                                onChange={(e) => setForm({ ...form, verificationCode: e.target.value })}
-                                placeholder="Nhập mã đã gửi qua Gmail"
-                            />
-                        </div>
-
-                        <button disabled={isLoading} onClick={registerAccount}>
-                            Hoàn tất đăng ký
-                        </button>
-                    </>
-                )}
 
                 {message && <p className="message">{message}</p>}
             </div>
@@ -120,37 +101,6 @@ function App() {
         </div>
     );
 
-    async function sendVerificationCode() {
-        setIsLoading(true);
-        setMessage('');
-
-        try {
-            const response = await fetch('/api/auth/send-verification', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userName: form.userName,
-                    email: form.email,
-                    password: form.password,
-                    confirmPassword: form.confirmPassword
-                })
-            });
-
-            const result = await response.json();
-            if (!response.ok) {
-                setMessage(result.message || 'Gửi mã xác thực thất bại.');
-                return;
-            }
-
-            setIsSentCode(true);
-            setMessage(result.message || 'Đã gửi mã xác thực.');
-        } catch {
-            setMessage('Không gọi được API backend.');
-        } finally {
-            setIsLoading(false);
-        }
-    }
-
     async function registerAccount() {
         setIsLoading(true);
         setMessage('');
@@ -160,8 +110,10 @@ function App() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    userName: form.userName,
                     email: form.email,
-                    verificationCode: form.verificationCode
+                    password: form.password,
+                    confirmPassword: form.confirmPassword
                 })
             });
 

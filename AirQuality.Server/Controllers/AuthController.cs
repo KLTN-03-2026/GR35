@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using AirQuality.Server.Data;
 using AirQuality.Server.Models;
@@ -7,7 +6,6 @@ using AirQuality.Server.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace AirQuality.Server.Controllers;
 
@@ -15,25 +13,21 @@ namespace AirQuality.Server.Controllers;
 [Route("api/[controller]")]
 public class AuthController(
     ApplicationDbContext dbContext,
-    IEmailService emailService,
-    ITokenService tokenService,
-    IMemoryCache memoryCache,
-    ILogger<AuthController> logger) : ControllerBase
+    ITokenService tokenService) : ControllerBase
 {
-    private const string VerificationCachePrefix = "register_verification_";
     private static readonly EmailAddressAttribute EmailValidator = new();
     private static readonly Regex PasswordRegex = new(@"^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$", RegexOptions.Compiled);
 
     [AllowAnonymous]
-    [HttpPost("send-verification")]
-    public async Task<IActionResult> SendVerification([FromBody] RegisterRequest request)
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         var userName = request.UserName.Trim();
         var email = request.Email.Trim().ToLowerInvariant();
 
         if (string.IsNullOrWhiteSpace(userName))
         {
-            return BadRequest(new { message = "Tên đăng nhập không được để trống." });
+            return BadRequest(new { message = "Tên người dùng không được để trống." });
         }
 
         if (!EmailValidator.IsValid(email))
@@ -46,99 +40,40 @@ public class AuthController(
             return BadRequest(new { message = "Mật khẩu phải có ít nhất 8 ký tự, gồm chữ, số và ký tự đặc biệt." });
         }
 
-        if (!string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal))
+        if (request.Password != request.ConfirmPassword)
         {
-            return BadRequest(new { message = "Mật khẩu nhập lại không khớp." });
+            return BadRequest(new { message = "Mật khẩu xác nhận không khớp." });
         }
 
-        var emailExists = await dbContext.Users.AnyAsync(x => x.Email.ToLower() == email);
-        if (emailExists)
+        var existingUser = await dbContext.Users.AnyAsync(x => x.Email.ToLower() == email);
+        if (existingUser)
         {
-            return Conflict(new { message = "Email đã tồn tại." });
+            return Conflict(new { message = "Email đã được sử dụng." });
         }
 
-        var verificationCode = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
-        var pendingRegistration = new PendingRegistration(
-            userName,
-            email,
-            BCrypt.Net.BCrypt.HashPassword(request.Password),
-            verificationCode);
-
-        memoryCache.Set(GetVerificationCacheKey(email), pendingRegistration, TimeSpan.FromMinutes(10));
-
-        try
-        {
-            await emailService.SendVerificationEmailAsync(email, userName, verificationCode);
-        }
-        catch (Exception ex)
-        {
-            memoryCache.Remove(GetVerificationCacheKey(email));
-            logger.LogError(ex, "Không gửi được mail xác thực tới {Email}", email);
-            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Không gửi được email xác thực. Vui lòng kiểm tra cấu hình SMTP." });
-        }
-
-        return Ok(new { message = "Đã gửi mã xác thực về email. Mã có hiệu lực 10 phút." });
-    }
-
-    [AllowAnonymous]
-    [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] VerifyRegistrationRequest request)
-    {
-        var email = request.Email.Trim().ToLowerInvariant();
-        var verificationCode = request.VerificationCode.Trim();
-
-        if (!EmailValidator.IsValid(email))
-        {
-            return BadRequest(new { message = "Email không đúng định dạng." });
-        }
-
-        if (string.IsNullOrWhiteSpace(verificationCode))
-        {
-            return BadRequest(new { message = "Mã xác thực không được để trống." });
-        }
-
-        if (!memoryCache.TryGetValue<PendingRegistration>(GetVerificationCacheKey(email), out var pendingRegistration)
-            || pendingRegistration is null)
-        {
-            return BadRequest(new { message = "Mã xác thực không hợp lệ hoặc đã hết hạn." });
-        }
-
-        if (!string.Equals(pendingRegistration.VerificationCode, verificationCode, StringComparison.Ordinal))
-        {
-            return BadRequest(new { message = "Mã xác thực không đúng." });
-        }
-
-        var emailExists = await dbContext.Users.AnyAsync(x => x.Email.ToLower() == email);
-        if (emailExists)
-        {
-            return Conflict(new { message = "Email đã tồn tại." });
-        }
-
-        var roleId = await dbContext.Roles
+        var userRoleId = await dbContext.Roles
             .Where(x => x.RoleName.ToLower() == "user")
             .Select(x => x.RoleId)
             .FirstOrDefaultAsync();
 
-        if (roleId == 0)
+        if (userRoleId == 0)
         {
-            return BadRequest(new { message = "Hệ thống chưa cấu hình vai trò người dùng." });
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Không tìm thấy vai trò mặc định cho người dùng." });
         }
 
-        var user = new User
+        dbContext.Users.Add(new User
         {
-            FullName = pendingRegistration.UserName,
-            Email = pendingRegistration.Email,
-            PasswordHash = pendingRegistration.PasswordHash,
-            CreatedAt = DateTime.UtcNow,
+            FullName = userName,
+            Email = email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             Status = 1,
-            RoleId = roleId
-        };
+            CreatedAt = DateTime.UtcNow,
+            RoleId = userRoleId
+        });
 
-        dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
-        memoryCache.Remove(GetVerificationCacheKey(email));
-        return Ok(new { message = "Đăng ký thành công." });
+        return Ok(new { message = "Đăng ký tài khoản thành công." });
     }
 
     [AllowAnonymous]
@@ -214,13 +149,7 @@ public class AuthController(
         return Ok(new { message = "User hoặc Admin đều truy cập được API này." });
     }
 
-    private static string GetVerificationCacheKey(string email) => $"{VerificationCachePrefix}{email}";
-
     public sealed record RegisterRequest(string UserName, string Email, string Password, string ConfirmPassword);
 
-    public sealed record VerifyRegistrationRequest(string Email, string VerificationCode);
-
     public sealed record LoginRequest(string Email, string Password);
-
-    private sealed record PendingRegistration(string UserName, string Email, string PasswordHash, string VerificationCode);
 }
