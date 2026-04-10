@@ -15,11 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services
-    .AddOptions<SmtpOptions>()
-    .Bind(builder.Configuration.GetSection(SmtpOptions.SectionName))
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
+
 
 builder.Services
     .AddOptions<JwtOptions>()
@@ -27,9 +23,7 @@ builder.Services
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
-builder.Services.AddMemoryCache();
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("Thiếu cấu hình Jwt.");
