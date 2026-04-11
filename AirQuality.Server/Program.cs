@@ -1,6 +1,7 @@
 ﻿using AirQuality.Server.Data;
 using AirQuality.Server.Models.Configurations;
 using AirQuality.Server.Services.Auth;
+using AirQuality.Server.Services.Background;
 using AirQuality.Server.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
+builder.Services.AddHttpClient();
+builder.Services.AddHostedService<TedpDataFetchService>();
 
 builder.Services
     .AddOptions<JwtOptions>()

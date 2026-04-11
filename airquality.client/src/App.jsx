@@ -1,158 +1,34 @@
-﻿import { useState } from 'react';
-import './App.css';
+﻿import { Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from './pages/auth/LoginPage';
+import LandingPage from './pages/auth/LandingPage';
+import RegisterPage from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import EcoAirDashboard from './pages/auth/EcoAirDashboard';
+import ProtectedRoute from './components/common/ProtectedRoute';
 
-function App() {
-    const [form, setForm] = useState({
-        userName: '',
-        email: '',
-        password: '',
-        confirmPassword: ''
-    });
-    const [message, setMessage] = useState('');
-    const [loginForm, setLoginForm] = useState({
-        email: '',
-        password: ''
-    });
-    const [loginMessage, setLoginMessage] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-
+export default function App() {
     return (
-        <div className="page-container">
-            <div className="register-container">
-                <h1>Đăng ký tài khoản</h1>
-                <p>Nhập thông tin để hoàn tất đăng ký.</p>
+        <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-                <div className="form-group">
-                    <label>Tên đăng nhập</label>
-                    <input
-                        value={form.userName}
-                        onChange={(e) => setForm({ ...form, userName: e.target.value })}
-                        placeholder="Nhập tên đăng nhập"
-                    />
-                </div>
+            {/* Protected: requires login (user role) */}
+            <Route
+                path="/dashboard"
+                element={
+                    <ProtectedRoute>
+                        <EcoAirDashboard />
+                    </ProtectedRoute>
+                }
+            />
 
-                <div className="form-group">
-                    <label>Gmail</label>
-                    <input
-                        type="email"
-                        value={form.email}
-                        onChange={(e) => setForm({ ...form, email: e.target.value })}
-                        placeholder="example@gmail.com"
-                    />
-                </div>
-
-                <div className="form-group">
-                    <label>Mật khẩu</label>
-                    <input
-                        type="password"
-                        value={form.password}
-                        onChange={(e) => setForm({ ...form, password: e.target.value })}
-                        placeholder="Tối thiểu 8 ký tự"
-                    />
-                </div>
-
-                <div className="form-group">
-                    <label>Nhập lại mật khẩu</label>
-                    <input
-                        type="password"
-                        value={form.confirmPassword}
-                        onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                        placeholder="Nhập lại mật khẩu"
-                    />
-                </div>
-
-                <button disabled={isLoading} onClick={registerAccount}>
-                    Đăng ký
-                </button>
-
-                {message && <p className="message">{message}</p>}
-            </div>
-
-            <div className="register-container">
-                <h1>Đăng nhập</h1>
-                <p>Kiểm tra phân quyền điều hướng theo vai trò.</p>
-
-                <div className="form-group">
-                    <label>Gmail</label>
-                    <input
-                        type="email"
-                        value={loginForm.email}
-                        onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                        placeholder="example@gmail.com"
-                    />
-                </div>
-
-                <div className="form-group">
-                    <label>Mật khẩu</label>
-                    <input
-                        type="password"
-                        value={loginForm.password}
-                        onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                        placeholder="Nhập mật khẩu"
-                    />
-                </div>
-
-                <button disabled={isLoading} onClick={loginAccount}>
-                    Đăng nhập
-                </button>
-
-                {loginMessage && <p className="message">{loginMessage}</p>}
-            </div>
-        </div>
+            {/* Fallback: redirect unknown paths to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
     );
-
-    async function registerAccount() {
-        setIsLoading(true);
-        setMessage('');
-
-        try {
-            const response = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userName: form.userName,
-                    email: form.email,
-                    password: form.password,
-                    confirmPassword: form.confirmPassword
-                })
-            });
-
-            const result = await response.json();
-            setMessage(result.message || (response.ok ? 'Đăng ký thành công.' : 'Đăng ký thất bại.'));
-        } catch {
-            setMessage('Không gọi được API backend.');
-        } finally {
-            setIsLoading(false);
-        }
-    }
-
-    async function loginAccount() {
-        setIsLoading(true);
-        setLoginMessage('');
-
-        try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: loginForm.email,
-                    password: loginForm.password
-                })
-            });
-
-            const result = await response.json();
-            if (!response.ok) {
-                setLoginMessage(result.message || 'Đăng nhập thất bại.');
-                return;
-            }
-
-            setLoginMessage(`Vai trò: ${result.role}. Chuyển đến: ${result.redirectUrl}`);
-        } catch {
-            setLoginMessage('Không gọi được API backend.');
-        } finally {
-            setIsLoading(false);
-        }
-    }
 }
-
-export default App;
