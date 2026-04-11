@@ -118,7 +118,8 @@ public class AuthController(
             message = "Đăng nhập thành công.",
             role = roleName,
             redirectUrl,
-            accessToken
+            accessToken,
+            fullName = user.FullName
         });
     }
 
