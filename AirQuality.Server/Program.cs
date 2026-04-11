@@ -1,6 +1,6 @@
 ﻿using AirQuality.Server.Data;
 using AirQuality.Server.Models.Configurations;
-using AirQuality.Server.Services;
+using AirQuality.Server.Services.Auth;
 using AirQuality.Server.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;

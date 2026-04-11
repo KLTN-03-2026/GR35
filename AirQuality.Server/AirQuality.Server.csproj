@@ -52,7 +52,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Contracts\Auth\" />
+    <Folder Include="Contracts\" />
     <Folder Include="Properties\Contracts\" />
   </ItemGroup>
 
