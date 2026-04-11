@@ -1,4 +1,32 @@
-```markdown
+<div align="center">
+  <img src="https://img.icons8.com/color/120/000000/air-quality.png" alt="Logo" width="120" height="120">
+
+  # 🌬️ Air Quality Monitoring System
+  
+  **Hệ thống theo dõi và cảnh báo chất lượng không khí**
+
+  [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](#)
+  [![React](https://img.shields.io/badge/React-18.x-61DAFB?logo=react&logoColor=black)](#)
+  [![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?logo=vite&logoColor=white)](#)
+  [![License](https://img.shields.io/badge/License-MIT-green.svg)](#)
+
+</div>
+
+<br />
+
+## 📖 Giới thiệu (About The Project)
+
+Dự án Hệ thống Theo dõi Chất lượng Không khí được phát triển với mục đích cung cấp thông tin theo thời gian thực về chỉ số chất lượng không khí (AQI), đưa ra các cảnh báo sớm thông qua nền tảng Web. 
+
+## ✨ Tính năng nổi bật (Features)
+
+- **Theo dõi thời gian thực:** Cập nhật dữ liệu AQI liên tục từ các trạm đo.
+- **Trực quan hóa dữ liệu:** Hiển thị bản đồ phân bố và biểu đồ biến động chất lượng không khí.
+- **Cảnh báo thông minh:** Hệ thống gửi thông báo/cảnh báo khi chỉ số AQI vượt mức an toàn.
+- **Tích hợp Zalo OA:** Gửi cảnh báo trực tiếp đến người dùng qua Zalo.
+
+---
+
 ## 🛠️ Kiến trúc Công nghệ (Tech Stack)
 
 ### Backend (ASP.NET Core Web API)
@@ -12,7 +40,7 @@
 - **Build Tool:** Vite (Hot Module Replacement)
 - **Quản lý Trạng thái:** Zustand (Client State) + TanStack Query v5 (Server State)
 - **UI Framework:** Material-UI (MUI) v5
-- **Thư viện tích hợp:** `react-leaflet` (Bản đồ), `recharts` (Biểu đồ), `axios`.
+- **Thư viện tích hợp:** `react-leaflet` (Bản đồ), `recharts` (Biểu đồ), `axios`
 
 ---
 
@@ -58,7 +86,6 @@ Dự án được cấu trúc theo dạng Decoupled (Tách rời Front/Back) tro
 - Hệ thống sẽ tự động build Backend, khởi chạy Proxy và mở trình duyệt web tại `http://localhost:5173`.
 
 ---
-
 
 ## 📝 Giấy phép (License)
 Dự án được phân phối dưới giấy phép MIT. Xem file `LICENSE.txt` để biết thêm chi tiết.
