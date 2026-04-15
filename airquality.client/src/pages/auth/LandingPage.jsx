@@ -513,7 +513,7 @@ function HeroSection() {
             zoom={12}
             style={{ width: "100%", height: "100%", zIndex: 1 }}
             scrollWheelZoom={false}
-            dragging={false}
+            dragging={true}
             doubleClickZoom={false}
             touchZoom={false}
             keyboard={false}
@@ -765,7 +765,7 @@ function TechSection() {
   const [headerRef, headerVisible] = useScrollReveal();
   const [gridRef, gridVisible] = useScrollReveal({ threshold: 0.05 });
 
-  const features = [
+    const features = [
     {
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={theme.green} strokeWidth="1.8" strokeLinecap="round">
@@ -773,8 +773,8 @@ function TechSection() {
           <path d="M3 9h18M9 21V9" />
         </svg>
       ),
-      title: "Ban do nhiet thoi gian thuc",
-      desc: "Truc quan hoa muc do o nhiem tren ban do tuong tac voi do tre duoi 5 phut.",
+      title: "Bản đồ nhiệt thời gian thực",
+      desc: "Trực quan hóa mức độ ô nhiễm trên bản đồ tương tác với độ trễ dưới 5 phút.",
     },
     {
       icon: (
@@ -782,8 +782,8 @@ function TechSection() {
           <path d="M2 12h4l3-9 4 18 3-9h6" />
         </svg>
       ),
-      title: "Du bao AI 7 ngay",
-      desc: "Du doan xu huong chat luong khong khi tuan toi bang thuat toan Deep Learning.",
+      title: "Dự báo AI 7 ngày",
+      desc: "Dự đoán xu hướng chất lượng không khí tuần tới bằng thuật toán Deep Learning.",
     },
     {
       icon: (
@@ -792,8 +792,8 @@ function TechSection() {
           <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
         </svg>
       ),
-      title: "Tim duong sinh thai (Eco-Routing)",
-      desc: "Goi y lo trinh di chuyen co nong do o nhiem thap nhat cho nguoi di bo va di xe dap.",
+      title: "Tìm đường sinh thái (Eco-Routing)",
+      desc: "Gợi ý lộ trình di chuyển có nồng độ ô nhiễm thấp nhất cho người đi bộ và đi xe đạp.",
     },
     {
       icon: (
@@ -802,8 +802,8 @@ function TechSection() {
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>
       ),
-      title: "Canh bao tu dong",
-      desc: "Nhan thong bao ngay lap tuc tren dien thoai khi chat luong khong khi tai noi ban o vuot nguong.",
+      title: "Cảnh báo tự động",
+      desc: "Nhận thông báo ngay lập tức trên điện thoại khi chất lượng không khí tại nơi bạn ở vượt ngưỡng.",
     },
     {
       icon: (
@@ -812,8 +812,8 @@ function TechSection() {
           <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
       ),
-      title: "Tro ly ao AI Gemini",
-      desc: "Hoi dap truc tiep ve suc khoe va cach cai thien chat luong song trong moi truong o nhiem.",
+      title: "Trợ lý ảo AI Gemini",
+      desc: "Hỏi đáp trực tiếp về sức khỏe và cách cải thiện chất lượng sống trong môi trường ô nhiễm.",
     },
     {
       icon: (
@@ -822,8 +822,8 @@ function TechSection() {
           <path d="M8 21h8M12 17v4" />
         </svg>
       ),
-      title: "API cho Nha phat trien",
-      desc: "Tich hop du lieu khong khi sach vao ung dung cua ban mot cach de dang va tin cay.",
+      title: "API cho Nhà phát triển",
+      desc: "Tích hợp dữ liệu không khí sạch vào ứng dụng của bạn một cách dễ dàng và tin cậy.",
     },
   ];
 
@@ -839,11 +839,11 @@ function TechSection() {
         >
           <div style={fadeUp(headerVisible, 0)}>
             <h2 style={{ fontSize: 32, fontWeight: 800, color: theme.text, marginBottom: 10, marginTop: 0 }}>
-              Cong nghe bao ho tien tien
+              Công nghệ bảo hộ tiên tiến
             </h2>
             <p style={{ fontSize: 15, color: theme.textMuted, lineHeight: 1.7, maxWidth: 480, margin: 0 }}>
-              Chung toi ket hop tri tue nhan tao va mang luoi du lieu ve tinh de mang lai cai nhin
-              minh bach nhat ve bau khi quyen.
+              Chúng tôi kết hợp trí tuệ nhân tạo và mạng lưới dữ liệu vệ tinh để mang lại cái nhìn
+              minh bạch nhất về bầu khí quyển.
             </p>
           </div>
           <button
@@ -861,7 +861,7 @@ function TechSection() {
               ...fadeUp(headerVisible, 150),
             }}
           >
-            Kham pha tat ca &rsaquo;
+            Khám phá tất cả &rsaquo;
           </button>
         </div>
 
@@ -870,7 +870,7 @@ function TechSection() {
           {features.map((f, i) => (
             <div
               key={f.title}
-              onClick={f.title === "Tro ly ao AI Gemini" ? () => navigate("/ai-chat") : undefined}
+              onClick={f.title === "Trợ lý ảo AI Gemini" ? () => navigate("/ai-chat") : undefined}
               style={{
                 background: "#fafcfa",
                 borderRadius: 14,
@@ -908,18 +908,18 @@ function WhySection() {
   const benefits = [
     {
       num: "1",
-      title: "Du lieu minh bach",
-      desc: "Thong tin duoc tong hop tu hon 500 tram do cong dong va du lieu ve tinh NASA/ESA.",
+      title: "Dữ liệu minh bạch",
+      desc: "Thông tin được tổng hợp từ hơn 500 trạm đo cộng đồng và dữ liệu vệ tinh NASA/ESA.",
     },
     {
       num: "2",
-      title: "Tu van suc khoe ca nhan hoa",
-      desc: "Khong chi la con so, chung toi dua ra hanh dong cu the cho tung ca nhan dua tren do tuoi va benh nen.",
+      title: "Tư vấn sức khỏe cá nhân hóa",
+      desc: "Không chỉ là con số, chúng tôi đưa ra hành động cụ thể cho từng cá nhân dựa trên độ tuổi và bệnh nền.",
     },
     {
       num: "3",
-      title: "Cong dong bao ve loi cuon",
-      desc: "Tham gia bao cao cac diem nong o nhiem va cung chung tay cai thien moi truong song.",
+      title: "Cộng đồng bảo vệ lôi cuốn",
+      desc: "Tham gia báo cáo các điểm nóng ô nhiễm và cùng chung tay cải thiện môi trường sống.",
     },
   ];
 
@@ -967,11 +967,11 @@ function WhySection() {
             <div style={{ background: "rgba(255,255,255,0.95)", borderRadius: 12, padding: "14px 18px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} />
-                <span style={{ fontSize: 12, color: theme.textMuted, fontWeight: 500 }}>He thong Dang hoat dong</span>
+                <span style={{ fontSize: 12, color: theme.textMuted, fontWeight: 500 }}>Hệ thống Đang hoạt động</span>
               </div>
               <div style={{ fontSize: 28, fontWeight: 800, color: theme.text }}>98.4%</div>
               <div style={{ fontSize: 12, color: theme.textMuted, lineHeight: 1.5 }}>
-                Do chinh xac du lieu tu trung tam duoc kiem chung boi AI
+                Độ chính xác dữ liệu từ trung tâm được kiểm chứng bởi AI
               </div>
             </div>
           </div>
@@ -990,7 +990,7 @@ function WhySection() {
               ...fadeRight(listVisible, 0),
             }}
           >
-            Tai sao chon<br />EcoAir VN?
+            Tại sao chọn<br />EcoAir VN?
           </h2>
           {benefits.map((item, i) => (
             <div
@@ -1033,7 +1033,7 @@ function WhySection() {
 /* ─── Page ──────────────────────────────────────────────────────── */
 export default function LandingPage() {
   return (
-    <MainLayout activePage="Trang chu">
+    <MainLayout activePage="Trang chủ">
       <HeroSection />
       <AqiInfoSection />
       <TechSection />

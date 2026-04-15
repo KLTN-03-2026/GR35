@@ -1,4 +1,4 @@
-export default function AIChatWidget() {
+﻿export default function AIChatWidget() {
     return (
         <div style={{
             minHeight: "100vh",
@@ -52,11 +52,11 @@ export default function AIChatWidget() {
                     <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <span style={{ fontWeight: 700, fontSize: 14, color: "#1a2e1a" }}>
-                                Tro ly EcoAir AI
+                                Trợ lý EcoAir AI
                             </span>
                         </div>
                         <div style={{ fontSize: 10, fontWeight: 700, color: "#22c55e", letterSpacing: "0.5px", marginTop: 1 }}>
-                            DANG TRUC TUYEN
+                            ĐANG TRỰC TUYẾN
                         </div>
                     </div>
 
@@ -82,7 +82,7 @@ export default function AIChatWidget() {
                 }}>
                     {/* Timestamp */}
                     <div style={{ textAlign: "center", fontSize: 11, color: "#9ca3af" }}>
-                        Hom nay, 10:24 AM
+                        Hôm nay, 10:24 AM
                     </div>
 
                     {/* Bot message bubble */}
@@ -98,7 +98,7 @@ export default function AIChatWidget() {
                                 lineHeight: 1.55,
                                 boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
                             }}>
-                                Du lieu thuc te tai Da Nang luc 10:00 AM:
+                                Dữ liệu thực tế tại Đà Nẵng lúc 10:00 AM:
                             </div>
                         </div>
 
@@ -129,7 +129,7 @@ export default function AIChatWidget() {
                                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
                                         <span style={{ fontSize: 10, color: "#9ca3af", fontWeight: 500 }}>AQI</span>
                                         <span style={{ fontSize: 10, color: "#9ca3af" }}>•</span>
-                                        <span style={{ fontSize: 10, color: "#eab308", fontWeight: 600 }}>TRUNG BINH</span>
+                                        <span style={{ fontSize: 10, color: "#eab308", fontWeight: 600 }}>TRUNG BÌNH</span>
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
                                             <circle cx="12" cy="12" r="5" />
                                             <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
@@ -137,7 +137,7 @@ export default function AIChatWidget() {
                                         <span style={{ fontSize: 12, fontWeight: 700, color: "#1a2e1a" }}>28°C</span>
                                     </div>
                                     <div style={{ fontSize: 13, fontWeight: 700, color: "#1a2e1a", marginBottom: 2 }}>
-                                        Thanh pho Da Nang
+                                        Thành phố Đà Nẵng
                                     </div>
                                     <div style={{ fontSize: 11, color: "#9ca3af" }}>
                                         PM2.5: 22 µg/m³
@@ -159,7 +159,7 @@ export default function AIChatWidget() {
                             maxWidth: "85%",
                             lineHeight: 1.5,
                         }}>
-                            Du bao ngay mai toi bi Hen suyen?
+                            Dự báo ngày mai, tôi bị Hen suyễn?
                         </div>
                     </div>
 
@@ -174,9 +174,9 @@ export default function AIChatWidget() {
                     <div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                             {[
-                                { label: "Du bao 24h" },
-                                { label: "Tim duong ne bui min" },
-                                { label: "Chi so PM10?" },
+                                { label: "Dự báo 24h" },
+                                { label: "Tìm đường né bụi mịn" },
+                                { label: "Chỉ số PM10?" },
                             ].map((chip) => (
                                 <div key={chip.label} style={{
                                     padding: "6px 12px",
@@ -205,12 +205,12 @@ export default function AIChatWidget() {
                             gap: 6,
                             fontSize: 12,
                         }}>
-                            <span style={{ color: "#374151" }}>Tai khoan Free: Ban con 2/5 luot hoi hom nay.</span>
+                            <span style={{ color: "#374151" }}>Tài khoản Free: Bạn còn 2/5 lượt hỏi hôm nay.</span>
                             <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#0d6e4e", fontWeight: 600, whiteSpace: "nowrap" }}>
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0d6e4e" strokeWidth="2">
                                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                                 </svg>
-                                Nang cap PRO
+                                Nâng cấp PRO
                             </span>
                         </div>
                     </div>
@@ -244,7 +244,7 @@ export default function AIChatWidget() {
                         <div style={{ flex: 1 }}>
                             <input
                                 type="text"
-                                placeholder="Hoi ve chat luong khong khi..."
+                                placeholder="Hỏi về chất lượng không khí..."
                                 style={{
                                     width: "100%",
                                     border: "none",

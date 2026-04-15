@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+﻿import { useNavigate } from "react-router-dom";
 import theme from "./theme";
 
 /**
@@ -46,16 +46,16 @@ export default function Footer() {
                             <span style={{ fontWeight: 700, fontSize: 15, color: theme.text }}>EcoAir VN</span>
                         </div>
                         <p style={{ fontSize: 13, color: theme.textMuted, lineHeight: 1.7, margin: 0, maxWidth: 240 }}>
-                            Ung dung tien phong su dung AI de giam sat va du bao chat luong khong khi, bao ve suc khoe cong dong Viet Nam.
+                            Ứng dụng tiên phong sử dụng AI để giám sát và dự báo chất lượng không khí, bảo vệ sức khỏe cộng đồng Việt Nam.
                         </p>
                     </div>
 
                     {/* Giai phap */}
                     <div>
                         <h4 style={{ fontSize: 14, fontWeight: 700, color: theme.text, marginBottom: 14, marginTop: 0 }}>
-                            Giai phap
+                            Giải pháp
                         </h4>
-                        {["Du bao AI", "Ban do nhiet real-time", "Lo trinh sach (Eco-routing)", "Thiet bi cam bien"].map(
+                        {["Dự báo AI", "Bản đồ nhiệt real-time", "Lộ trình sạch (Eco-routing)", "Thiết bị cảm biến"].map(
                             (item) => (
                                 <a
                                     key={item}
@@ -71,9 +71,9 @@ export default function Footer() {
                     {/* Tai nguyen */}
                     <div>
                         <h4 style={{ fontSize: 14, fontWeight: 700, color: theme.text, marginBottom: 14, marginTop: 0 }}>
-                            Tai nguyen
+                            Tài nguyên
                         </h4>
-                        {["Tai lieu API", "Bao cao hang nam", "Blog suc khoe", "Cong dong"].map((item) => (
+                        {["Tài liệu API", "Báo cáo hàng năm", "Blog sức khỏe", "Cộng đồng"].map((item) => (
                             <a
                                 key={item}
                                 href="#"
@@ -87,12 +87,12 @@ export default function Footer() {
                     {/* Lien he */}
                     <div>
                         <h4 style={{ fontSize: 14, fontWeight: 700, color: theme.text, marginBottom: 14, marginTop: 0 }}>
-                            Lien he
+                            Liên hệ
                         </h4>
                         {[
                             { icon: "✉", text: "support@ecoair.vn" },
                             { icon: "✆", text: "1900 6789" },
-                            { icon: "⊙", text: "Khu Cong nghe Cao, TP. Thu Duc, TP. HCM" },
+                            { icon: "⊙", text: "Khu Công nghệ Cao, TP. Thủ Đức, TP. HCM" },
                         ].map((item) => (
                             <div key={item.text} style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "flex-start" }}>
                                 <span style={{ fontSize: 13, color: theme.textMuted, flexShrink: 0 }}>{item.icon}</span>
@@ -113,10 +113,10 @@ export default function Footer() {
                     }}
                 >
                     <span style={{ fontSize: 13, color: theme.textLight }}>
-                        © 2024 EcoAir VN - Nguoi bao ho thanh khiet.
+                        © 2024 EcoAir VN - Người bảo hộ thanh khiết.
                     </span>
                     <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
-                        {["Ve chung toi", "Tai khoan", "Bao mat"].map((item) => (
+                        {["Về chúng tôi", "Tài khoản", "Bảo mật"].map((item) => (
                             <a key={item} href="#" style={{ fontSize: 13, color: theme.textMuted, textDecoration: "none" }}>
                                 {item}
                             </a>

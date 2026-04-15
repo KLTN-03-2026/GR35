@@ -1,20 +1,20 @@
-import { useNavigate } from "react-router-dom";
+﻿import { useNavigate } from "react-router-dom";
 import theme from "./theme";
 
 /**
  * Navbar dùng chung cho các trang có MainLayout.
- * Prop `activePage`: tên link đang active, mặc định "Trang chu".
+ * Prop `activePage`: tên link đang active, mặc định "Trang chủ".
  * Tự động hiển thị nút "Dashboard" khi người dùng đã đăng nhập.
  */
-export default function Navbar({ activePage = "Trang chu" }) {
+export default function Navbar({ activePage = "Trang chủ" }) {
     const navigate = useNavigate();
 
     const navLinks = [
-        { label: "Trang chu", path: "/" },
-        { label: "Du lieu chat luong khong khi", path: "/du-lieu" },
-        { label: "Ban do", path: "/ban-do" },
-        { label: "Lien he", path: "/lien-he" },
-        { label: "Goi", path: "/goi" },
+        { label: "Trang chủ", path: "/" },
+        { label: "Dữ liệu chất lượng không khí", path: "/du-lieu" },
+        { label: "Bản đồ", path: "/ban-do" },
+        { label: "Liên hệ", path: "/lien-he" },
+        { label: "Gói", path: "/goi" },
     ];
 
     return (

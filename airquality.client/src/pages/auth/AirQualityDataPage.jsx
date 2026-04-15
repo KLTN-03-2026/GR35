@@ -216,8 +216,69 @@ export default function AirQualityDataPage() {
         return sorted[0] ?? null;
     }, [validStations]);
 
+    const childImpacts = [
+        {
+            icon: "🫁",
+            title: "Các vấn đề về hô hấp",
+            desc: "Tăng các trường hợp hen suyễn và viêm phế quản.",
+        },
+        {
+            icon: "🫁",
+            title: "Giảm chức năng phổi",
+            desc: "Tiếp xúc lâu dài có thể làm suy yếu sự phát triển của phổi.",
+        },
+        {
+            icon: "🧠",
+            title: "Phát triển nhận thức",
+            desc: "Tác động tiềm tàng đến sự phát triển của não bộ và thành tích học tập.",
+        },
+    ];
+
+    const pollutantKnowledge = [
+        {
+            title: "PM2.5 là gì?",
+            desc: "Bụi PM2.5 là vật chất dạng hạt trôi nổi trong không khí với đường kính nhỏ hơn 2.5 micromet.",
+        },
+        {
+            title: "PM10 là gì?",
+            desc: "Bụi PM10 là vật chất dạng hạt lơ lửng trong không khí với đường kính khoảng 10 micromet.",
+        },
+        {
+            title: "Ozone là gì?",
+            desc: "Ozone (O₃) là khí được hình thành bởi bức xạ cực tím và các phản ứng hóa học trong khí quyển.",
+        },
+    ];
+
+    const riskFactors = [
+        { rank: 1, name: "Huyết áp cao", deaths: "10.9M", relatedToAir: false },
+        { rank: 2, name: "Ô nhiễm không khí (Ngoài trời & Trong nhà)", deaths: "8.1M", relatedToAir: true },
+        { rank: 3, name: "Hút thuốc", deaths: "6.2M", relatedToAir: false },
+        { rank: 4, name: "Đường huyết cao", deaths: "5.3M", relatedToAir: false },
+        { rank: 5, name: "Ô nhiễm hạt vật chất ngoài trời", deaths: "4.7M", relatedToAir: true },
+        { rank: 6, name: "Béo phì", deaths: "3.7M", relatedToAir: false },
+        { rank: 7, name: "Cholesterol cao", deaths: "3.6M", relatedToAir: false },
+        { rank: 8, name: "Ô nhiễm không khí trong nhà", deaths: "3.1M", relatedToAir: true },
+        { rank: 9, name: "Chế độ ăn nhiều natri", deaths: "1.9M", relatedToAir: false },
+        { rank: 10, name: "Sử dụng rượu", deaths: "1.8M", relatedToAir: false },
+        { rank: 11, name: "Chế độ ăn ít trái cây", deaths: "1.7M", relatedToAir: false },
+        { rank: 12, name: "Chế độ ăn ít ngũ cốc nguyên hạt", deaths: "1.5M", relatedToAir: false },
+        { rank: 13, name: "Trẻ sơ sinh nhẹ cân", deaths: "1.5M", relatedToAir: false },
+        { rank: 14, name: "Khói thuốc lá gián tiếp", deaths: "1.3M", relatedToAir: true },
+    ];
+
+    const pm25Sources = [
+        { icon: "🏭", label: "Sự đốt than" },
+        { icon: "⛽", label: "Sự đốt cháy xăng" },
+        { icon: "🚚", label: "Đốt cháy dầu diesel" },
+        { icon: "🔥", label: "Đốt gỗ" },
+        { icon: "🚗", label: "Động cơ đốt trong" },
+        { icon: "🏗️", label: "Quy trình công nghiệp" },
+        { icon: "🌲", label: "Cháy rừng" },
+        { icon: "⚗️", label: "Chuyển đổi khí thành hạt" },
+    ];
+
     return (
-        <MainLayout activePage="Du lieu chat luong khong khi">
+        <MainLayout activePage="Dữ liệu chất lượng không khí">
             <section style={{ paddingTop: 92, paddingBottom: 56, background: "#f3f6f4", minHeight: "100vh" }}>
                 <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
                     <div
@@ -236,17 +297,17 @@ export default function AirQualityDataPage() {
                     >
                         <div>
                             <h1 style={{ margin: 0, color: theme.text, fontSize: 30, fontWeight: 800 }}>
-                                Du lieu chat luong khong khi
+                                Dữ liệu chất lượng không khí
                             </h1>
                             <div style={{ marginTop: 6, fontSize: 13, color: theme.textMuted }}>
-                                Theo doi trạm quan trắc theo thời gian thực và bảng xếp hạng thành phố.
+                                Theo dõi trạm quan trắc theo thời gian thực và bảng xếp hạng thành phố.
                             </div>
                         </div>
 
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             {lastUpdated && (
                                 <span style={{ fontSize: 12.5, color: theme.textLight }}>
-                                    Cap nhat luc {lastUpdated}
+                                    Cập nhật lúc {lastUpdated}
                                 </span>
                             )}
                             <button
@@ -263,24 +324,24 @@ export default function AirQualityDataPage() {
                                     cursor: loading ? "not-allowed" : "pointer",
                                 }}
                             >
-                                {loading ? "Dang tai..." : "Tai lai du lieu"}
+                                {loading ? "Đang tải..." : "Tải lại dữ liệu"}
                             </button>
                         </div>
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginBottom: 16 }}>
-                        <StatCard title="Tram dang hien thi" value={validStations.length} sub="Tram co toa do hop le" tone="brand" />
-                        <StatCard title="AQI trung binh" value={averageAqi} sub="Toan bo tram quan trac" tone="default" />
+                        <StatCard title="Trạm đang hiển thị" value={validStations.length} sub="Trạm có toạ độ hợp lệ" tone="brand" />
+                        <StatCard title="AQI trung bình" value={averageAqi} sub="Toàn bộ trạm quan trắc" tone="default" />
                         <StatCard
-                            title="O nhiem cao nhat"
+                            title="Ô nhiễm cao nhất"
                             value={highestAqi?.calculatedAqi ?? "--"}
-                            sub={highestAqi?.city || "Chua co du lieu"}
+                            sub={highestAqi?.city || "Chưa có dữ liệu"}
                             tone="danger"
                         />
                         <StatCard
-                            title="Trong lanh nhat"
+                            title="Trong lành nhất"
                             value={cleanestAqi?.calculatedAqi ?? "--"}
-                            sub={cleanestAqi?.city || "Chua co du lieu"}
+                            sub={cleanestAqi?.city || "Chưa có dữ liệu"}
                             tone="good"
                         />
                     </div>
@@ -309,7 +370,7 @@ export default function AirQualityDataPage() {
                                     {[
                                         { key: "aqi", label: "AQI", enabled: true },
                                         { key: "pm25", label: "PM2.5", enabled: false },
-                                        { key: "temperature", label: "Nhiet do", enabled: false },
+                                        { key: "temperature", label: "Nhiệt độ", enabled: false },
                                     ].map((tab) => {
                                         const isActive = activeLayer === tab.key;
                                         return (
@@ -335,18 +396,18 @@ export default function AirQualityDataPage() {
                                 </div>
 
                                 <div style={{ fontSize: 12, color: theme.textLight, fontWeight: 600 }}>
-                                    Marker: {validStations.length} tram
+                                    Marker: {validStations.length} trạm
                                 </div>
                             </div>
 
                             {activeLayer !== "aqi" && (
                                 <div style={{ marginBottom: 10, fontSize: 12.5, color: theme.textMuted }}>
-                                    Lop nay dang duoc phat trien, hien tai uu tien AQI.
+                                    Lớp này đang được phát triển, hiện tại ưu tiên AQI.
                                 </div>
                             )}
 
                             <div style={{ height: 560, borderRadius: 14, overflow: "hidden", border: `1px solid ${theme.border}`, position: "relative" }}>
-                                <MapContainer center={mapCenter} zoom={6} style={{ height: "100%", width: "100%" }}>
+                                <MapContainer center={mapCenter} zoom={6} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
                                     <TileLayer
                                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                         attribution="&copy; OpenStreetMap contributors"
@@ -371,7 +432,7 @@ export default function AirQualityDataPage() {
                                             backdropFilter: "blur(1px)",
                                         }}
                                     >
-                                        Dang tai marker AQI...
+                                        Đang tải marker AQI...
                                     </div>
                                 )}
 
@@ -390,7 +451,7 @@ export default function AirQualityDataPage() {
                                             fontWeight: 600,
                                         }}
                                     >
-                                        Khong co du lieu tram hop le de hien thi tren ban do.
+                                        Không có dữ liệu trạm hợp lệ để hiển thị trên bản đồ.
                                     </div>
                                 )}
                             </div>
@@ -412,18 +473,18 @@ export default function AirQualityDataPage() {
                         </div>
 
                         <aside style={{ background: "white", border: `1px solid ${theme.border}`, borderRadius: 16, padding: 16, position: "sticky", top: 78 }}>
-                            <h3 style={{ margin: "0 0 14px", fontSize: 22, color: theme.text }}>Xep hang AQI</h3>
+                            <h3 style={{ margin: "0 0 14px", fontSize: 22, color: theme.text }}>Xếp hạng AQI</h3>
                             <RankingList
-                                title="O nhiem nhat"
+                                title="Ô nhiễm nhất"
                                 dotColor="#ef4444"
                                 rows={rankings.polluted}
-                                emptyText="Dang cap nhat du lieu o nhiem."
+                                emptyText="Đang cập nhật dữ liệu ô nhiễm."
                             />
                             <RankingList
-                                title="Trong lanh nhat"
+                                title="Trong lành nhất"
                                 dotColor="#22c55e"
                                 rows={rankings.cleanest}
-                                emptyText="Dang cap nhat du lieu trong lanh."
+                                emptyText="Đang cập nhật dữ liệu trong lành."
                             />
                             <div style={{
                                 marginTop: 6,
@@ -435,13 +496,206 @@ export default function AirQualityDataPage() {
                                 color: theme.textMuted,
                                 textAlign: "center",
                             }}>
-                                Tong so thanh pho co du lieu: <b style={{ color: theme.text }}>{rankings.totalCities}</b>
+                                Tổng số thành phố có dữ liệu: <b style={{ color: theme.text }}>{rankings.totalCities}</b>
                             </div>
 
                             <div style={{ marginTop: 12, fontSize: 12, color: theme.textLight }}>
-                                {loading ? "Dang tai du lieu ban do va bang xep hang..." : "Du lieu duoc cap nhat theo ban ghi moi nhat."}
+                                {loading ? "Đang tải dữ liệu bản đồ và bảng xếp hạng..." : "Dữ liệu được cập nhật theo bản ghi mới nhất."}
                             </div>
                         </aside>
+                    </div>
+
+                    <div style={{ marginTop: 22, display: "grid", gap: 16 }}>
+                        <div style={{ background: "#fff", border: `1px solid ${theme.border}`, borderRadius: 16, padding: "18px 18px 14px" }}>
+                            <h2 style={{ margin: "0 0 18px", fontSize: 22, fontWeight: 800, color: theme.text }}>
+                                Ô nhiễm không khí ảnh hưởng đến trẻ em như thế nào?
+                            </h2>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 0 }}>
+                                {childImpacts.map((item, idx) => (
+                                    <div
+                                        key={item.title}
+                                        style={{
+                                            padding: "8px 12px 12px",
+                                            borderRight: idx < childImpacts.length - 1 ? `1px solid ${theme.border}` : "none",
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                width: 60,
+                                                height: 60,
+                                                borderRadius: "50%",
+                                                background: "#3b82f6",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                fontSize: 28,
+                                                marginBottom: 12,
+                                            }}
+                                        >
+                                            {item.icon}
+                                        </div>
+                                        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8, color: theme.text }}>{item.title}</div>
+                                        <div style={{ fontSize: 17, color: theme.textMuted, lineHeight: 1.6 }}>{item.desc}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div style={{ marginTop: 8, fontSize: 12, color: theme.textLight }}>
+                                Nguồn: EEA (European Environment Agency)
+                            </div>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16 }}>
+                            <div style={{ background: "#fff", border: `1px solid ${theme.border}`, borderRadius: 14, display: "flex", flexDirection: "column" }}>
+                                <div style={{ padding: "18px 16px", minHeight: 220 }}>
+                                    <div style={{ fontSize: 36, fontWeight: 900, color: theme.text, marginBottom: 10 }}>99%</div>
+                                    <div style={{ fontSize: 17, color: theme.text, lineHeight: 1.55 }}>
+                                        Dân số thế giới sống ở những nơi có chất lượng không khí vượt quá giới hạn hướng dẫn hằng năm của WHO.
+                                    </div>
+                                </div>
+                                <div style={{ marginTop: "auto", borderTop: `1px solid ${theme.border}`, padding: "10px 16px", fontSize: 12, color: theme.textLight }}>
+                                    Nguồn: World Health Organization
+                                </div>
+                            </div>
+
+                            <div style={{ background: "#fff", border: `1px solid ${theme.border}`, borderRadius: 14, display: "flex", flexDirection: "column" }}>
+                                <div style={{ padding: "18px 16px" }}>
+                                    <div style={{ fontSize: 36, fontWeight: 900, color: theme.text, marginBottom: 10 }}>8,1 triệu</div>
+                                    <div style={{ fontSize: 17, color: theme.text, lineHeight: 1.5, marginBottom: 14 }}>
+                                        Số ca tử vong trên toàn thế giới có thể là do ô nhiễm không khí.
+                                    </div>
+                                    <div style={{ background: "#f8fafc", border: `1px solid ${theme.border}`, borderRadius: 10, padding: "12px 14px", display: "grid", gap: 8 }}>
+                                        <div style={{ fontSize: 16, color: theme.text }}>
+                                            → <b>4,7 triệu</b> do ô nhiễm không khí do các hạt vật chất ngoài trời
+                                        </div>
+                                        <div style={{ fontSize: 16, color: theme.text }}>
+                                            → <b>3,1 triệu</b> do ô nhiễm không khí trong nhà
+                                        </div>
+                                        <div style={{ fontSize: 16, color: theme.text }}>
+                                            → <b>0,5 triệu</b> do ô nhiễm tầng ozone ngoài trời
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ marginTop: "auto", borderTop: `1px solid ${theme.border}`, padding: "10px 16px", fontSize: 12, color: theme.textLight }}>
+                                    Nguồn: Health Effects Institute 2021 - Numbers for 2021
+                                </div>
+                            </div>
+
+                            <div style={{ background: "#fff", border: `1px solid ${theme.border}`, borderRadius: 14, display: "flex", flexDirection: "column" }}>
+                                <div style={{ padding: "18px 16px" }}>
+                                    <div style={{ fontSize: 36, fontWeight: 900, color: theme.text, marginBottom: 10 }}>
+                                        100<span style={{ fontSize: 18, color: theme.textMuted }}>/100,000</span>
+                                    </div>
+                                    <div style={{ fontSize: 17, color: theme.text, lineHeight: 1.5, marginBottom: 14 }}>
+                                        Người dân trên toàn thế giới tử vong vì ô nhiễm không khí.
+                                    </div>
+                                    <div style={{ background: "#f8fafc", border: `1px solid ${theme.border}`, borderRadius: 10, padding: "12px 14px", display: "grid", gap: 8 }}>
+                                        <div style={{ fontSize: 16, color: theme.text }}>
+                                            → <b>58</b>/100,000 từ các hạt vật chất ngoài trời
+                                        </div>
+                                        <div style={{ fontSize: 16, color: theme.text }}>
+                                            → <b>39</b>/100,000 từ ô nhiễm không khí trong nhà
+                                        </div>
+                                        <div style={{ fontSize: 16, color: theme.text }}>
+                                            → <b>6</b>/100,000 từ ô nhiễm ozone ngoài trời
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ marginTop: "auto", borderTop: `1px solid ${theme.border}`, padding: "10px 16px", fontSize: 12, color: theme.textLight }}>
+                                    Nguồn: IHME (Institute for Health Metrics and Evaluation) 2024
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 style={{ margin: "2px 0 10px", fontSize: 22, color: theme.text }}>Hiểu rõ hơn về ô nhiễm không khí</h3>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14 }}>
+                                {pollutantKnowledge.map((item) => (
+                                    <div key={item.title} style={{ background: "#fff", border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px 14px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                                            <div style={{ fontSize: 16, fontWeight: 800, color: theme.text }}>{item.title}</div>
+                                            <span style={{ color: "#3b82f6", fontWeight: 700 }}>↗</span>
+                                        </div>
+                                        <div style={{ fontSize: 13, color: theme.textMuted, lineHeight: 1.45 }}>{item.desc}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 style={{ margin: "6px 0 10px", fontSize: 22, color: theme.text }}>
+                                Tác động đến sức khỏe và nguồn gây ô nhiễm không khí
+                            </h3>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                                <div style={{ background: "#fff", border: `1px solid ${theme.border}`, borderRadius: 14, padding: "14px 14px 10px" }}>
+                                    <div style={{ fontSize: 16, fontWeight: 800, color: theme.text, marginBottom: 8 }}>
+                                        Những yếu tố nguy cơ tử vong chính trên toàn thế giới là gì?
+                                    </div>
+                                    <div style={{ fontSize: 12.5, color: theme.textMuted, marginBottom: 10 }}>
+                                        Trong số 62 triệu người tử vong mỗi năm (tính đến năm 2021), theo yếu tố nguy cơ:
+                                    </div>
+
+                                    <div style={{ border: `1px solid ${theme.border}`, borderRadius: 10, overflow: "hidden" }}>
+                                        <div style={{ display: "grid", gridTemplateColumns: "48px 1fr 120px", background: "#f8fafc", padding: "8px 10px", fontSize: 12, color: theme.textMuted, fontWeight: 700 }}>
+                                            <span>#</span>
+                                            <span>Các yếu tố rủi ro</span>
+                                            <span style={{ textAlign: "right" }}>Tử vong</span>
+                                        </div>
+                                        {riskFactors.map((row) => (
+                                            <div
+                                                key={row.rank}
+                                                style={{
+                                                    display: "grid",
+                                                    gridTemplateColumns: "48px 1fr 120px",
+                                                    padding: "8px 10px",
+                                                    fontSize: 12,
+                                                    borderTop: `1px solid ${theme.border}`,
+                                                    background: row.relatedToAir ? "#eff6ff" : "#fff",
+                                                    color: row.relatedToAir ? "#1d4ed8" : theme.text,
+                                                }}
+                                            >
+                                                <span style={{ fontWeight: 700 }}>{row.rank}</span>
+                                                <span>{row.name}</span>
+                                                <span style={{ textAlign: "right", fontWeight: 700 }}>{row.deaths}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div style={{ marginTop: 10, fontSize: 12, color: theme.textLight }}>
+                                        Nguồn: IHME, Global Burden of Disease (2024) - with minor processing by Our World in Data
+                                    </div>
+                                </div>
+
+                                <div style={{ background: "#fff", border: `1px solid ${theme.border}`, borderRadius: 14, padding: "14px 14px 10px" }}>
+                                    <div style={{ fontSize: 16, fontWeight: 800, color: theme.text, marginBottom: 8 }}>
+                                        Nguồn chính gây ô nhiễm PM2.5
+                                    </div>
+                                    <div style={{ fontSize: 12.5, color: theme.textMuted, marginBottom: 12, lineHeight: 1.5 }}>
+                                        Vì PM2.5 là các hạt bụi mịn có đường kính lên đến 2,5 micromet, có thể xâm nhập sâu vào phổi và đi vào máu, chúng gây ra những rủi ro đáng kể cho sức khỏe.
+                                    </div>
+
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", border: `1px solid ${theme.border}`, borderRadius: 10, overflow: "hidden" }}>
+                                        {pm25Sources.map((item, idx) => (
+                                            <div
+                                                key={item.label}
+                                                style={{
+                                                    padding: "18px 12px",
+                                                    textAlign: "center",
+                                                    borderRight: idx % 2 === 0 ? `1px solid ${theme.border}` : "none",
+                                                    borderBottom: idx < pm25Sources.length - 2 ? `1px solid ${theme.border}` : "none",
+                                                }}
+                                            >
+                                                <div style={{ fontSize: 30, marginBottom: 6 }}>{item.icon}</div>
+                                                <div style={{ fontSize: 13, color: theme.text, fontWeight: 600 }}>{item.label}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div style={{ marginTop: 10, fontSize: 12, color: theme.textLight }}>
+                                        Nguồn: AQMD Community in Action Guidebook
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
