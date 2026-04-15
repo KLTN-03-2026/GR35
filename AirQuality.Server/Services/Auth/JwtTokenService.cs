@@ -1,7 +1,7 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using AirQuality.Server.Models;
+using AirQuality.Server.Models.Entites;
 using AirQuality.Server.Models.Configurations;
 using AirQuality.Server.Services.Interfaces;
 using Microsoft.Extensions.Options;
