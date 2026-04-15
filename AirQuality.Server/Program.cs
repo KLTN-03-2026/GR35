@@ -18,6 +18,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddHttpClient();
 builder.Services.AddHostedService<TedpDataFetchService>();
+builder.Services.AddHostedService<WeatherDataFetchService>();
 
 builder.Services
     .AddOptions<JwtOptions>()
