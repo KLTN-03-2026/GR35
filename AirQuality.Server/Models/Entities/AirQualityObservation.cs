@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace AirQuality.Server.Models;
+namespace AirQuality.Server.Models.Entites;
 
 [Table("AirQualityObservations")]
 public class AirQualityObservation
@@ -42,7 +42,10 @@ public class AirQualityObservation
     [Column("wind_speed")]
     public double? WindSpeed { get; set; }
 
-    [Column("pressure")]
+	[Column("wind_deg")]
+	public double? WindDeg { get; set; }
+
+	[Column("pressure")]
     public double? Pressure { get; set; }
 
     [Column("calculated_aqi")]

@@ -1,4 +1,4 @@
-﻿using AirQuality.Server.Models;
+﻿using AirQuality.Server.Models.Entites;
 using Microsoft.EntityFrameworkCore;
 
 namespace AirQuality.Server.Data;

@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace AirQuality.Server.Models;
+namespace AirQuality.Server.Models.Entites;
 
 [Table("AuditLogs")]
 public class AuditLog
