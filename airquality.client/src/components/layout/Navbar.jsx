@@ -91,13 +91,15 @@ export default function Navbar({ activePage = "Trang chu" }) {
 
 function NavAuthButtons({ navigate }) {
     const accessToken = localStorage.getItem("accessToken");
+    const role = (localStorage.getItem("role") ?? "").toLowerCase();
     const isLoggedIn = !!accessToken;
+    const isAdmin = role === "admin" || role === "super admin";
 
     if (isLoggedIn) {
         return (
             <div style={{ display: "flex", gap: 12, alignItems: "center", flexShrink: 0 }}>
                 <button
-                    onClick={() => navigate("/dashboard")}
+                    onClick={() => navigate(isAdmin ? "/admin" : "/dashboard")}
                     style={{
                         padding: "8px 20px",
                         background: "linear-gradient(135deg, #0d6e4e, #22c55e)",
@@ -119,7 +121,7 @@ function NavAuthButtons({ navigate }) {
                         <rect x="14" y="12" width="7" height="9" rx="1" />
                         <rect x="3" y="16" width="7" height="5" rx="1" />
                     </svg>
-                    Dashboard
+                    {isAdmin ? "Admin Dashboard" : "Dashboard"}
                 </button>
             </div>
         );

@@ -153,18 +153,26 @@ export default function LoginPage() {
                 return;
             }
 
+            const normalizedRole = (result.role ?? "")
+                .toString()
+                .trim()
+                .toLowerCase()
+                .replace(/[_-]/g, " ")
+                .replace(/\s+/g, " ");
+
+            const roleToStore = normalizedRole === "superadmin" ? "super admin" : normalizedRole;
+
             // Lưu token vào localStorage
             if (result.accessToken) {
                 localStorage.setItem("accessToken", result.accessToken);
-                localStorage.setItem("role", result.role ?? "");
+                localStorage.setItem("role", roleToStore);
                 // Lưu tên hiển thị (nếu API trả về)
                 localStorage.setItem("userName", result.fullName ?? result.userName ?? result.FullName ?? email.split("@")[0]);
             }
 
-            // Điều hướng: admin → /dashboard, user → /dashboard (nếu có), còn lại → /
-            const role = result.role?.toLowerCase() ?? "";
-            if (role === "admin" || role === "super admin") {
-                navigate("/dashboard");
+            // Điều hướng: admin/super admin -> /admin, còn lại -> /dashboard
+            if (roleToStore === "admin" || roleToStore === "super admin") {
+                navigate("/admin");
             } else {
                 navigate("/dashboard");
             }
