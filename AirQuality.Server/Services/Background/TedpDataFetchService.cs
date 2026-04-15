@@ -1,6 +1,7 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using AirQuality.Server.Data;
-using AirQuality.Server.Models;
+using AirQuality.Server.Models.Entites;
+using AirQuality.Server.Services.AirQuality;
 using Microsoft.EntityFrameworkCore;
 
 namespace AirQuality.Server.Services.Background;
@@ -403,12 +404,25 @@ public class TedpDataFetchService(
                 {
                     StationId = dbStationId,
                     Timestamp = record.Timestamp,
-                    Pm25 = record.Pm25,
-                    Pm10 = record.Pm10,
-                    Co = record.Co,
-                    No2 = record.No2,
-                    So2 = record.So2,
-                    O3 = record.O3,
+                    // Chuyển IAQI → nồng độ thô (μg/m³ hoặc ppm) trước khi lưu
+                    Pm25 = record.Pm25.HasValue
+                        ? AqiConverter.ConvertIaqiToRaw("pm25", record.Pm25.Value)
+                        : null,
+                    Pm10 = record.Pm10.HasValue
+                        ? AqiConverter.ConvertIaqiToRaw("pm10", record.Pm10.Value)
+                        : null,
+                    Co = record.Co.HasValue
+                        ? AqiConverter.ConvertIaqiToRaw("co", record.Co.Value)
+                        : null,
+                    No2 = record.No2.HasValue
+                        ? AqiConverter.ConvertIaqiToRaw("no2", record.No2.Value)
+                        : null,
+                    So2 = record.So2.HasValue
+                        ? AqiConverter.ConvertIaqiToRaw("so2", record.So2.Value)
+                        : null,
+                    O3 = record.O3.HasValue
+                        ? AqiConverter.ConvertIaqiToRaw("o3", record.O3.Value)
+                        : null,
                     CalculatedAqi = record.Aqi.HasValue ? (int)Math.Round(record.Aqi.Value) : null,
                     IsValid = 1,
                     IsImputed = 0

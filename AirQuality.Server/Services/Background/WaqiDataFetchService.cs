@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using AirQuality.Server.Data;
-using AirQuality.Server.Models;
+using AirQuality.Server.Models.Entites;
 using AirQuality.Server.Services.AirQuality;
 using Microsoft.EntityFrameworkCore;
 
