@@ -11,7 +11,9 @@ import StationDetailPage from './pages/auth/StationDetailPage';
 import NotFoundPage from './pages/auth/NotFoundPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import AdminProtectedRoute from './components/common/AdminProtectedRoute';
-
+// Sửa 2 dòng này
+import EcoAirAIConfig_1 from './pages/auth/EcoAirAIConfig_1';
+import EcoAirUserManagement from './pages/auth/EcoAirUserManagement';
 export default function App() {
     return (
         <Routes>
@@ -24,6 +26,8 @@ export default function App() {
             <Route path="/du-lieu" element={<AirQualityDataPage />} />
             <Route path="/tram/:stationId" element={<StationDetailPage />} />
             <Route path="/404" element={<NotFoundPage />} />
+            <Route path="/EcoAirAIConfig_1" element={<EcoAirAIConfig_1 />} />
+            <Route path="/EcoAirUserManagement" element={<EcoAirUserManagement />} /> {/* 👈 thêm dòng này */}
 
             {/* Protected: requires login (user role) */}
             <Route
