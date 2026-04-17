@@ -218,6 +218,8 @@ export default function EcoAirStationMonitor() {
                         <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e8ede8', position: 'relative' }}>
                             <iframe
                                 src="https://www.openstreetmap.org/export/embed.html?bbox=105.7,20.95,105.95,21.1&layer=mapnik&marker=21.028511,105.804817"
+                                loading="lazy"
+                                sandbox="allow-scripts allow-same-origin allow-popups"
                                 style={{ width: '100%', height: 400, border: 'none', display: 'block', filter: 'sepia(10%) saturate(0.9)' }}
                                 title="Bản đồ Hà Nội"
                             />
