@@ -568,7 +568,7 @@
                                 <div>THL 5</div>
                                 <div>THL 6</div>
                                 <div>THL 7</div>
-                                <div>CHỦ NHBT</div>
+                                <div>CHỦ NHẬT</div>
                             </div>
                         </div>
 
