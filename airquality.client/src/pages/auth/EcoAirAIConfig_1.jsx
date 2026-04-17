@@ -1,4 +1,5 @@
-export default function EcoAirAIConfig() {
+export default function EcoAirAIConfig_1() {
+
   return (
     <div style={{ fontFamily: "'Be Vietnam Pro', sans-serif", display: "flex", minHeight: "100vh", background: "#f0f4f0", color: "#1a1a1a" }}>
       <style>{`
