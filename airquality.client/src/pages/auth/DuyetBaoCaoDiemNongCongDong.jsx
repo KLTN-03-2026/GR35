@@ -82,12 +82,11 @@
             style={{
                 minHeight: '100vh',
                 background: '#f6f6ea',
-                fontFamily: "'Be Vietnam Pro', 'Segoe UI', sans-serif",
+                fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
                 color: '#1f251f',
             }}
         >
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
                 * { box-sizing: border-box; }
                 body { margin: 0; }
             `}</style>
