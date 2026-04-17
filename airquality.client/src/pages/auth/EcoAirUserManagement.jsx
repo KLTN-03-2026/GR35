@@ -30,12 +30,7 @@ export default function EcoAirUserManagement() {
   ];
 
   return (
-    <div style={{ fontFamily: "'Be Vietnam Pro', sans-serif", display: "flex", minHeight: "100vh", background: "#f0f4f0", color: "#1a1a1a" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-      `}</style>
-
+    <div style={{ fontFamily: "'Be Vietnam Pro', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: "flex", minHeight: "100vh", background: "#f0f4f0", color: "#1a1a1a" }}>
       {/* SIDEBAR */}
       <aside style={{ width: 200, background: "#fff", borderRight: "1px solid #e5e7eb", display: "flex", flexDirection: "column", padding: "0 0 24px 0", flexShrink: 0, position: "fixed", top: 0, left: 0, height: "100vh" }}>
         <div style={{ padding: "16px 18px 14px", borderBottom: "1px solid #e5e7eb" }}>
