@@ -59,233 +59,162 @@ export default function EcoAirStationMonitor() {
     const [activeTab, setActiveTab] = useState('Dữ liệu Vùng');
 
     return (
-        <div style={{ display: 'flex', height: '100vh', fontFamily: "'Be Vietnam Pro', 'Segoe UI', sans-serif", background: '#f4f6f0', overflow: 'hidden' }}>
-            {/* Sidebar */}
-            <aside style={{ width: 220, background: '#fff', borderRight: '1px solid #e8ede8', display: 'flex', flexDirection: 'column', padding: '0 0 16px', flexShrink: 0 }}>
-                {/* Logo */}
-                <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #eef2ee', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 38, height: 38, background: '#1a3c2a', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ color: '#7ecf8e', fontWeight: 900, fontSize: 13 }}>EA</span>
+        <div>
+            {/* Topbar Tab Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', borderRadius: 8, padding: '6px 14px', width: 220, border: '1px solid #e8ede8' }}>
+                        <Search size={14} color="#9aaa9a" />
+                        <input placeholder="Tìm kiếm trạm..." style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 13, color: '#444', width: '100%' }} />
                     </div>
-                    <div>
-                        <div style={{ fontWeight: 800, fontSize: 13, color: '#1a3c2a', letterSpacing: 0.3 }}>EcoAir VN</div>
-                        <div style={{ fontSize: 9, color: '#7a9a7a', textTransform: 'uppercase', letterSpacing: 1 }}>Quản trị môi trường</div>
-                    </div>
-                </div>
-
-                {/* Nav */}
-                <nav style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {navItems.map(({ icon: Icon, label, path, active }) => (
-                        <Link key={label} to={path}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
-                                borderRadius: 8, textDecoration: 'none', cursor: 'pointer',
-                                background: active ? '#e8f5ec' : 'transparent',
-                                color: active ? '#1a6630' : '#555',
-                                fontWeight: active ? 700 : 400, fontSize: 13,
-                                transition: 'all 0.15s',
-                                borderLeft: active ? '3px solid #2d7a3a' : '3px solid transparent',
-                            }}
-                        >
-                            <Icon size={16} />
-                            {label}
-                        </Link>
-                    ))}
-                </nav>
-
-                {/* Bottom */}
-                <div style={{ padding: '0 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, textDecoration: 'none', color: '#555', fontSize: 13 }}>
-                        <User size={16} /> Hồ sơ
-                    </Link>
-                    <Link to="/logout" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, textDecoration: 'none', color: '#555', fontSize: 13 }}>
-                        <LogOut size={16} /> Đăng xuất
-                    </Link>
-                </div>
-            </aside>
-
-            {/* Main */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                {/* Topbar */}
-                <header style={{ background: '#fff', borderBottom: '1px solid #e8ede8', padding: '0 28px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f4f6f0', borderRadius: 8, padding: '6px 14px', width: 220 }}>
-                            <Search size={14} color="#9aaa9a" />
-                            <input placeholder="Tìm kiếm trạm..." style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 13, color: '#444', width: '100%' }} />
-                        </div>
-                        <nav style={{ display: 'flex', gap: 4 }}>
-                            {['Tổng quan', 'Dữ liệu Vùng'].map(tab => (
-                                <button key={tab} onClick={() => setActiveTab(tab)}
-                                    style={{
-                                        padding: '6px 16px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
-                                        background: activeTab === tab ? 'transparent' : 'transparent',
-                                        color: activeTab === tab ? '#1a6630' : '#777',
-                                        borderBottom: activeTab === tab ? '2px solid #2d7a3a' : '2px solid transparent',
-                                    }}>
-                                    {tab}
-                                </button>
-                            ))}
-                        </nav>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                        <div style={{ position: 'relative', cursor: 'pointer' }}>
-                            <Bell size={18} color="#555" />
-                            <div style={{ position: 'absolute', top: -3, right: -3, width: 8, height: 8, background: '#e74c3c', borderRadius: '50%' }} />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                            <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: '#1a3c2a' }}>Quản trị viên</div>
-                                <div style={{ fontSize: 10, color: '#9aaa9a' }}>Quản lý mạng lưới</div>
-                            </div>
-                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #2d7a3a, #7ecf8e)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <User size={16} color="#fff" />
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
-                {/* Content */}
-                <main style={{ flex: 1, overflowY: 'auto', padding: '28px 28px' }}>
-                    {/* Page title */}
-                    <div style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: '#7a9a7a', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>Hạ tầng hệ thống</div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#1a3c2a', margin: 0 }}>Giám sát Trạm quan trắc</h1>
-                            <div style={{ display: 'flex', gap: 10 }}>
-                                <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #d0ddd0', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#444', fontWeight: 500 }}>
-                                    <Filter size={14} /> Bộ lọc
-                                </button>
-                                <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 8, border: 'none', background: '#1a3c2a', cursor: 'pointer', fontSize: 13, color: '#fff', fontWeight: 600 }}>
-                                    <Plus size={14} /> Triển khai Trạm
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Top cards */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16, marginBottom: 20 }}>
-                        {/* Health card */}
-                        <div style={{ background: '#fff', borderRadius: 14, padding: '24px', border: '1px solid #e8ede8', position: 'relative', overflow: 'hidden' }}>
-                            <div style={{ position: 'absolute', top: 0, right: 0, width: 100, height: 100, background: 'radial-gradient(circle, #e8f5ec 0%, transparent 70%)', borderRadius: '0 14px 0 100%' }} />
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                                <span style={{ fontSize: 13, fontWeight: 600, color: '#555' }}>Sức khỏe Hệ thống</span>
-                                <Sparkles size={18} color="#2d7a3a" />
-                            </div>
-                            <div style={{ fontSize: 42, fontWeight: 900, color: '#2d7a3a', lineHeight: 1 }}>
-                                98.4%
-                                <span style={{ fontSize: 15, fontWeight: 600, color: '#4caf50', marginLeft: 8 }}>+2.1%</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                                <span style={{ background: '#e8f5ec', color: '#2d7a3a', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>ĐANG HOẠT ĐỘNG</span>
-                                <span style={{ background: '#f0f0f0', color: '#555', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>24 ĐƠN VỊ ACTIVE</span>
-                            </div>
-                        </div>
-
-                        {/* Warning card */}
-                        <div style={{ background: '#fff', borderRadius: 14, padding: '20px 24px', border: '1px solid #e8ede8', display: 'flex', gap: 24, alignItems: 'center' }}>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                                    <AlertTriangle size={16} color="#e67e22" />
-                                    <span style={{ fontSize: 15, fontWeight: 700, color: '#333' }}>Cảnh báo Bảo trì</span>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                    {warnings.map(w => (
-                                        <div key={w.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: w.bg, borderRadius: 8 }}>
-                                            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: w.levelColor, marginTop: 5, flexShrink: 0 }} />
-                                                <div>
-                                                    <div style={{ fontSize: 13, fontWeight: 700, color: '#222' }}>{w.id}: {w.title}</div>
-                                                    <div style={{ fontSize: 11, color: '#777', marginTop: 2 }}>{w.desc}</div>
-                                                </div>
-                                            </div>
-                                            <span style={{ background: w.levelColor, color: '#fff', padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', marginLeft: 12 }}>
-                                                {w.level}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                                <CircleProgress value={88} />
-                                <span style={{ fontSize: 10, fontWeight: 700, color: '#777', textTransform: 'uppercase', letterSpacing: 0.8 }}>Toàn vẹn đội ngũ</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Map + Table */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 16 }}>
-                        {/* Map */}
-                        <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e8ede8', position: 'relative' }}>
-                            <iframe
-                                src="https://www.openstreetmap.org/export/embed.html?bbox=105.7,20.95,105.95,21.1&layer=mapnik&marker=21.028511,105.804817"
-                                style={{ width: '100%', height: 400, border: 'none', display: 'block', filter: 'sepia(10%) saturate(0.9)' }}
-                                title="Bản đồ Hà Nội"
-                            />
-                            {/* Overlay popup */}
-                            <div style={{ position: 'absolute', top: 16, left: 16, background: '#fff', borderRadius: 10, padding: '10px 14px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: 180 }}>
-                                <div style={{ fontSize: 9, fontWeight: 800, color: '#9aaa9a', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>Sơ đồ mạng lưới</div>
-                                <div style={{ fontSize: 14, fontWeight: 800, color: '#1a3c2a' }}>Khu vực: Hà Nội Nội thành</div>
-                                <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>12 Trạm hoạt động / 2 Dự phòng</div>
-                            </div>
-                            {/* Zoom controls */}
-                            <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                {[ZoomIn, ZoomOut].map((Icon, i) => (
-                                    <button key={i} style={{ width: 32, height: 32, borderRadius: 8, background: '#fff', border: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}>
-                                        <Icon size={15} color="#444" />
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Station list */}
-                        <div style={{ background: '#fff', borderRadius: 14, padding: '20px 24px', border: '1px solid #e8ede8' }}>
-                            <div style={{ marginBottom: 14 }}>
-                                <div style={{ fontSize: 15, fontWeight: 800, color: '#1a3c2a' }}>Danh sách Trạm vật lý</div>
-                                <div style={{ fontSize: 11, color: '#9aaa9a', marginTop: 2 }}>Dữ liệu kỹ thuật thời gian thực</div>
-                            </div>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ borderBottom: '2px solid #f0f4f0' }}>
-                                        {['Mã trạm', 'Pin', 'Tín hiệu', 'Hoạt động'].map(h => (
-                                            <th key={h} style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, fontWeight: 800, color: '#aaa', textTransform: 'uppercase', letterSpacing: 0.8 }}>{h}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {stations.map(s => (
-                                        <tr key={s.id} style={{ borderBottom: '1px solid #f5f7f5' }}>
-                                            <td style={{ padding: '10px 8px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                                                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.status === 'online' ? '#2ecc71' : '#e74c3c', flexShrink: 0 }} />
-                                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#222' }}>{s.id}</span>
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '10px 8px' }}><PinBar value={s.pin} offline={s.status === 'offline'} /></td>
-                                            <td style={{ padding: '10px 8px', fontSize: 12, color: s.status === 'offline' ? '#bbb' : '#555' }}>{s.signal} dBm</td>
-                                            <td style={{ padding: '10px 8px' }}>
-                                                <span style={{
-                                                    fontSize: 12, fontWeight: 600,
-                                                    color: s.status === 'offline' ? '#e74c3c' : '#2d7a3a',
-                                                    background: s.status === 'offline' ? '#fdecea' : '#e8f5ec',
-                                                    padding: '3px 8px', borderRadius: 6
-                                                }}>{s.hoatDong}</span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            <button style={{ marginTop: 16, width: '100%', padding: '10px', background: '#f4f6f0', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#2d7a3a', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                                Xem tất cả hạ tầng <ChevronRight size={14} />
+                    <nav style={{ display: 'flex', gap: 4, background: '#fff', padding: 4, borderRadius: 8, border: '1px solid #e8ede8' }}>
+                        {['Tổng quan', 'Dữ liệu Vùng'].map(tab => (
+                            <button key={tab} onClick={() => setActiveTab(tab)}
+                                style={{
+                                    padding: '6px 16px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                                    background: activeTab === tab ? '#e8f5ec' : 'transparent',
+                                    color: activeTab === tab ? '#1a6630' : '#777',
+                                }}>
+                                {tab}
                             </button>
-                        </div>
-                    </div>
-                </main>
+                        ))}
+                    </nav>
+                </div>
             </div>
 
-            {/* FAB */}
-            <button style={{ position: 'fixed', bottom: 28, right: 28, width: 52, height: 52, borderRadius: '50%', background: '#1a3c2a', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(26,60,42,0.4)' }}>
-                <MapPin size={22} color="#7ecf8e" />
-            </button>
+            {/* Page title */}
+            <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#7a9a7a', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>Hạ tầng hệ thống</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <h1 style={{ fontSize: 28, fontWeight: 900, color: '#1a3c2a', margin: 0 }}>Giám sát Trạm quan trắc</h1>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: '1px solid #d0ddd0', background: '#fff', cursor: 'pointer', fontSize: 13, color: '#444', fontWeight: 500 }}>
+                            <Filter size={14} /> Bộ lọc
+                        </button>
+                        <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 8, border: 'none', background: '#1a3c2a', cursor: 'pointer', fontSize: 13, color: '#fff', fontWeight: 600 }}>
+                            <Plus size={14} /> Triển khai Trạm
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Top cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16, marginBottom: 20 }}>
+                {/* Health card */}
+                <div style={{ background: '#fff', borderRadius: 14, padding: '24px', border: '1px solid #e8ede8', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, right: 0, width: 100, height: 100, background: 'radial-gradient(circle, #e8f5ec 0%, transparent 70%)', borderRadius: '0 14px 0 100%' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#555' }}>Sức khỏe Hệ thống</span>
+                        <Sparkles size={18} color="#2d7a3a" />
+                    </div>
+                    <div style={{ fontSize: 42, fontWeight: 900, color: '#2d7a3a', lineHeight: 1 }}>
+                        98.4%
+                        <span style={{ fontSize: 15, fontWeight: 600, color: '#4caf50', marginLeft: 8 }}>+2.1%</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                        <span style={{ background: '#e8f5ec', color: '#2d7a3a', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>ĐANG HOẠT ĐỘNG</span>
+                        <span style={{ background: '#f0f0f0', color: '#555', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>24 ĐƠN VỊ ACTIVE</span>
+                    </div>
+                </div>
+
+                {/* Warning card */}
+                <div style={{ background: '#fff', borderRadius: 14, padding: '20px 24px', border: '1px solid #e8ede8', display: 'flex', gap: 24, alignItems: 'center' }}>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                            <AlertTriangle size={16} color="#e67e22" />
+                            <span style={{ fontSize: 15, fontWeight: 700, color: '#333' }}>Cảnh báo Bảo trì</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {warnings.map(w => (
+                                <div key={w.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: w.bg, borderRadius: 8 }}>
+                                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: w.levelColor, marginTop: 5, flexShrink: 0 }} />
+                                        <div>
+                                            <div style={{ fontSize: 13, fontWeight: 700, color: '#222' }}>{w.id}: {w.title}</div>
+                                            <div style={{ fontSize: 11, color: '#777', marginTop: 2 }}>{w.desc}</div>
+                                        </div>
+                                    </div>
+                                    <span style={{ background: w.levelColor, color: '#fff', padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', marginLeft: 12 }}>
+                                        {w.level}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <CircleProgress value={88} />
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#777', textTransform: 'uppercase', letterSpacing: 0.8 }}>Toàn vẹn đội ngũ</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Map + Table */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 16 }}>
+                {/* Map */}
+                <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid #e8ede8', position: 'relative' }}>
+                    <iframe
+                        src="https://www.openstreetmap.org/export/embed.html?bbox=105.7,20.95,105.95,21.1&layer=mapnik&marker=21.028511,105.804817"
+                        style={{ width: '100%', height: 400, border: 'none', display: 'block', filter: 'sepia(10%) saturate(0.9)' }}
+                        title="Bản đồ Hà Nội"
+                    />
+                    {/* Overlay popup */}
+                    <div style={{ position: 'absolute', top: 16, left: 16, background: '#fff', borderRadius: 10, padding: '10px 14px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: 180 }}>
+                        <div style={{ fontSize: 9, fontWeight: 800, color: '#9aaa9a', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>Sơ đồ mạng lưới</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: '#1a3c2a' }}>Khu vực: Hà Nội Nội thành</div>
+                        <div style={{ fontSize: 12, color: '#777', marginTop: 2 }}>12 Trạm hoạt động / 2 Dự phòng</div>
+                    </div>
+                    {/* Zoom controls */}
+                    <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {[ZoomIn, ZoomOut].map((Icon, i) => (
+                            <button key={i} style={{ width: 32, height: 32, borderRadius: 8, background: '#fff', border: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}>
+                                <Icon size={15} color="#444" />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Station list */}
+                <div style={{ background: '#fff', borderRadius: 14, padding: '20px 24px', border: '1px solid #e8ede8' }}>
+                    <div style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: '#1a3c2a' }}>Danh sách Trạm vật lý</div>
+                        <div style={{ fontSize: 11, color: '#9aaa9a', marginTop: 2 }}>Dữ liệu kỹ thuật thời gian thực</div>
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ borderBottom: '2px solid #f0f4f0' }}>
+                                {['Mã trạm', 'Pin', 'Tín hiệu', 'Hoạt động'].map(h => (
+                                    <th key={h} style={{ textAlign: 'left', padding: '6px 8px', fontSize: 10, fontWeight: 800, color: '#aaa', textTransform: 'uppercase', letterSpacing: 0.8 }}>{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {stations.map(s => (
+                                <tr key={s.id} style={{ borderBottom: '1px solid #f5f7f5' }}>
+                                    <td style={{ padding: '10px 8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.status === 'online' ? '#2ecc71' : '#e74c3c', flexShrink: 0 }} />
+                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#222' }}>{s.id}</span>
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '10px 8px' }}><PinBar value={s.pin} offline={s.status === 'offline'} /></td>
+                                    <td style={{ padding: '10px 8px', fontSize: 12, color: s.status === 'offline' ? '#bbb' : '#555' }}>{s.signal} dBm</td>
+                                    <td style={{ padding: '10px 8px' }}>
+                                        <span style={{
+                                            fontSize: 12, fontWeight: 600,
+                                            color: s.status === 'offline' ? '#e74c3c' : '#2d7a3a',
+                                            background: s.status === 'offline' ? '#fdecea' : '#e8f5ec',
+                                            padding: '3px 8px', borderRadius: 6
+                                        }}>{s.hoatDong}</span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <button style={{ marginTop: 16, width: '100%', padding: '10px', background: '#f4f6f0', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#2d7a3a', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                        Xem tất cả hạ tầng <ChevronRight size={14} />
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
