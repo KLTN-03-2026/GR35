@@ -414,12 +414,12 @@ export default function StationDetailPage() {
                             <div>
                                 <PollutantRow label="PM2.5" value={station.pm25} unit="μg/m³" max={500} />
                                 <PollutantRow label="PM10" value={station.pm10} unit="μg/m³" max={600} />
-                                <PollutantRow label="O₃" value={station.o3} unit="ppb" max={200} />
+                                <PollutantRow label="O₃" value={station.o3} unit="μg/m³" max={200} />
                             </div>
                             <div>
-                                <PollutantRow label="NO₂" value={station.no2} unit="ppb" max={200} />
-                                <PollutantRow label="SO₂" value={station.so2} unit="ppb" max={200} />
-                                <PollutantRow label="CO" value={station.co} unit="ppm" max={50} />
+                                <PollutantRow label="NO₂" value={station.no2} unit="μg/m³" max={200} />
+                                <PollutantRow label="SO₂" value={station.so2} unit="μg/m³" max={200} />
+                                <PollutantRow label="CO" value={station.co} unit="μg/m³" max={50} />
                             </div>
                         </div>
                     </Card>

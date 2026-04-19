@@ -22,6 +22,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<AffiliateProduct> AffiliateProducts => Set<AffiliateProduct>();
     public DbSet<CommunityReport> CommunityReports => Set<CommunityReport>();
+    public DbSet<City> Cities => Set<City>();
+    public DbSet<CityAirQualitySnapshot> CityAirQualitySnapshots => Set<CityAirQualitySnapshot>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -125,6 +127,18 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(x => x.AuditLogs)
             .HasForeignKey(x => x.ActionTypeId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<CityAirQualitySnapshot>()
+            .HasOne(x => x.City)
+            .WithMany(x => x.CityAirQualitySnapshots)
+            .HasForeignKey(x => x.CityId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<City>()
+            .HasIndex(x => x.Slug)
+            .IsUnique();
+
+        modelBuilder.Entity<City>().Property(x => x.IsActive).HasDefaultValue(1);
 
         modelBuilder.Entity<CommunityReport>()
             .HasOne(x => x.User)

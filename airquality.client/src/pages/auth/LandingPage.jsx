@@ -204,13 +204,13 @@ function AqiInfoSection() {
                 key={tab}
                 onClick={() => setActivePollutant(tab)}
                 style={{
-              padding: "8px 24px",
-              borderRadius: 8,
-              background: isActive ? "rgba(17,24,39,0.82)" : "transparent",
-              color: isActive ? "#3fa9ff" : "rgba(255,255,255,0.7)",
-              fontSize: 14,
-              fontWeight: isActive ? 600 : 500,
-              cursor: "pointer"
+                  padding: "8px 24px",
+                  borderRadius: 8,
+                  background: isActive ? "rgba(17,24,39,0.82)" : "transparent",
+                  color: isActive ? "#3fa9ff" : "rgba(255,255,255,0.7)",
+                  fontSize: 14,
+                  fontWeight: isActive ? 600 : 500,
+                  cursor: "pointer"
                 }}
               >
                 {tab}
@@ -245,7 +245,7 @@ function AqiInfoSection() {
                 {item.desc}
               </div>
               <div style={{ flexShrink: 0 }}>
-                 <img src={item.img} alt={item.level} style={{ width: 48, height: "auto" }} />
+                <img src={item.img} alt={item.level} style={{ width: 48, height: "auto" }} />
               </div>
             </div>
           ))}
@@ -327,10 +327,10 @@ function HeroSection() {
   const pollutantCards = [
     { name: "Vật chất hạt mịn (PM2.5)", value: stationDetail?.pm25, unit: "µg/m³", color: "#eab308" },
     { name: "Vật chất hạt mịn (PM10)", value: stationDetail?.pm10, unit: "µg/m³", color: "#f59e0b" },
-    { name: "Carbon monoxide (CO)", value: stationDetail?.co, unit: "ppm", color: "#22c55e" },
-    { name: "Lưu huỳnh dioxide (SO2)", value: stationDetail?.so2, unit: "ppb", color: "#22c55e" },
-    { name: "Nitrogen dioxide (NO2)", value: stationDetail?.no2, unit: "ppb", color: "#22c55e" },
-    { name: "Ozon (O3)", value: stationDetail?.o3, unit: "ppb", color: "#22c55e" },
+    { name: "Carbon monoxide (CO)", value: stationDetail?.co, unit: "μg/m³", color: "#22c55e" },
+    { name: "Lưu huỳnh dioxide (SO2)", value: stationDetail?.so2, unit: "μg/m³", color: "#22c55e" },
+    { name: "Nitrogen dioxide (NO2)", value: stationDetail?.no2, unit: "μg/m³", color: "#22c55e" },
+    { name: "Ozon (O3)", value: stationDetail?.o3, unit: "μg/m³", color: "#22c55e" },
   ];
 
   const mapCenter = selectedStation
@@ -602,27 +602,27 @@ function HeroSection() {
             </div>
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               <button style={{
-                display: "flex", alignItems: "center", gap: 6, background: "transparent", 
-                border: "1px solid rgba(255,255,255,0.2)", borderRadius: 16, padding: "6px 12px", 
+                display: "flex", alignItems: "center", gap: 6, background: "transparent",
+                border: "1px solid rgba(255,255,255,0.2)", borderRadius: 16, padding: "6px 12px",
                 color: "#60a5fa", fontSize: 13, cursor: "pointer"
               }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" /></svg>
                 Locate me
               </button>
               <button style={{ width: 32, height: 32, borderRadius: "50%", background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#60a5fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
               </button>
               <button style={{ width: 32, height: 32, borderRadius: "50%", background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
               </button>
             </div>
           </div>
 
           {/* Main Card */}
-          <div style={{ 
-            background: `linear-gradient(to bottom, #1f2937, ${dashboardTintStrong})`, 
-            borderRadius: 16, 
-            padding: "32px 32px 48px", 
+          <div style={{
+            background: `linear-gradient(to bottom, #1f2937, ${dashboardTintStrong})`,
+            borderRadius: 16,
+            padding: "32px 32px 48px",
             display: "flex",
             position: "relative",
             overflow: "hidden",
@@ -648,7 +648,7 @@ function HeroSection() {
                   <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", animation: "blinkRed 1.5s infinite" }} />
                   <span style={{ fontSize: 13, fontWeight: 700, color: "#f8fafc" }}>AQI Trực tiếp</span>
                 </div>
-                <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "8px 16px", border: `1px solid rgba(255,255,255,0.1)`}}>
+                <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "8px 16px", border: `1px solid rgba(255,255,255,0.1)` }}>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginBottom: 2 }}>Chất lượng không khí là</div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: currentColor }}>{currentLevel}</div>
                 </div>
@@ -674,61 +674,61 @@ function HeroSection() {
 
               {/* AQI Scale Bar */}
               <div style={{ position: "relative", width: "80%", maxWidth: 500, height: 6, borderRadius: 3, background: "linear-gradient(to right, #63cc2f, #f5d233, #f39a3d, #ec4f83, #b748c8, #e92b49)", marginTop: 20 }}>
-                 <div style={{ position: "absolute", top: -24, left: 0, right: 0, display: "flex", justifyContent: "space-between", fontSize: 11, color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>
-                   <span>Tốt</span><span>Vừa Phải</span><span>Kém</span><span>Không L...</span><span>Nghiêm ...</span><span>Nguy Hiể...</span>
-                 </div>
-                 <div style={{ position: "absolute", top: 12, left: 0, right: 0, display: "flex", justifyContent: "space-between", fontSize: 10, color: "rgba(255,255,255,0.6)" }}>
-                   <span>0</span><span>50</span><span>100</span><span>150</span><span>200</span><span>300</span><span>301+</span>
-                 </div>
-                 <div style={{ position: "absolute", top: -4, left: `${Math.min(100, Math.max(0, (currentAqi / 300) * 100))}%`, width: 14, height: 14, borderRadius: "50%", background: "white", border: "3px solid #1f2937", transform: "translateX(-50%)", zIndex: 2, boxShadow: "0 0 10px rgba(0,0,0,0.5)" }} />
+                <div style={{ position: "absolute", top: -24, left: 0, right: 0, display: "flex", justifyContent: "space-between", fontSize: 11, color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>
+                  <span>Tốt</span><span>Vừa Phải</span><span>Kém</span><span>Không L...</span><span>Nghiêm ...</span><span>Nguy Hiể...</span>
+                </div>
+                <div style={{ position: "absolute", top: 12, left: 0, right: 0, display: "flex", justifyContent: "space-between", fontSize: 10, color: "rgba(255,255,255,0.6)" }}>
+                  <span>0</span><span>50</span><span>100</span><span>150</span><span>200</span><span>300</span><span>301+</span>
+                </div>
+                <div style={{ position: "absolute", top: -4, left: `${Math.min(100, Math.max(0, (currentAqi / 300) * 100))}%`, width: 14, height: 14, borderRadius: "50%", background: "white", border: "3px solid #1f2937", transform: "translateX(-50%)", zIndex: 2, boxShadow: "0 0 10px rgba(0,0,0,0.5)" }} />
               </div>
             </div>
-            
+
             {/* Center Character */}
             <div style={{ position: "absolute", bottom: -10, left: "45%", transform: "translateX(-50%)", zIndex: 2 }}>
-               <img src={getCharacterByAqi(currentAqi)} alt="Character" style={{ height: 260, filter: "drop-shadow(0 10px 15px rgba(0,0,0,0.3))" }} />
+              <img src={getCharacterByAqi(currentAqi)} alt="Character" style={{ height: 260, filter: "drop-shadow(0 10px 15px rgba(0,0,0,0.3))" }} />
             </div>
 
             {/* Right Column (Weather Data) */}
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-end", zIndex: 1 }}>
-               <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.15)", padding: 24, width: 360, backdropFilter: "blur(8px)", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
-                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                     <svg width="48" height="48" viewBox="0 0 24 24" fill="#94a3b8"><path d="M17.5 19c2.5 0 4.5-2 4.5-4.5S20 10 17.5 10c-.3 0-.6 0-.8.1-1.3-3.6-5.1-5.6-8.9-4.2-2.4 1-4.2 3.1-4.6 5.6C1.4 11.9 0 13.8 0 16c0 2.8 2.2 5 5 5h12.5z"/></svg>
-                     <div style={{ fontSize: 32, fontWeight: 700, color: "white" }}>{stationDetail?.temperature ?? selectedStation?.temperature ?? "--"} <span style={{ fontSize: 20 }}>°C</span></div>
-                   </div>
-                   <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>Overcast</div>
-                   <div style={{ width: 28, height: 28, borderRadius: "50%", background: "white", display: "flex", alignItems: "center", justifyContent: "center", color: "#1f2937", cursor: "pointer" }}>
-                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
-                   </div>
-                 </div>
-                 
-                 <div style={{ height: 1, background: "rgba(255,255,255,0.1)", marginBottom: 16 }} />
+              <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.15)", padding: 24, width: 360, backdropFilter: "blur(8px)", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="#94a3b8"><path d="M17.5 19c2.5 0 4.5-2 4.5-4.5S20 10 17.5 10c-.3 0-.6 0-.8.1-1.3-3.6-5.1-5.6-8.9-4.2-2.4 1-4.2 3.1-4.6 5.6C1.4 11.9 0 13.8 0 16c0 2.8 2.2 5 5 5h12.5z" /></svg>
+                    <div style={{ fontSize: 32, fontWeight: 700, color: "white" }}>{stationDetail?.temperature ?? selectedStation?.temperature ?? "--"} <span style={{ fontSize: 20 }}>°C</span></div>
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>Overcast</div>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "white", display: "flex", alignItems: "center", justifyContent: "center", color: "#1f2937", cursor: "pointer" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
+                  </div>
+                </div>
 
-                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, textAlign: "center" }}>
-                   <div>
-                     <div style={{ display: "flex", justifyContent: "center", marginBottom: 6, color: "rgba(255,255,255,0.7)" }}>
-                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-                     </div>
-                     <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 2 }}>Độ ẩm</div>
-                     <div style={{ fontSize: 14, fontWeight: 700 }}>{stationDetail?.humidity ?? "--"} %</div>
-                   </div>
-                   <div>
-                     <div style={{ display: "flex", justifyContent: "center", marginBottom: 6, color: "rgba(255,255,255,0.7)" }}>
-                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
-                     </div>
-                     <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 2 }}>Tốc độ gió</div>
-                     <div style={{ fontSize: 14, fontWeight: 700 }}>{stationDetail?.windSpeed ?? "--"} km/h</div>
-                   </div>
-                   <div>
-                     <div style={{ display: "flex", justifyContent: "center", marginBottom: 6, color: "rgba(255,255,255,0.7)" }}>
-                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-                     </div>
-                     <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 2 }}>Chỉ số UV</div>
-                     <div style={{ fontSize: 14, fontWeight: 700 }}>0</div>
-                   </div>
-                 </div>
-               </div>
+                <div style={{ height: 1, background: "rgba(255,255,255,0.1)", marginBottom: 16 }} />
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, textAlign: "center" }}>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 6, color: "rgba(255,255,255,0.7)" }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" /></svg>
+                    </div>
+                    <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 2 }}>Độ ẩm</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{stationDetail?.humidity ?? "--"} %</div>
+                  </div>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 6, color: "rgba(255,255,255,0.7)" }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" /></svg>
+                    </div>
+                    <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 2 }}>Tốc độ gió</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{stationDetail?.windSpeed ?? "--"} km/h</div>
+                  </div>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 6, color: "rgba(255,255,255,0.7)" }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></svg>
+                    </div>
+                    <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 2 }}>Chỉ số UV</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>0</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -740,8 +740,8 @@ function HeroSection() {
                 <div key={p.name} style={{ background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: "16px", border: `1px solid ${p.color}40`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                       <div style={{ width: 12, height: 12, borderRadius: "50%", border: `2px solid ${p.color}` }} />
-                       <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>{p.name}</span>
+                      <div style={{ width: 12, height: 12, borderRadius: "50%", border: `2px solid ${p.color}` }} />
+                      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>{p.name}</span>
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
@@ -765,7 +765,7 @@ function TechSection() {
   const [headerRef, headerVisible] = useScrollReveal();
   const [gridRef, gridVisible] = useScrollReveal({ threshold: 0.05 });
 
-    const features = [
+  const features = [
     {
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={theme.green} strokeWidth="1.8" strokeLinecap="round">
