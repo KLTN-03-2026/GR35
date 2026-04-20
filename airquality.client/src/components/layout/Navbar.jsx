@@ -24,7 +24,7 @@ export default function Navbar({ activePage = "Trang chủ" }) {
                 top: 0,
                 left: 0,
                 right: 0,
-                zIndex: 100,
+                zIndex: 1200,
                 background: theme.navBg,
                 borderBottom: `1px solid ${theme.border}`,
                 display: "flex",

@@ -1,0 +1,267 @@
+﻿.national-air-page {
+    min-height: 100vh;
+    background: #f4f7f6;
+    padding: 88px 18px 40px;
+}
+
+.national-air-header {
+    max-width: 1360px;
+    margin: 0 auto 12px;
+}
+
+.national-air-header h1 {
+    margin: 0;
+    font-size: 30px;
+    color: #0f172a;
+}
+
+.national-air-header p {
+    margin: 6px 0 0;
+    color: #475569;
+    font-size: 14px;
+}
+
+.national-air-error {
+    max-width: 1360px;
+    margin: 0 auto 12px;
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+}
+
+.national-air-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 65fr) minmax(320px, 35fr);
+    gap: 14px;
+    align-items: start;
+    max-width: 1360px;
+    margin: 0 auto;
+}
+
+.national-air-map-card,
+.national-air-table-card {
+    background: #ffffff;
+    border: 1px solid #dbe4e2;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.national-air-toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px;
+    border-bottom: 1px solid #ecf1ef;
+    flex-wrap: wrap;
+}
+
+.national-air-toggle-group {
+    display: inline-flex;
+    gap: 6px;
+}
+
+.national-air-toggle-group button {
+    border: 1px solid #d5dfdc;
+    background: #fff;
+    color: #334155;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.national-air-toggle-group button.active {
+    background: #0d6e4e;
+    border-color: #0d6e4e;
+    color: #fff;
+}
+
+.national-air-map {
+    height: 700px;
+    position: relative;
+}
+
+.national-air-legend {
+    position: absolute;
+    left: 14px;
+    bottom: 14px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border-radius: 10px;
+    padding: 10px;
+    width: 220px;
+    backdrop-filter: blur(3px);
+}
+
+.legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.legend-scale {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 2px;
+    height: 10px;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.legend-labels {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    font-size: 10px;
+    margin-top: 5px;
+    color: #cbd5e1;
+}
+
+.national-air-overlay,
+.national-air-mapbox-warning {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.national-air-overlay {
+    background: rgba(255, 255, 255, 0.62);
+    color: #334155;
+}
+
+.national-air-mapbox-warning {
+    top: auto;
+    left: 14px;
+    right: 14px;
+    bottom: 86px;
+    inset: auto 14px 86px;
+    background: rgba(255, 237, 213, 0.94);
+    border: 1px solid #fdba74;
+    border-radius: 8px;
+    color: #9a3412;
+    padding: 8px;
+}
+
+.table-head {
+    padding: 14px;
+    border-bottom: 1px solid #ecf1ef;
+}
+
+.table-head h2 {
+    margin: 0;
+    font-size: 20px;
+    color: #0f172a;
+}
+
+.table-head p {
+    margin: 5px 0 0;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.table-search {
+    margin: 12px 14px;
+    width: calc(100% - 28px);
+    border: 1px solid #d5dfdc;
+    border-radius: 10px;
+    padding: 9px 11px;
+    outline: none;
+    font-size: 13px;
+}
+
+.table-search:focus {
+    border-color: #0d6e4e;
+}
+
+.national-air-table-body {
+    max-height: 624px;
+    overflow: auto;
+    border-top: 1px solid #ecf1ef;
+}
+
+.national-air-table-body table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.national-air-table-body th,
+.national-air-table-body td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eef3f1;
+    font-size: 13px;
+    color: #0f172a;
+    text-align: left;
+}
+
+.national-air-table-body th {
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #64748b;
+    z-index: 1;
+}
+
+.ranked-name {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.rank-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 22px;
+    border-radius: 99px;
+    background: #eefcf5;
+    color: #0d6e4e;
+    font-weight: 700;
+    font-size: 11px;
+}
+
+.table-empty {
+    padding: 18px;
+    font-size: 13px;
+    color: #64748b;
+}
+
+@media (max-width: 1180px) {
+    .national-air-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .national-air-map {
+        height: 520px;
+    }
+
+    .national-air-table-body {
+        max-height: 430px;
+    }
+}
+
+@media (max-width: 640px) {
+    .national-air-page {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .national-air-header h1 {
+        font-size: 24px;
+    }
+
+    .national-air-map {
+        height: 420px;
+    }
+}

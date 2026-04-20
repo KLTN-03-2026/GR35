@@ -216,12 +216,13 @@ public class AirQualityController(ApplicationDbContext dbContext) : ControllerBa
     {
         var station = await dbContext.Stations
             .AsNoTracking()
-            .Where(s => s.StationId == id && s.IsActive == 1)
+            .Where(s => s.StationId == id)
             .Select(s => new
             {
                 s.StationId,
                 s.StationName,
                 s.City,
+                s.IsActive,
                 Latitude = (double)s.Latitude,
                 Longitude = (double)s.Longitude,
                 s.Provider,
@@ -249,7 +250,10 @@ public class AirQualityController(ApplicationDbContext dbContext) : ControllerBa
             .FirstOrDefaultAsync();
 
         if (station == null)
-            return NotFound(new { message = "Trạm không tồn tại hoặc không còn hoạt động." });
+            return NotFound(new { message = "Trạm không tồn tại." });
+
+        if (station.IsActive != 1)
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Trạm đang bảo trì, vui lòng quay lại sau." });
 
         if (station.Latest == null)
             return NotFound(new { message = "Chưa có dữ liệu quan trắc cho trạm này." });
@@ -290,9 +294,17 @@ public class AirQualityController(ApplicationDbContext dbContext) : ControllerBa
     {
         hours = Math.Clamp(hours, 1, 168);
 
-        var exists = await dbContext.Stations.AnyAsync(s => s.StationId == id && s.IsActive == 1);
-        if (!exists)
-            return NotFound(new { message = "Trạm không tồn tại hoặc không còn hoạt động." });
+        var stationState = await dbContext.Stations
+            .AsNoTracking()
+            .Where(s => s.StationId == id)
+            .Select(s => new { s.StationId, s.IsActive })
+            .FirstOrDefaultAsync();
+
+        if (stationState == null)
+            return NotFound(new { message = "Trạm không tồn tại." });
+
+        if (stationState.IsActive != 1)
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Trạm đang bảo trì, vui lòng quay lại sau." });
 
         var since = DateTime.UtcNow.AddHours(-hours);
 
