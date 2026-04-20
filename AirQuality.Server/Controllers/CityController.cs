@@ -1,4 +1,4 @@
-using AirQuality.Server.Data;
+﻿using AirQuality.Server.Data;
 using AirQuality.Server.Services.AirQuality;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -259,6 +259,40 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
     }
 
     /// <summary>
+    /// Lấy thành phố gần nhất dựa trên tọa độ.
+    /// </summary>
+    [HttpGet("nearest")]
+    public async Task<IActionResult> GetNearestCity([FromQuery] double lat, [FromQuery] double lon)
+    {
+        var city = await dbContext.Cities
+            .AsNoTracking()
+            .Where(c => c.IsActive == 1 && c.CityAirQualitySnapshots.Any())
+            .OrderBy(c => ((double)c.Latitude - lat) * ((double)c.Latitude - lat) + ((double)c.Longitude - lon) * ((double)c.Longitude - lon))
+            .Select(c => new { c.Slug, c.ProvinceName })
+            .FirstOrDefaultAsync();
+
+        if (city == null) return NotFound(new { message = "Không tìm thấy thành phố lân cận." });
+        return Ok(city);
+    }
+
+    /// <summary>
+    /// Lấy ngẫu nhiên một thành phố.
+    /// </summary>
+    [HttpGet("random")]
+    public async Task<IActionResult> GetRandomCity()
+    {
+        var city = await dbContext.Cities
+            .AsNoTracking()
+            .Where(c => c.IsActive == 1 && c.CityAirQualitySnapshots.Any())
+            .OrderBy(c => Guid.NewGuid())
+            .Select(c => new { c.Slug, c.ProvinceName })
+            .FirstOrDefaultAsync();
+
+        if (city == null) return NotFound(new { message = "Không tìm thấy thành phố nào." });
+        return Ok(city);
+    }
+
+    /// <summary>
     /// Xếp hạng AQI tất cả thành phố (mới nhất).
     /// </summary>
     [HttpGet("rankings")]
@@ -375,5 +409,89 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
         });
 
         return Ok(result);
+    }
+    /// <summary>
+    /// Danh sách trạm quan trắc thuộc thành phố (khớp tên tỉnh).
+    /// </summary>
+    [HttpGet("{slug}/stations")]
+    public async Task<IActionResult> GetCityStations(string slug)
+    {
+        // Tìm thành phố theo slug
+        var city = await dbContext.Cities
+            .AsNoTracking()
+            .Where(c => c.Slug == slug && c.IsActive == 1)
+            .Select(c => new { c.CityId, c.ProvinceName, c.Slug })
+            .FirstOrDefaultAsync();
+
+        if (city == null)
+            return NotFound(new { message = "Thành phố không tồn tại." });
+
+        var provinceName = city.ProvinceName;
+
+        // Lấy các trạm có City chứa tên tỉnh (khớp substring)
+        var rawStations = await dbContext.Stations
+            .AsNoTracking()
+            .Where(s => s.IsActive == 1
+                        && s.Latitude != 0 && s.Longitude != 0
+                        && (s.City.Contains(provinceName)
+                            || s.City.Contains(provinceName.Replace("TP. ", "").Replace("Thành phố ", ""))))
+            .Select(s => new
+            {
+                s.StationId,
+                s.StationName,
+                s.City,
+                Latitude = (double)s.Latitude,
+                Longitude = (double)s.Longitude,
+                s.Provider,
+                Latest = s.AirQualityObservations
+                    .Where(o => o.IsValid == 1 && o.CalculatedAqi.HasValue)
+                    .OrderByDescending(o => o.Timestamp)
+                    .Select(o => new
+                    {
+                        o.Timestamp,
+                        o.CalculatedAqi,
+                        o.Pm25,
+                        o.Pm10,
+                        o.Temperature,
+                        o.Humidity,
+                        o.WindSpeed
+                    })
+                    .FirstOrDefault()
+            })
+            .ToListAsync();
+
+        var result = rawStations.Select(s =>
+        {
+            var aqi = s.Latest?.CalculatedAqi ?? 0;
+            var classification = AqiClassifier.Classify(aqi);
+            return new
+            {
+                s.StationId,
+                s.StationName,
+                s.City,
+                s.Latitude,
+                s.Longitude,
+                s.Provider,
+                HasData = s.Latest != null,
+                Timestamp = s.Latest?.Timestamp,
+                CalculatedAqi = classification.Aqi,
+                Level = classification.Level,
+                ColorHex = classification.ColorHex,
+                Pm25 = s.Latest?.Pm25,
+                Pm10 = s.Latest?.Pm10,
+                Temperature = s.Latest?.Temperature,
+                Humidity = s.Latest?.Humidity,
+                WindSpeed = s.Latest?.WindSpeed
+            };
+        }).OrderByDescending(s => s.HasData).ThenByDescending(s => s.CalculatedAqi);
+
+        return Ok(new
+        {
+            CitySlug = slug,
+            ProvinceName = city.ProvinceName,
+            Stations = result,
+            TotalStations = rawStations.Count,
+            HasStations = rawStations.Count > 0
+        });
     }
 }

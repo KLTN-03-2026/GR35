@@ -1,209 +1,399 @@
+﻿import { useEffect, useMemo, useState } from 'react';
+
+function getAuthHeaders() {
+  const token = localStorage.getItem('accessToken');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function getRoleBadge(roleKey) {
+  if (roleKey === 'super-admin') {
+    return { label: 'SUPER ADMIN', roleColor: { bg: '#7c3aed', color: '#fff' } };
+  }
+
+  if (roleKey === 'admin') {
+    return { label: 'QUẢN TRỊ', roleColor: { bg: '#1a7a4a', color: '#fff' } };
+  }
+
+  return { label: 'NGƯỜI DÙNG', roleColor: { bg: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db' } };
+}
+
+function computeSummaryFromUsers(list) {
+  return {
+    totalUsers: list.length,
+    activeUsers: list.filter((u) => Number(u.status) === 1).length,
+    onlineUsers: list.filter((u) => !!u.isOnline).length,
+    lockedUsers: list.filter((u) => Number(u.status) !== 1).length,
+  };
+}
+
 export default function EcoAirUserManagement() {
-  const users = [
-    {
-      name: "Nguyen Minh Hiếu",
-      email: "hieu.minh@ecoair.vn",
-      role: "QUẢN TRỊ",
-      roleColor: { bg: "#7c3aed", color: "#fff" },
-      status: "Hoạt động",
-      online: true,
-      avatar: "👨‍💼",
-    },
-    {
-      name: "Lê Thị Kim Chi",
-      email: "chi.le@data-science.vn",
-      role: "PRO",
-      roleColor: { bg: "#1a7a4a", color: "#fff" },
-      status: "Hoạt động",
-      online: true,
-      avatar: "👩‍💼",
-    },
-    {
-      name: "Phạm Quang Vinh",
-      email: "vinh.pq@guest.io",
-      role: "FREE",
-      roleColor: { bg: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db" },
-      status: "Ngoại tuyến",
-      online: false,
-      avatar: "👨",
-    },
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
+  const [actingUserId, setActingUserId] = useState(null);
+  const [editingRoleUserId, setEditingRoleUserId] = useState(null);
+  const [summary, setSummary] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    onlineUsers: 0,
+    lockedUsers: 0,
+  });
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadUsers() {
+      setLoading(true);
+      setError('');
+
+      try {
+        const query = searchTerm.trim()
+          ? `?q=${encodeURIComponent(searchTerm.trim())}`
+          : '';
+
+        const response = await fetch(`/api/admin/user-management${query}`, {
+          headers: {
+            ...getAuthHeaders(),
+          },
+        });
+
+        const raw = await response.text();
+        let data = null;
+        try {
+          data = raw ? JSON.parse(raw) : null;
+        } catch {
+          data = null;
+        }
+
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('Bạn không có quyền truy cập chức năng này. Vui lòng đăng nhập tài khoản admin.');
+          }
+          throw new Error(data?.message || 'Không tải được dữ liệu người dùng.');
+        }
+
+        if (ignore) return;
+
+        const nextUsers = Array.isArray(data?.users) ? data.users : [];
+        setSummary(data?.summary ?? computeSummaryFromUsers(nextUsers));
+        setUsers(nextUsers);
+      } catch (err) {
+        if (ignore) return;
+        setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu.');
+        setUsers([]);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
+
+    loadUsers();
+
+    return () => {
+      ignore = true;
+    };
+  }, [searchTerm, reloadKey]);
+
+  const viewUsers = useMemo(() => users.map((u) => {
+    const badge = getRoleBadge(u.roleKey);
+    return {
+      ...u,
+      badge,
+    };
+  }), [users]);
+
+  function updateLocalUser(userId, updater) {
+    setUsers((prev) => {
+      const next = prev.map((u) => (u.userId === userId ? updater(u) : u));
+      setSummary(computeSummaryFromUsers(next));
+      return next;
+    });
+  }
+
+  async function handleEditRole(user, nextRole) {
+    const normalizedRole = (nextRole || '').trim().toLowerCase();
+    if (!['super-admin', 'admin', 'user'].includes(normalizedRole)) {
+      setError('Role không hợp lệ. Chỉ chấp nhận: super-admin, admin, user.');
+      return;
+    }
+
+    if ((user.roleKey || '').toLowerCase() === normalizedRole) {
+      setEditingRoleUserId(null);
+      return;
+    }
+
+    setError('');
+    setActingUserId(user.userId);
+
+    try {
+      const response = await fetch(`/api/admin/user-management/${user.userId}/role`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ roleKey: normalizedRole }),
+      });
+
+      const raw = await response.text();
+      let data = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.message || 'Không thể cập nhật role.');
+      }
+
+      const updated = data?.user;
+      if (!updated) return;
+
+      updateLocalUser(user.userId, () => updated);
+      setEditingRoleUserId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi cập nhật role.');
+    } finally {
+      setActingUserId(null);
+    }
+  }
+
+  async function handleToggleLock(user) {
+    const isLocked = Number(user.status) !== 1;
+    const nextLockState = !isLocked;
+    const confirmed = window.confirm(nextLockState
+      ? `Khóa tài khoản ${user.fullName || user.email}?`
+      : `Mở khóa tài khoản ${user.fullName || user.email}?`);
+
+    if (!confirmed) return;
+
+    setError('');
+    setActingUserId(user.userId);
+
+    try {
+      const response = await fetch(`/api/admin/user-management/${user.userId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ isLocked: nextLockState }),
+      });
+
+      const raw = await response.text();
+      let data = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.message || 'Không thể cập nhật trạng thái tài khoản.');
+      }
+
+      const updated = data?.user;
+      if (!updated) return;
+
+      updateLocalUser(user.userId, () => updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi cập nhật trạng thái tài khoản.');
+    } finally {
+      setActingUserId(null);
+    }
+  }
+
+  const statCards = [
+    { key: 'total', label: 'Tổng người dùng', value: summary.totalUsers, tone: { bg: '#eff6ff', color: '#1d4ed8' } },
+    { key: 'active', label: 'Đang hoạt động', value: summary.activeUsers, tone: { bg: '#ecfdf5', color: '#047857' } },
+    { key: 'online', label: 'Trực tuyến', value: summary.onlineUsers, tone: { bg: '#f0fdf4', color: '#15803d' } },
+    { key: 'locked', label: 'Đã khóa', value: summary.lockedUsers, tone: { bg: '#fef2f2', color: '#b91c1c' } },
   ];
 
   return (
-    <div>
-      <style>{`
-        * { box-sizing: border-box; }
-      `}</style>
+    <div style={{ display: 'grid', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 30, fontWeight: 800, color: '#101828' }}>Quản lý người dùng</h1>
+          <div style={{ marginTop: 6, fontSize: 14, color: '#667085' }}>
+            Giao diện quản trị tối giản để theo dõi quyền và trạng thái tài khoản.
+          </div>
+        </div>
 
-      {/* TOP BAR / NAVIGATION */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", borderRadius: 8, padding: "7px 14px", width: 240, border: "1px solid #e5e7eb" }}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="5" stroke="#9ca3af" strokeWidth="1.5" /><path d="M10 10l2.5 2.5" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" /></svg>
-            <input placeholder="Tìm kiếm người dùng..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 13, width: "100%" }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e4e7ec', borderRadius: 10, padding: '10px 12px', width: 280 }}>
+            <span style={{ color: '#98a2b3', fontSize: 14 }}>⌕</span>
+            <input
+              placeholder="Tìm kiếm theo tên, email, vai trò..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: '#344054' }}
+            />
           </div>
-          <div style={{ display: "flex", gap: 4, background: "#fff", padding: 4, borderRadius: 8, border: "1px solid #e5e7eb" }}>
-            <div style={{ padding: "6px 16px", fontSize: 13, fontWeight: 500, color: "#6b7280", cursor: "pointer" }}>Tổng quan</div>
-            <div style={{ padding: "6px 16px", fontSize: 13, fontWeight: 700, color: "#1a7a4a", background: "#e8f5ec", borderRadius: 6, cursor: "pointer" }}>Dữ liệu khu vực</div>
-          </div>
+
+          <button
+            type="button"
+            onClick={() => setReloadKey((v) => v + 1)}
+            style={{
+              border: '1px solid #d0d5dd', background: '#fff', color: '#344054', borderRadius: 10,
+              padding: '10px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit'
+            }}
+          >
+            Làm mới
+          </button>
+
+          <button
+            type="button"
+            style={{
+              border: 'none', background: '#16a34a', color: '#fff', borderRadius: 10,
+              padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
+            }}
+          >
+            + Thêm người dùng
+          </button>
         </div>
       </div>
 
-      {/* PAGE CONTENT */}
-      <div>
-        {/* Heading row */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
+        {statCards.map((card) => (
+          <div key={card.key} style={{ background: '#fff', border: '1px solid #eaecf0', borderRadius: 12, padding: 14 }}>
+            <div style={{ color: '#667085', fontSize: 12 }}>{card.label}</div>
+            <div style={{ marginTop: 6, display: 'inline-flex', padding: '4px 10px', borderRadius: 999, background: card.tone.bg, color: card.tone.color, fontSize: 12, fontWeight: 700 }}>
+              {card.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {error && (
+        <div style={{ background: '#fef3f2', border: '1px solid #fecdca', color: '#b42318', borderRadius: 12, padding: '10px 12px', fontSize: 13 }}>
+          {error}
+        </div>
+      )}
+
+      <div style={{ background: '#fff', border: '1px solid #eaecf0', borderRadius: 16, overflow: 'hidden' }}>
+        <div style={{ padding: '16px 18px', borderBottom: '1px solid #f2f4f7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 6 }}>Quản lý Người dùng</h1>
-            <p style={{ fontSize: 14, color: "#6b7280" }}>Giám sát các mục truy cập và quyền theo dõi môi trường.</p>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#101828' }}>Danh sách người dùng</div>
+            <div style={{ marginTop: 2, fontSize: 12, color: '#667085' }}>
+              {loading ? 'Đang tải dữ liệu...' : `${viewUsers.length} người dùng khớp bộ lọc hiện tại`}
+            </div>
           </div>
-          <button style={{ display: "flex", alignItems: "center", gap: 8, background: "#1a7a4a", color: "#fff", border: "none", borderRadius: 10, padding: "12px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-            <span style={{ fontSize: 16 }}>👤+</span> Thêm người dùng mới
-          </button>
         </div>
 
-        {/* Main grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 20 }}>
-
-          {/* Left col */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-            {/* User table */}
-            <div style={{ background: "#fff", borderRadius: 14, padding: "24px 24px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                <div style={{ fontSize: 15, fontWeight: 700 }}>Danh sách hoạt động</div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <span style={{ background: "#f3f4f6", color: "#374151", fontSize: 12, fontWeight: 600, padding: "4px 12px", borderRadius: 20 }}>Tổng số 34</span>
-                  <span style={{ background: "#d1fae5", color: "#065f46", fontSize: 12, fontWeight: 600, padding: "4px 12px", borderRadius: 20 }}>12 Trực tuyến</span>
-                </div>
-              </div>
-
-              {/* Table header */}
-              <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 1.2fr 0.5fr", gap: 8, padding: "0 0 10px 0", borderBottom: "1px solid #f3f4f6", marginBottom: 4 }}>
-                {["NGƯỜI DÙNG", "VAI TRÒ", "TRẠNG THÁI", "HÀNH ĐỘNG"].map((h) => (
-                  <div key={h} style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", letterSpacing: 0.8, textTransform: "uppercase" }}>{h}</div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #eaecf0' }}>
+                {['Người dùng', 'Vai trò', 'Trạng thái', 'Email', 'Hành động'].map((h) => (
+                  <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: 11, color: '#667085', textTransform: 'uppercase', letterSpacing: 0.7 }}>
+                    {h}
+                  </th>
                 ))}
-              </div>
-
-              {/* Table rows */}
-              {users.map((u, i) => (
-                <div key={i} style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 1.2fr 0.5fr", gap: 8, alignItems: "center", padding: "14px 0", borderBottom: i < users.length - 1 ? "1px solid #f9fafb" : "none" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0, overflow: "hidden" }}>
-                      {u.avatar}
+              </tr>
+            </thead>
+            <tbody>
+              {viewUsers.map((u) => (
+                <tr key={u.userId} style={{ borderBottom: '1px solid #f2f4f7' }}>
+                  <td style={{ padding: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e4e7ec', color: '#1f2937', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700 }}>
+                        {(u.fullName || '?').trim().charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#101828' }}>{u.fullName || '--'}</div>
                     </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</div>
-                      <div style={{ fontSize: 12, color: "#9ca3af" }}>{u.email}</div>
-                    </div>
-                  </div>
-                  <div>
-                    <span style={{ background: u.roleColor.bg, color: u.roleColor.color, border: u.roleColor.border || "none", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6 }}>
-                      {u.role}
+                  </td>
+                  <td style={{ padding: 12 }}>
+                    <span style={{ background: u.badge.roleColor.bg, color: u.badge.roleColor.color, border: u.badge.roleColor.border || 'none', fontSize: 11, fontWeight: 700, borderRadius: 999, padding: '4px 10px' }}>
+                      {u.badge.label}
                     </span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: u.online ? "#374151" : "#9ca3af" }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: u.online ? "#10b981" : "#d1d5db", flexShrink: 0 }} />
-                    {u.status}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
-                    <div style={{ cursor: "pointer", fontSize: 18, color: "#9ca3af", padding: "4px 6px" }}>⋮</div>
-                  </div>
-                </div>
+                  </td>
+                  <td style={{ padding: 12 }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 999,
+                      background: u.isOnline ? '#ecfdf3' : '#f2f4f7',
+                      color: u.isOnline ? '#027a48' : '#667085',
+                      padding: '4px 10px', fontSize: 12, fontWeight: 700,
+                    }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: u.isOnline ? '#12b76a' : '#98a2b3' }} />
+                      {u.statusText}
+                    </span>
+                  </td>
+                  <td style={{ padding: 12, fontSize: 13, color: '#475467' }}>{u.email || '--'}</td>
+                  <td style={{ padding: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => setEditingRoleUserId((prev) => (prev === u.userId ? null : u.userId))}
+                        disabled={actingUserId === u.userId}
+                        title="Chỉnh sửa role"
+                        style={{
+                          width: 30, height: 30, borderRadius: 8, border: '1px solid #d0d5dd', background: '#fff',
+                          cursor: actingUserId === u.userId ? 'not-allowed' : 'pointer', color: '#1d4ed8', fontSize: 14,
+                        }}
+                      >
+                        ✎
+                      </button>
+
+                      {editingRoleUserId === u.userId && (
+                        <select
+                          value={u.roleKey || 'user'}
+                          disabled={actingUserId === u.userId}
+                          onChange={(e) => handleEditRole(u, e.target.value)}
+                          onBlur={() => {
+                            if (actingUserId !== u.userId) setEditingRoleUserId(null);
+                          }}
+                          style={{
+                            height: 30,
+                            borderRadius: 8,
+                            border: '1px solid #d0d5dd',
+                            background: '#fff',
+                            fontSize: 12,
+                            color: '#344054',
+                            padding: '0 8px',
+                            outline: 'none',
+                          }}
+                        >
+                          <option value="user">User</option>
+                          <option value="admin">Admin</option>
+                          <option value="super-admin">Super Admin</option>
+                        </select>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleLock(u)}
+                        disabled={actingUserId === u.userId}
+                        title={Number(u.status) === 1 ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+                        style={{
+                          width: 30, height: 30, borderRadius: 8, border: '1px solid #d0d5dd', background: '#fff',
+                          cursor: actingUserId === u.userId ? 'not-allowed' : 'pointer',
+                          color: Number(u.status) === 1 ? '#b42318' : '#027a48', fontSize: 14,
+                        }}
+                      >
+                        {Number(u.status) === 1 ? '🔒' : '🔓'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               ))}
-            </div>
-
-            {/* Bottom 3 cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-              {[
-                {
-                  icon: "🛡️",
-                  title: "Kiểm tra bảo mật",
-                  desc: "Lần quét toàn bộ hệ thống cuối cùng hoàn thành cách đây 4 giờ. Không có bất thường nào được phát hiện.",
-                  iconColor: "#1a7a4a",
-                },
-                {
-                  icon: "🔗",
-                  title: "Webhooks đang hoạt động",
-                  desc: "12 điểm cuối đang lắng nghe cảnh báo ngưỡng PM2.5 tại 4 tỉnh thành.",
-                  iconColor: "#1a7a4a",
-                },
-                {
-                  icon: "🕐",
-                  title: "Nhật ký truy cập",
-                  desc: "3 lần đăng nhập thất bại từ IP không xác định (192.168.1.1) đã được ghi cờ để xem xét.",
-                  iconColor: "#b91c1c",
-                },
-              ].map((card) => (
-                <div key={card.title} style={{ background: "#fff", borderRadius: 14, padding: "22px 20px" }}>
-                  <div style={{ fontSize: 24, marginBottom: 10 }}>{card.icon}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{card.title}</div>
-                  <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.7 }}>{card.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right col */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-            {/* API Key card */}
-            <div style={{ background: "#fff", borderRadius: 14, padding: "22px 20px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <div style={{ fontSize: 15, fontWeight: 700 }}>Sử dụng API Key</div>
-                <span style={{ fontSize: 18, color: "#9ca3af" }}>✦</span>
-              </div>
-
-              <div style={{ marginBottom: 6 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.5 }}>Hạn ngạch đã dùng</span>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>8,450 / 10,000</span>
-                </div>
-                <div style={{ height: 8, background: "#e5e7eb", borderRadius: 4 }}>
-                  <div style={{ width: "84.5%", height: "100%", background: "#1a7a4a", borderRadius: 4 }} />
-                </div>
-              </div>
-
-              <div style={{ marginTop: 18, background: "#f9fafb", borderRadius: 10, padding: "14px 14px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <span style={{ fontSize: 16 }}>🔑</span>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>Khóa tích hợp Master</span>
-                </div>
-                <div style={{ fontSize: 12, color: "#9ca3af", fontFamily: "monospace", background: "#f3f4f6", padding: "6px 10px", borderRadius: 6, marginBottom: 12, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
-                  ecair_live_9a87v2b5_x900k11...
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button style={{ flex: 1, border: "1.5px solid #d1d5db", background: "#fff", borderRadius: 7, padding: "8px 0", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                    THU HỒI
-                  </button>
-                  <button style={{ flex: 1, border: "1.5px solid #d1d5db", background: "#fff", borderRadius: 7, padding: "8px 0", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                    ĐỔI KHÓA
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: "1.5px dashed #d1d5db", borderRadius: 8, padding: "10px 0", cursor: "pointer" }}>
-                <span style={{ fontSize: 16, color: "#6b7280" }}>⊕</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>TẠO KHÓA MỚI</span>
-              </div>
-            </div>
-
-            {/* Optimization suggestion */}
-            <div style={{ background: "#fff", borderRadius: 14, padding: "22px 20px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <span style={{ fontSize: 18 }}>📈</span>
-                <span style={{ fontSize: 14, fontWeight: 700 }}>Gợi ý tối ưu hóa</span>
-              </div>
-              <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, marginBottom: 14 }}>
-                Hệ thống nhận thấy 3 tài khoản PRO không hoạt động. Hạ cấp chúng có thể tối ưu hóa chi phí hạ tầng khoảng <span style={{ color: "#1a7a4a", fontWeight: 700 }}>12%</span>.
-              </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#1a7a4a" }}>Xem xét các tài khoản không hoạt động</span>
-                <span style={{ color: "#1a7a4a", fontSize: 14 }}>→</span>
-              </div>
-            </div>
-          </div>
+            </tbody>
+          </table>
         </div>
+
+        {!loading && viewUsers.length === 0 && (
+          <div style={{ padding: 18, fontSize: 13, color: '#667085' }}>
+            Không có người dùng nào phù hợp.
+          </div>
+        )}
+
+        {loading && (
+          <div style={{ padding: 18, fontSize: 13, color: '#667085' }}>
+            Đang tải dữ liệu người dùng...
+          </div>
+        )}
       </div>
     </div>
   );

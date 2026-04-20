@@ -1,8 +1,18 @@
-﻿import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+
+function MapUpdater({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center && center.length === 2 && !isNaN(center[0])) {
+      map.setView(center, map.getZoom(), { animate: true });
+    }
+  }, [center, map]);
+  return null;
+}
 import MainLayout from "../../components/layout/MainLayout";
 import theme from "../../components/layout/theme";
 
@@ -257,84 +267,167 @@ function AqiInfoSection() {
 
 /* ─── Hero Section ─────────────────────────────────────────────── */
 function HeroSection() {
+  const navigate = useNavigate();
   const [heroRef, heroVisible] = useScrollReveal({ threshold: 0.05 });
   const [dashboardRef, dashboardVisible] = useScrollReveal({ threshold: 0.1 });
   const [nearbyStations, setNearbyStations] = useState([]);
-  const [selectedStation, setSelectedStation] = useState(null);
-  const [stationDetail, setStationDetail] = useState(null);
-  const [stationError, setStationError] = useState("");
+  const [cityDetail, setCityDetail] = useState(null);
+  const [dataError, setDataError] = useState("");
+
+  /* ── Search state ── */
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState({ cities: [], stations: [] });
+  const [showDrop, setShowDrop] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const searchRef = useRef(null);
+  const debounceRef = useRef(null);
+
+  /* Server-side search with 300ms debounce */
+  const doSearch = useCallback(async (term) => {
+    if (!term || term.trim().length < 2) {
+      setSearchResults({ cities: [], stations: [] });
+      setShowDrop(false);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(term.trim())}&limit=6`);
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults({
+          cities: Array.isArray(data.cities) ? data.cities : [],
+          stations: Array.isArray(data.stations) ? data.stations : [],
+        });
+        setShowDrop(true);
+      }
+    } catch { /* silent */ } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  function handleQueryChange(e) {
+    const val = e.target.value;
+    setQuery(val);
+    clearTimeout(debounceRef.current);
+    if (val.trim().length < 2) {
+      setSearchResults({ cities: [], stations: [] });
+      setShowDrop(false);
+      return;
+    }
+    setSearching(true);
+    debounceRef.current = setTimeout(() => doSearch(val), 300);
+  }
+
+  /* Close dropdown on outside click */
+  useEffect(() => {
+    function handleClick(e) {
+      if (searchRef.current && !searchRef.current.contains(e.target)) setShowDrop(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function handleSearch(e) {
+    e.preventDefault();
+    clearTimeout(debounceRef.current);
+    doSearch(query);
+  }
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadHanoiStation() {
+    async function loadCityData(slug) {
+      if (!slug) return;
       try {
-        setStationError("");
-
-        const stationsResponse = await fetch("/api/airquality/map-stations?limit=600", { cache: "no-store" });
-        if (!stationsResponse.ok) {
-          throw new Error("Không tải được dữ liệu trạm");
+        setDataError("");
+        const cityRes = await fetch(`/api/city/${slug}`, { cache: "no-store" });
+        if (cityRes.ok) {
+          const cityData = await cityRes.json();
+          if (isMounted) setCityDetail(cityData);
+        } else {
+          if (isMounted) setDataError("Không tải được dữ liệu thành phố");
         }
 
-        const stations = await stationsResponse.json();
-        if (!isMounted) return;
-
-        const hanoiStations = (Array.isArray(stations) ? stations : []).filter((x) => isHanoiCity(x.city));
-        if (hanoiStations.length === 0) {
-          setStationError("Hiện chưa có dữ liệu trạm Hà Nội.");
-          return;
-        }
-
-        const hanoiCenter = { latitude: 21.0285, longitude: 105.8542 };
-        const sorted = [...hanoiStations].sort((a, b) => {
-          const da = (a.latitude - hanoiCenter.latitude) ** 2 + (a.longitude - hanoiCenter.longitude) ** 2;
-          const db = (b.latitude - hanoiCenter.latitude) ** 2 + (b.longitude - hanoiCenter.longitude) ** 2;
-          return da - db;
-        });
-
-        const fixedStation = sorted[0];
-        setSelectedStation(fixedStation);
-        setNearbyStations(sorted.slice(0, 20));
-
-        const detailResponse = await fetch(`/api/airquality/station/${fixedStation.stationId}`, { cache: "no-store" });
-        if (detailResponse.ok) {
-          const detail = await detailResponse.json();
-          if (isMounted) {
-            setStationDetail(detail);
+        const stationsResponse = await fetch(`/api/city/${slug}/stations`, { cache: "no-store" });
+        if (stationsResponse.ok) {
+          const stData = await stationsResponse.json();
+          if (isMounted && stData && stData.stations) {
+            setNearbyStations(stData.stations.slice(0, 20));
           }
         }
       } catch {
-        if (isMounted) {
-          setStationError("Không thể tải dữ liệu trạm thực tế.");
-        }
+        if (isMounted) setDataError("Không thể tải dữ liệu.");
       }
     }
 
-    loadHanoiStation();
+    async function loadRandomFallback() {
+      try {
+        const res = await fetch(`/api/city/random`, { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          loadCityData(data.slug);
+        } else {
+          if (isMounted) setDataError("Không thể gọi dữ liệu ngẫu nhiên.");
+        }
+      } catch {
+        if (isMounted) setDataError("Lỗi kết nối máy chủ.");
+      }
+    }
+
+    async function initDashboard() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            try {
+              const res = await fetch(`/api/city/nearest?lat=${latitude}&lon=${longitude}`, { cache: "no-store" });
+              if (res.ok) {
+                const data = await res.json();
+                loadCityData(data.slug);
+              } else {
+                loadRandomFallback();
+              }
+            } catch {
+              loadRandomFallback();
+            }
+          },
+          (error) => {
+            loadRandomFallback();
+          },
+          { timeout: 5000 }
+        );
+      } else {
+        loadRandomFallback();
+      }
+    }
+
+    initDashboard();
+
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const currentAqi = Number(stationDetail?.calculatedAqi ?? selectedStation?.calculatedAqi ?? 0);
-  const currentColor = stationDetail?.colorHex ?? selectedStation?.colorHex ?? "#94a3b8";
-  const currentLevel = stationDetail?.level ?? selectedStation?.level ?? "Đang cập nhật";
-  const currentStationName = stationDetail?.stationName ?? selectedStation?.stationName ?? "Trạm Hà Nội";
-  const currentTimestamp = stationDetail?.timestamp ?? selectedStation?.timestamp;
+  const currentAqi = Number(cityDetail?.calculatedAqi ?? 0);
+  const currentColor = cityDetail?.colorHex ?? "#94a3b8";
+  const currentLevel = cityDetail?.level ?? "Đang cập nhật";
+  const currentCityName = cityDetail?.provinceName ?? "Hà Nội";
+  const currentTimestamp = cityDetail?.timestamp;
   const dashboardTintStrong = hexToRgba(currentColor, 0.78);
   const dashboardTintLight = hexToRgba(currentColor, 0.32);
 
   const pollutantCards = [
-    { name: "Vật chất hạt mịn (PM2.5)", value: stationDetail?.pm25, unit: "µg/m³", color: "#eab308" },
-    { name: "Vật chất hạt mịn (PM10)", value: stationDetail?.pm10, unit: "µg/m³", color: "#f59e0b" },
-    { name: "Carbon monoxide (CO)", value: stationDetail?.co, unit: "μg/m³", color: "#22c55e" },
-    { name: "Lưu huỳnh dioxide (SO2)", value: stationDetail?.so2, unit: "μg/m³", color: "#22c55e" },
-    { name: "Nitrogen dioxide (NO2)", value: stationDetail?.no2, unit: "μg/m³", color: "#22c55e" },
-    { name: "Ozon (O3)", value: stationDetail?.o3, unit: "μg/m³", color: "#22c55e" },
+    { name: "Vật chất hạt mịn (PM2.5)", value: cityDetail?.pm25, unit: "µg/m³", color: "#eab308" },
+    { name: "Vật chất hạt mịn (PM10)", value: cityDetail?.pm10, unit: "µg/m³", color: "#f59e0b" },
+    { name: "Carbon monoxide (CO)", value: cityDetail?.co, unit: "μg/m³", color: "#22c55e" },
+    { name: "Lưu huỳnh dioxide (SO2)", value: cityDetail?.so2, unit: "μg/m³", color: "#22c55e" },
+    { name: "Nitrogen dioxide (NO2)", value: cityDetail?.no2, unit: "μg/m³", color: "#22c55e" },
+    { name: "Ozon (O3)", value: cityDetail?.o3, unit: "μg/m³", color: "#22c55e" },
   ];
 
-  const mapCenter = selectedStation
-    ? [selectedStation.latitude, selectedStation.longitude]
+  const mapCenter = cityDetail
+    ? [cityDetail.latitude, cityDetail.longitude]
     : [21.0285, 105.8542];
 
   return (
@@ -424,61 +517,78 @@ function HeroSection() {
           mạng lưới cảm biến cộng đồng.
         </p>
 
-        {/* Search bar */}
-        <div
-          style={{
-            display: "flex",
-            maxWidth: 520,
-            margin: "0 auto",
-            background: "white",
-            borderRadius: 12,
-            border: `1.5px solid ${theme.border}`,
-            boxShadow: "0 4px 24px rgba(0,0,0,0.07)",
-            overflow: "hidden",
-            ...fadeUp(heroVisible, 400),
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", padding: "0 16px" }}>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#9ca3af"
-              strokeWidth="2"
-              strokeLinecap="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-          </div>
-          <input
-            type="text"
-            placeholder="Nhập thành phố hoặc trạm (VD: Hà Nội, Đà Nẵng...)"
-            style={{
-              flex: 1,
-              border: "none",
-              outline: "none",
-              fontSize: 14,
-              color: theme.text,
-              padding: "14px 0",
-              background: "transparent",
-            }}
-          />
-          <button
-            style={{
-              padding: "12px 22px",
-              background: theme.green,
-              color: "white",
-              border: "none",
-              cursor: "pointer",
-              fontSize: 14,
-              fontWeight: 600,
-              borderRadius: 0,
-            }}
-          >
-            Tìm kiếm
-          </button>
+        {/* Search bar with autocomplete */}
+        <div ref={searchRef} style={{ position: "relative", maxWidth: 520, margin: "0 auto", ...fadeUp(heroVisible, 400) }}>
+          <form onSubmit={handleSearch} style={{ display: "flex", background: "white", borderRadius: 12, border: `1.5px solid ${showDrop ? theme.green : theme.border}`, boxShadow: showDrop ? `0 0 0 3px ${theme.green}22, 0 4px 24px rgba(0,0,0,0.1)` : "0 4px 24px rgba(0,0,0,0.07)", overflow: "visible", transition: "box-shadow .2s, border-color .2s" }}>
+            <div style={{ display: "flex", alignItems: "center", padding: "0 16px", flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={query}
+              onChange={handleQueryChange}
+              onFocus={() => { if (searchResults.cities.length || searchResults.stations.length) setShowDrop(true); }}
+              placeholder="Tìm thành phố hoặc trạm... (VD: Hà Nội)"
+              style={{ flex: 1, border: "none", outline: "none", fontSize: 14, color: theme.text, padding: "14px 0", background: "transparent" }}
+            />
+            {query && (
+              <button type="button" onClick={() => { setQuery(""); setSearchResults({ cities: [], stations: [] }); setShowDrop(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 18, paddingRight: 8, display: "flex", alignItems: "center" }}>×</button>
+            )}
+            <button type="submit" style={{ padding: "12px 22px", background: theme.green, color: "white", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, borderRadius: "0 10px 10px 0", flexShrink: 0 }}>Tìm kiếm</button>
+          </form>
+
+          {/* Dropdown */}
+          {(showDrop || searching) && (
+            <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0, background: "white", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.14)", border: `1px solid ${theme.border}`, zIndex: 999, overflow: "hidden" }}>
+              {/* Loading indicator */}
+              {searching && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", color: "#9ca3af", fontSize: 13 }}>
+                  <div style={{ width: 14, height: 14, border: `2px solid ${theme.green}40`, borderTopColor: theme.green, borderRadius: "50%", animation: "searchSpin 0.7s linear infinite", flexShrink: 0 }} />
+                  <style>{`@keyframes searchSpin { to { transform: rotate(360deg); } }`}</style>
+                  Đang tìm kiếm...
+                </div>
+              )}
+
+              {!searching && searchResults.cities.length > 0 && (
+                <>
+                  <div style={{ padding: "8px 16px 4px", fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 0.8 }}>🏙️ Thành phố / Tỉnh thành</div>
+                  {searchResults.cities.map(c => (
+                    <div key={c.cityId ?? c.slug} onClick={() => { navigate(`/thanh-pho/${c.slug}`); setShowDrop(false); setQuery(""); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", cursor: "pointer", transition: "background .15s" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "#f0fdf4"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: c.colorHex ? `${c.colorHex}20` : "#f0fdf4", border: `1.5px solid ${c.colorHex ?? theme.green}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: c.colorHex ?? theme.green, flexShrink: 0 }}>{c.calculatedAqi ?? "—"}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: theme.text }}>{c.provinceName}</div>
+                        <div style={{ fontSize: 11, color: "#9ca3af" }}>{c.region} · {c.level ?? "Đang cập nhật"}</div>
+                      </div>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
+                    </div>
+                  ))}
+                </>
+              )}
+              {!searching && searchResults.stations.length > 0 && (
+                <>
+                  <div style={{ padding: "8px 16px 4px", fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: 0.8, borderTop: searchResults.cities.length ? `1px solid ${theme.border}` : "none" }}>📡 Trạm quan trắc</div>
+                  {searchResults.stations.map(s => (
+                    <div key={s.stationId} onClick={() => { navigate(`/tram/${s.stationId}`); setShowDrop(false); setQuery(""); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", cursor: "pointer", transition: "background .15s" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "#f0fdf4"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: s.colorHex ? `${s.colorHex}20` : "#f0fdf4", border: `1.5px solid ${s.colorHex ?? "#64748b"}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: s.colorHex ?? "#64748b", flexShrink: 0 }}>{s.calculatedAqi ?? "—"}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: theme.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.stationName}</div>
+                        <div style={{ fontSize: 11, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📍 {s.city}</div>
+                      </div>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
+                    </div>
+                  ))}
+                </>
+              )}
+              {!searching && searchResults.cities.length === 0 && searchResults.stations.length === 0 && showDrop && (
+                <div style={{ padding: "16px", textAlign: "center", color: "#9ca3af", fontSize: 13 }}>Không tìm thấy kết quả cho "{query}"</div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -520,9 +630,10 @@ function HeroSection() {
             zoomControl={false}
             attributionControl={false}
           >
+            <MapUpdater center={mapCenter} />
             <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
             {nearbyStations.map((station) => {
-              const isSelected = station.stationId === selectedStation?.stationId;
+              const isSelected = false;
               const markerColor = station.colorHex || "#facc15";
               const markerAqi = Number(station.calculatedAqi ?? 0);
 
@@ -595,7 +706,7 @@ function HeroSection() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, padding: "0 16px" }}>
             <div>
               <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 6, color: "#f8fafc" }}>Real-time Air Quality Index (AQI)</div>
-              <div style={{ color: "#3b82f6", fontSize: 13, marginBottom: 6, cursor: "pointer", textDecoration: "underline" }}>{currentStationName}, Vietnam</div>
+              <div style={{ color: "#3b82f6", fontSize: 13, marginBottom: 6, cursor: "pointer", textDecoration: "underline" }} onClick={() => navigate(`/thanh-pho/${cityDetail?.slug || 'ha-noi'}`)}>📍 {currentCityName}, Vietnam</div>
               <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, fontStyle: "italic" }}>
                 Cập nhật lần cuối: {formatLocalTime(currentTimestamp)} (Thời gian địa phương)
               </div>
@@ -662,12 +773,12 @@ function HeroSection() {
               <div style={{ display: "flex", gap: 32, marginBottom: 32 }}>
                 <div>
                   <span style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.8)" }}>PM2.5 : </span>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: "#f8fafc" }}>{stationDetail?.pm25 ?? "--"}</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: "#f8fafc" }}>{cityDetail?.pm25 ?? "--"}</span>
                   <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginLeft: 4 }}>µg/m³</span>
                 </div>
                 <div>
                   <span style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.8)" }}>PM10 : </span>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: "#f8fafc" }}>{stationDetail?.pm10 ?? "--"}</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: "#f8fafc" }}>{cityDetail?.pm10 ?? "--"}</span>
                   <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginLeft: 4 }}>µg/m³</span>
                 </div>
               </div>
@@ -695,9 +806,9 @@ function HeroSection() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="#94a3b8"><path d="M17.5 19c2.5 0 4.5-2 4.5-4.5S20 10 17.5 10c-.3 0-.6 0-.8.1-1.3-3.6-5.1-5.6-8.9-4.2-2.4 1-4.2 3.1-4.6 5.6C1.4 11.9 0 13.8 0 16c0 2.8 2.2 5 5 5h12.5z" /></svg>
-                    <div style={{ fontSize: 32, fontWeight: 700, color: "white" }}>{stationDetail?.temperature ?? selectedStation?.temperature ?? "--"} <span style={{ fontSize: 20 }}>°C</span></div>
+                    <div style={{ fontSize: 32, fontWeight: 700, color: "white" }}>{cityDetail?.temperature ?? "--"} <span style={{ fontSize: 20 }}>°C</span></div>
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>Overcast</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(255,255,255,0.9)", textTransform: "capitalize" }}>{cityDetail?.weatherDescription ?? cityDetail?.weatherMain ?? "Đang cập nhật"}</div>
                   <div style={{ width: 28, height: 28, borderRadius: "50%", background: "white", display: "flex", alignItems: "center", justifyContent: "center", color: "#1f2937", cursor: "pointer" }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M7 17L17 7M17 7H7M17 7v10" /></svg>
                   </div>
@@ -711,14 +822,14 @@ function HeroSection() {
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" /></svg>
                     </div>
                     <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 2 }}>Độ ẩm</div>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>{stationDetail?.humidity ?? "--"} %</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{cityDetail?.humidity ?? "--"} %</div>
                   </div>
                   <div>
                     <div style={{ display: "flex", justifyContent: "center", marginBottom: 6, color: "rgba(255,255,255,0.7)" }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" /></svg>
                     </div>
                     <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 2 }}>Tốc độ gió</div>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>{stationDetail?.windSpeed ?? "--"} km/h</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{cityDetail?.windSpeed ?? "--"} km/h</div>
                   </div>
                   <div>
                     <div style={{ display: "flex", justifyContent: "center", marginBottom: 6, color: "rgba(255,255,255,0.7)" }}>

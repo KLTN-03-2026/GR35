@@ -10,3 +10,30 @@ export const AQI_LEVELS = [
 export function getLevel(aqi) {
     return AQI_LEVELS.find((l) => aqi <= l.max) ?? AQI_LEVELS[AQI_LEVELS.length - 1];
 }
+
+export function getHealthTiles(aqi) {
+    if (aqi <= 50) return [
+        { icon: "😊", label: "Không cần khẩu trang", active: false },
+        { icon: "🪟", label: "Thoải mái mở cửa", active: true },
+        { icon: "🏃", label: "Lý tưởng để tập thể dục", active: true },
+        { icon: "💨", label: "Máy lọc không cần thiết", active: false },
+        { icon: "👨‍👩‍👧", label: "An toàn cho trẻ em & người già", active: true },
+        { icon: "🌿", label: "Thích hợp hoạt động ngoài trời", active: true },
+    ];
+    if (aqi <= 100) return [
+        { icon: "😷", label: "Chưa cần khẩu trang", active: false },
+        { icon: "🪟", label: "Nên mở cửa thoáng", active: true },
+        { icon: "🏃", label: "Vẫn có thể tập ngoài trời", active: true },
+        { icon: "💨", label: "Máy lọc hữu ích", active: true },
+        { icon: "⚠️", label: "Người nhạy cảm chú ý", active: true },
+        { icon: "🌿", label: "Hạn chế thời gian ngoài trời lâu", active: false },
+    ];
+    return [
+        { icon: "😷", label: "Nên đeo khẩu trang N95", active: true },
+        { icon: "🏠", label: "Hạn chế ra ngoài trời", active: true },
+        { icon: "🚫", label: "Tránh tập thể dục ngoài trời", active: true },
+        { icon: "💨", label: "Bật máy lọc không khí", active: true },
+        { icon: "🧒", label: "Giữ trẻ em trong nhà", active: true },
+        { icon: "🏥", label: "Người bệnh cần đặc biệt chú ý", active: true },
+    ];
+}

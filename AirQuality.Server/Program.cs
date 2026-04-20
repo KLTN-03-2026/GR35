@@ -20,8 +20,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 //builder.Services.AddHostedService<TedpDataFetchService>();
 //builder.Services.AddHostedService<WeatherDataFetchService>();
 
-builder.Services.AddHttpClient();
-builder.Services.AddHostedService<OwmCityDataFetchService>();
+//builder.Services.AddHttpClient();
+//builder.Services.AddHostedService<OwmCityDataFetchService>();
 
 builder.Services
     .AddOptions<JwtOptions>()

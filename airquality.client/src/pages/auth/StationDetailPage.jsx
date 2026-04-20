@@ -7,20 +7,28 @@ import MainLayout from "../../components/layout/MainLayout";
 
 /* ─── Design tokens ──────────────────────────────────────────── */
 const T = {
-    bg: "#f5f6f8",
-    card: "#ffffff",
-    green: "#0d6e4e",
-    greenLight: "#e8f5ef",
-    text: "#111827",
-    textSub: "#6b7280",
-    textLight: "#9ca3af",
-    border: "#e5e7eb",
-    shadow: "0 1px 4px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05)",
+    bg: "#0b0f19",
+    card: "#161d2e",
+    green: "#10b981",
+    greenLight: "rgba(16, 185, 129, 0.15)",
+    text: "#f1f5f9",
+    textSub: "#94a3b8",
+    textLight: "#64748b",
+    border: "#1e2d44",
+    shadow: "0 8px 32px rgba(0,0,0,0.2)",
     radius: 16,
     radiusSm: 10,
 };
 
-import { AQI_LEVELS, getLevel } from "../../utils/aqiHelper";
+function hexToRgb(hex, a = 1) {
+    if (!hex) return `rgba(0,0,0,${a})`;
+    const clean = hex.replace("#", "");
+    const full = clean.length === 3 ? clean.split("").map(c => c + c).join("") : clean;
+    const n = parseInt(full, 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+import { AQI_LEVELS, getLevel, getHealthTiles } from "../../utils/aqiHelper";
 
 /* ─── Map icon ────────────────────────────────────────────────── */
 function pinIcon(color) {
@@ -70,7 +78,7 @@ function PollutantRow({ label, value, unit, max }) {
     return (
         <div style={{ display: "grid", gridTemplateColumns: "60px 1fr 80px", gap: "0 12px", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${T.border}` }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: T.textSub }}>{label}</div>
-            <div style={{ height: 6, borderRadius: 99, background: "#f3f4f6", overflow: "hidden" }}>
+            <div style={{ height: 6, borderRadius: 99, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 99, transition: "width .5s ease" }} />
             </div>
             <div style={{ fontSize: 13, fontWeight: 700, color: T.text, textAlign: "right" }}>
@@ -141,8 +149,8 @@ function HealthTile({ icon, label, active }) {
                 gap: 10,
                 padding: "10px 12px",
                 borderRadius: T.radiusSm,
-                background: active ? T.greenLight : "#f9fafb",
-                border: `1px solid ${active ? "#a7f3d0" : T.border}`,
+                background: active ? T.greenLight : "rgba(255,255,255,0.03)",
+                border: `1px solid ${active ? "rgba(16, 185, 129, 0.4)" : T.border}`,
             }}
         >
             <span style={{ fontSize: 22, opacity: active ? 1 : 0.35 }}>{icon}</span>
@@ -189,6 +197,20 @@ export default function StationDetailPage() {
 
     useEffect(() => { loadData(); }, [loadData]);
 
+    useEffect(() => {
+        if (loading) {
+            document.title = "Đang tải trạm | EcoAir VN";
+            return;
+        }
+
+        if (error || !station) {
+            document.title = "Không tìm thấy trạm | EcoAir VN";
+            return;
+        }
+
+        document.title = `${station.stationName} | Trạm quan trắc | EcoAir VN`;
+    }, [loading, error, station]);
+
     /* ── Loading ── */
     if (loading) {
         return (
@@ -231,27 +253,7 @@ export default function StationDetailPage() {
         ? new Date(station.timestamp).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
         : "--";
 
-    const healthTiles =
-        aqi <= 50
-            ? [
-                { icon: "😷", label: "Không cần khẩu trang", active: false },
-                { icon: "🪟", label: "Thoải mái mở cửa", active: true },
-                { icon: "🏃", label: "Tập thể dục lý tưởng", active: true },
-                { icon: "💨", label: "Máy lọc chưa cần thiết", active: false },
-            ]
-            : aqi <= 100
-                ? [
-                    { icon: "😷", label: "Chưa cần khẩu trang", active: false },
-                    { icon: "🪟", label: "Nên mở cửa thoáng", active: true },
-                    { icon: "🏃", label: "Vẫn có thể tập ngoài trời", active: true },
-                    { icon: "💨", label: "Máy lọc hữu ích", active: true },
-                ]
-                : [
-                    { icon: "😷", label: "Nên đeo khẩu trang", active: true },
-                    { icon: "🏠", label: "Hạn chế ra ngoài", active: true },
-                    { icon: "🚫", label: "Hạn chế tập ngoài trời", active: true },
-                    { icon: "💨", label: "Dùng máy lọc không khí", active: true },
-                ];
+
 
     return (
         <MainLayout activePage="Du lieu chat luong khong khi">
@@ -308,7 +310,7 @@ export default function StationDetailPage() {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
 
                         {/* AQI Hero */}
-                        <Card style={{ padding: "28px 28px 24px", background: lv.bg, border: `1.5px solid ${lv.color}22` }}>
+                        <Card style={{ padding: "28px 28px 24px", background: hexToRgb(lv.color, 0.08), border: `1.5px solid ${lv.color}22` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                                 <div>
                                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", color: lv.color, marginBottom: 4 }}>
@@ -325,7 +327,7 @@ export default function StationDetailPage() {
                                             marginTop: 16,
                                             padding: "10px 24px 10px 16px",
                                             borderRadius: 99,
-                                            background: lv.badge,
+                                            background: hexToRgb(lv.color, 0.15),
                                             border: `1px solid ${lv.color}33`,
                                         }}
                                     >
@@ -359,7 +361,7 @@ export default function StationDetailPage() {
 
                             {/* Health advice strip */}
                             {station.healthAdvice && (
-                                <div style={{ marginTop: 20, padding: "10px 14px", borderRadius: T.radiusSm, background: "#fff8", border: `1px solid ${lv.color}22`, fontSize: 12.5, color: T.text, lineHeight: 1.5 }}>
+                                <div style={{ marginTop: 20, padding: "10px 14px", borderRadius: T.radiusSm, background: hexToRgb(lv.color, 0.08), border: `1px solid ${lv.color}22`, fontSize: 12.5, color: T.text, lineHeight: 1.5 }}>
                                     ℹ️ {station.healthAdvice}
                                 </div>
                             )}
@@ -456,7 +458,7 @@ export default function StationDetailPage() {
                             <Card style={{ padding: "24px" }}>
                                 <SectionTitle icon="💚">Khuyến nghị sức khỏe</SectionTitle>
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                                    {healthTiles.map((h, i) => <HealthTile key={i} {...h} />)}
+                                    {getHealthTiles(aqi).map((h, i) => <HealthTile key={i} {...h} />)}
                                 </div>
                             </Card>
                         </div>
@@ -474,7 +476,7 @@ export default function StationDetailPage() {
                                     zoomControl={false}
                                     attributionControl={false}
                                 >
-                                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                    <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
                                     <Marker
                                         position={[station.latitude, station.longitude]}
                                         icon={pinIcon(lv.color)}
@@ -488,14 +490,14 @@ export default function StationDetailPage() {
                                     alignItems: "center",
                                     gap: 12,
                                     padding: "14px 16px",
-                                    background: lv.bg,
+                                    background: hexToRgb(lv.color, 0.05),
                                     borderTop: `1px solid ${lv.color}22`,
                                 }}
                             >
                                 <div
                                     style={{
                                         width: 44, height: 44, borderRadius: 10,
-                                        background: lv.badge,
+                                        background: hexToRgb(lv.color, 0.15),
                                         border: `2px solid ${lv.color}44`,
                                         display: "flex", alignItems: "center", justifyContent: "center",
                                         fontSize: 22, fontWeight: 900, color: lv.color,
@@ -512,7 +514,7 @@ export default function StationDetailPage() {
                     </div>
 
                     {/* AI PRO banner */}
-                    <Card style={{ marginTop: 16, padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", background: "linear-gradient(120deg, #f0fdf4, #fff)" }}>
+                    <Card style={{ marginTop: 16, padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", background: "linear-gradient(120deg, rgba(16, 185, 129, 0.1), #0b0f19)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                             <div style={{ width: 44, height: 44, borderRadius: 10, background: T.greenLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🤖</div>
                             <div>
@@ -521,7 +523,7 @@ export default function StationDetailPage() {
                             </div>
                         </div>
                         <div style={{ display: "flex", gap: 8 }}>
-                            <button style={{ padding: "9px 18px", borderRadius: 99, background: "#f3f4f6", color: T.textSub, border: `1px solid ${T.border}`, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
+                            <button style={{ padding: "9px 18px", borderRadius: 99, background: "rgba(255,255,255,0.06)", color: T.textSub, border: `1px solid ${T.border}`, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
                                 ⬇ Xuất CSV
                             </button>
                             <button style={{ padding: "9px 18px", borderRadius: 99, background: T.green, color: "#fff", border: "none", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
