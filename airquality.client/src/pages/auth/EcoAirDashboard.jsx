@@ -1,6 +1,8 @@
 ﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import PlacesTab from "./PlacesTab";
+import ReportTab from "./ReportTab";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -65,6 +67,10 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userName }) {
             icon: <Icon d={["M3 3h7v7H3z", "M14 3h7v7h-7z", "M3 14h7v7H3z", "M14 14h7v7h-7z"]} />,
         },
         {
+            id: "places", label: "Địa điểm",
+            icon: <Icon d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z" />,
+        },
+        {
             id: "map", label: "Bản đồ & Tim đường",
             icon: <Icon d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />,
         },
@@ -81,7 +87,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userName }) {
             icon: <Icon d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
         },
         {
-            id: "developer", label: "Dành cho Lập trình viên",
+            id: "developer", label: "API Key",
             icon: <Icon d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />,
         },
         {
@@ -99,7 +105,10 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userName }) {
         }}>
             {/* Logo */}
             <div style={{ padding: "18px 16px 14px", borderBottom: `1px solid ${C.border}` }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div
+                    onClick={() => navigate('/')}
+                    style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+                >
                     <div style={{
                         width: 32, height: 32, borderRadius: 8,
                         background: "linear-gradient(135deg,#0d6e4e,#22c55e)",
@@ -592,6 +601,7 @@ export default function EcoAirDashboard() {
 
     const tabTitles = {
         overview: "Tổng quan",
+        places: "Địa điểm",
         map: "Bản đồ & Tìm đường",
         history: "Lịch sử & Xuất dữ liệu",
         alert: "Cấu hình Cảnh báo",
@@ -602,10 +612,10 @@ export default function EcoAirDashboard() {
     };
 
     return (
-        <div style={{ display: "flex", minHeight: "100vh", background: C.bg, fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif" }}>
+        <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: C.bg, fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif" }}>
             <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={logout} userName={userName} />
 
-            <div style={{ marginLeft: C.sidebarW, flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+            <div style={{ marginLeft: C.sidebarW, flex: 1, display: "flex", flexDirection: "column", height: "100vh" }}>
                 <DashboardHeader userName={userName} />
 
                 <main style={{ marginTop: 60, flex: 1, padding: "28px 28px 24px", overflowY: "auto" }}>
@@ -615,7 +625,9 @@ export default function EcoAirDashboard() {
                     </div>
 
                     {activeTab === "overview" && <OverviewTab />}
-                    {activeTab !== "overview" && <PlaceholderTab title={tabTitles[activeTab]} />}
+                    {activeTab === "places" && <PlacesTab />}
+                    {activeTab === "report" && <ReportTab />}
+                    {activeTab !== "overview" && activeTab !== "places" && activeTab !== "report" && <PlaceholderTab title={tabTitles[activeTab]} />}
                 </main>
 
                 <DashboardFooter />

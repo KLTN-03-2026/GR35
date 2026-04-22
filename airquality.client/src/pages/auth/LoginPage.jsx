@@ -168,6 +168,7 @@ export default function LoginPage() {
                 localStorage.setItem("role", roleToStore);
                 // Lưu tên hiển thị (nếu API trả về)
                 localStorage.setItem("userName", result.fullName ?? result.userName ?? result.FullName ?? email.split("@")[0]);
+                localStorage.setItem("subscriptionTier", result.subscriptionTier ?? "Free");
             }
 
             // Điều hướng: admin/super admin -> /admin, còn lại -> /dashboard

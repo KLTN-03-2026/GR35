@@ -20,6 +20,8 @@ import EcoAirUserManagement from './pages/auth/EcoAirUserManagement';
 import EcoAirStationMonitor from './pages/auth/EcoAirStationMonitor';
 import GiamSatDuLieuAQI from './pages/auth/GiamSatDuLieuAQI';
 import DuyetBaoCaoDiemNongCongDong from './pages/auth/DuyetBaoCaoDiemNongCongDong';
+import PricingPage from './pages/auth/PricingPage';
+import ContactPage from './pages/auth/ContactPage';
 
 function getPageTitle(pathname) {
     if (pathname === '/') return 'Trang chủ | EcoAir VN';
@@ -29,6 +31,8 @@ function getPageTitle(pathname) {
     if (pathname === '/reset-password') return 'Đặt lại mật khẩu | EcoAir VN';
     if (pathname === '/du-lieu') return 'Dữ liệu chất lượng không khí | EcoAir VN';
     if (pathname === '/ban-do') return 'Bản đồ nhiệt toàn quốc | EcoAir VN';
+    if (pathname === '/lien-he') return 'Liên hệ | EcoAir VN';
+    if (pathname === '/goi') return 'Gói dịch vụ | EcoAir VN';
     if (pathname.startsWith('/tram/')) return 'Chi tiết trạm quan trắc | EcoAir VN';
     if (pathname.startsWith('/thanh-pho/')) return 'Chi tiết thành phố | EcoAir VN';
     if (pathname === '/dashboard') return 'Dashboard | EcoAir VN';
@@ -71,6 +75,8 @@ export default function App() {
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/du-lieu" element={<AirQualityDataPage />} />
                 <Route path="/ban-do" element={<NationalAirQualityPage />} />
+                <Route path="/lien-he" element={<ContactPage />} />
+                <Route path="/goi" element={<PricingPage />} />
                 <Route path="/tram/:stationId" element={<StationDetailPage />} />
                 <Route path="/thanh-pho/:slug" element={<CityDetailPage />} />
                 <Route path="/404" element={<NotFoundPage />} />

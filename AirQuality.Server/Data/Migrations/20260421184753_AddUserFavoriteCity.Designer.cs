@@ -4,6 +4,7 @@ using AirQuality.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AirQuality.Server.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260421184753_AddUserFavoriteCity")]
+    partial class AddUserFavoriteCity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -785,78 +788,6 @@ namespace AirQuality.Server.Data.Migrations
                     b.ToTable("Stations");
                 });
 
-            modelBuilder.Entity("AirQuality.Server.Models.Entites.SubscriptionPayment", b =>
-                {
-                    b.Property<long>("PaymentId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("payment_id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("PaymentId"));
-
-                    b.Property<decimal>("AmountVnd")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("amount_vnd");
-
-                    b.Property<string>("BankCode")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("bank_code");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("GatewayTransactionNo")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("gateway_transaction_no");
-
-                    b.Property<DateTime?>("PaidAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("paid_at");
-
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
-                        .HasDefaultValue("VNPAY")
-                        .HasColumnName("provider");
-
-                    b.Property<string>("RawResponse")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("raw_response");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
-                        .HasDefaultValue("Pending")
-                        .HasColumnName("status");
-
-                    b.Property<string>("TxnRef")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("txn_ref");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("PaymentId");
-
-                    b.HasIndex("TxnRef")
-                        .IsUnique();
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("SubscriptionPayments");
-                });
-
             modelBuilder.Entity("AirQuality.Server.Models.Entites.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -906,22 +837,6 @@ namespace AirQuality.Server.Data.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(1)
                         .HasColumnName("status");
-
-                    b.Property<DateTime?>("SubscriptionExpiresAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("subscription_expires_at");
-
-                    b.Property<DateTime?>("SubscriptionStartedAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("subscription_started_at");
-
-                    b.Property<string>("SubscriptionTier")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("Free")
-                        .HasColumnName("subscription_tier");
 
                     b.HasKey("UserId");
 
@@ -1140,17 +1055,6 @@ namespace AirQuality.Server.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("AirQuality.Server.Models.Entites.SubscriptionPayment", b =>
-                {
-                    b.HasOne("AirQuality.Server.Models.Entites.User", "User")
-                        .WithMany("SubscriptionPayments")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("AirQuality.Server.Models.Entites.User", b =>
                 {
                     b.HasOne("AirQuality.Server.Models.Entites.Role", "Role")
@@ -1272,8 +1176,6 @@ namespace AirQuality.Server.Data.Migrations
                     b.Navigation("CommunityReports");
 
                     b.Navigation("NotificationHistories");
-
-                    b.Navigation("SubscriptionPayments");
 
                     b.Navigation("UserFavoriteCities");
 

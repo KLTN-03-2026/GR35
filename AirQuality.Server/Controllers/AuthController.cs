@@ -68,7 +68,8 @@ public class AuthController(
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             Status = 1,
             CreatedAt = DateTime.UtcNow,
-            RoleId = userRoleId
+            RoleId = userRoleId,
+            SubscriptionTier = "Free"
         });
 
         await dbContext.SaveChangesAsync();
@@ -119,20 +120,36 @@ public class AuthController(
             role = roleName,
             redirectUrl,
             accessToken,
-            fullName = user.FullName
+            fullName = user.FullName,
+            subscriptionTier = user.SubscriptionTier,
+            subscriptionExpiresAt = user.SubscriptionExpiresAt
         });
     }
 
     [Authorize]
     [HttpGet("me")]
-    public IActionResult Me()
+    public async Task<IActionResult> Me()
     {
+        var userIdRaw = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdRaw, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.UserId == userId);
+        if (user is null)
+        {
+            return NotFound(new { message = "Không tìm thấy người dùng." });
+        }
+
         return Ok(new
         {
-            userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
-            fullName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value,
-            email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value,
-            role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
+            userId = userId,
+            fullName = user.FullName,
+            email = user.Email,
+            role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value,
+            subscriptionTier = user.SubscriptionTier,
+            subscriptionExpiresAt = user.SubscriptionExpiresAt
         });
     }
 

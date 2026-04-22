@@ -1,559 +1,527 @@
-﻿export default function GiamSatDuLieuAQI() {
-    const sideItems = [
-        { icon: '⊞', label: 'Bảng điều khiển', active: false },
-        { icon: '◫', label: 'Báo cáo', active: false },
-        { icon: '◌', label: 'Người dùng', active: false },
-        { icon: '◍', label: 'Trạm đo', active: true },
-        { icon: '◔', label: 'Cấu hình AI', active: false },
-    ];
+﻿import { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Activity, RefreshCcw, Search, ShieldAlert, Power, PowerOff } from 'lucide-react';
+import Pagination from '../../components/common/Pagination';
 
-    const bars = [72, 104, 80, 132, 156, 182, 142];
+const C = {
+    card: '#14202e',
+    cardBorder: '#1e3048',
+    text: '#e8edf3',
+    textMuted: '#9db0c3',
+    textDim: '#6f8397',
+    green: '#22c55e',
+    greenSoft: 'rgba(34,197,94,0.14)',
+    blue: '#3b82f6',
+    blueSoft: 'rgba(59,130,246,0.14)',
+    orange: '#f59e0b',
+    orangeSoft: 'rgba(245,158,11,0.14)',
+    red: '#ef4444',
+    redSoft: 'rgba(239,68,68,0.14)',
+};
 
-    const activities = [
-        {
-            iconBg: '#fde8e6',
-            iconColor: '#d83b2d',
-            icon: '⚠',
-            title: 'Cảnh báo: Cảng Hải Phòng',
-            desc: 'Nồng độ SO2 vượt ngưỡng 15%',
-            time: '2 phút trước',
-        },
-        {
-            iconBg: '#e7f3eb',
-            iconColor: '#168c4d',
-            icon: '☁',
-            title: 'Trạm #402 đã hiệu chuẩn',
-            desc: 'Bảo trì định kỳ hoàn tất tại TP. Huế',
-            time: '45 phút trước',
-        },
-        {
-            iconBg: '#eef7ea',
-            iconColor: '#2f8b3d',
-            icon: '◉',
-            title: 'Nghiên cứu viên mới',
-            desc: 'Đã cấp quyền truy cập cho Bộ Tài nguyên & Môi trường',
-            time: '2 giờ trước',
-        },
-    ];
+function getAuthHeaders() {
+    const token = localStorage.getItem('accessToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
-    const ghostButton = {
-        border: 'none',
-        background: 'transparent',
-        padding: 0,
-        margin: 0,
-        font: 'inherit',
-        textAlign: 'left',
-        cursor: 'pointer',
-    };
+function formatDateTime(value) {
+    if (!value) return '--';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '--';
+
+    return date.toLocaleString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
+function getAlertTone(severity) {
+    if (severity === 'Khẩn cấp') return { fg: '#fca5a5', bg: 'rgba(239,68,68,0.12)' };
+    if (severity === 'Cao') return { fg: '#fcd34d', bg: 'rgba(245,158,11,0.12)' };
+    return { fg: '#93c5fd', bg: 'rgba(59,130,246,0.12)' };
+}
+
+function SummaryCard({ label, value, sub, icon, iconBg }) {
+    return (
+        <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 14, padding: 16 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {icon}
+            </div>
+            <div style={{ marginTop: 10, fontSize: 12, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: 700 }}>
+                {label}
+            </div>
+            <div style={{ marginTop: 4, fontSize: 30, color: C.text, fontWeight: 800, lineHeight: 1 }}>{value}</div>
+            <div style={{ marginTop: 6, fontSize: 12, color: C.textDim }}>{sub}</div>
+        </div>
+    );
+}
+
+export default function GiamSatDuLieuAQI() {
+    const PAGE_SIZE = 10;
+    const [searchInput, setSearchInput] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [cityFilter, setCityFilter] = useState('all');
+    const [minAqiFilter, setMinAqiFilter] = useState('all');
+    const [reloadKey, setReloadKey] = useState(0);
+
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [actingCity, setActingCity] = useState('');
+
+    const [summary, setSummary] = useState({
+        totalCities: 0,
+        enabledCities: 0,
+        disabledCities: 0,
+        totalSnapshots24h: 0,
+        freshCities: 0,
+        averageAqi: 0,
+        criticalAlerts: 0,
+    });
+    const [trend, setTrend] = useState([]);
+    const [alerts, setAlerts] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [cityRankings, setCityRankings] = useState({ polluted: [], cleanest: [] });
+    const [availableCities, setAvailableCities] = useState([]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setSearchTerm(searchInput.trim()), 350);
+        return () => clearTimeout(timer);
+    }, [searchInput]);
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadOverview() {
+            setLoading(true);
+            setError('');
+
+            try {
+                const params = new URLSearchParams();
+                params.set('limit', '500');
+
+                if (searchTerm) params.set('q', searchTerm);
+                if (cityFilter !== 'all') params.set('city', cityFilter);
+                if (minAqiFilter !== 'all') params.set('minAqi', minAqiFilter);
+
+                const response = await fetch(`/api/admin/data-monitor/overview?${params.toString()}`, {
+                    headers: {
+                        ...getAuthHeaders(),
+                    },
+                    cache: 'no-store',
+                });
+
+                const raw = await response.text();
+                let data = null;
+                try {
+                    data = raw ? JSON.parse(raw) : null;
+                } catch {
+                    data = null;
+                }
+
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        throw new Error('Bạn không có quyền truy cập trang này.');
+                    }
+                    throw new Error(data?.message || 'Không tải được dữ liệu giám sát AQI theo thành phố.');
+                }
+
+                if (ignore) return;
+
+                setSummary(data?.summary ?? {
+                    totalCities: 0,
+                    enabledCities: 0,
+                    disabledCities: 0,
+                    totalSnapshots24h: 0,
+                    freshCities: 0,
+                    averageAqi: 0,
+                    criticalAlerts: 0,
+                });
+                setTrend(Array.isArray(data?.trend) ? data.trend : []);
+                setAlerts(Array.isArray(data?.alerts) ? data.alerts : []);
+                setCities(Array.isArray(data?.cities) ? data.cities : []);
+                setCityRankings({
+                    polluted: data?.cityRankings?.polluted ?? [],
+                    cleanest: data?.cityRankings?.cleanest ?? [],
+                });
+                setAvailableCities(Array.isArray(data?.availableCities) ? data.availableCities : []);
+            } catch (err) {
+                if (ignore) return;
+                setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu.');
+                setTrend([]);
+                setAlerts([]);
+                setCities([]);
+                setCityRankings({ polluted: [], cleanest: [] });
+                setAvailableCities([]);
+            } finally {
+                if (!ignore) setLoading(false);
+            }
+        }
+
+        loadOverview();
+
+        return () => {
+            ignore = true;
+        };
+    }, [searchTerm, cityFilter, minAqiFilter, reloadKey]);
+
+    async function handleToggleCity(cityName, isEnabled) {
+        const nextState = !isEnabled;
+        const confirmed = window.confirm(
+            nextState
+                ? `Bật giám sát cho ${cityName}?`
+                : `Tắt giám sát cho ${cityName}?`
+        );
+
+        if (!confirmed) return;
+
+        setError('');
+        setActingCity(cityName);
+
+        try {
+            const response = await fetch(`/api/admin/data-monitor/city/${encodeURIComponent(cityName)}/activation`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...getAuthHeaders(),
+                },
+                body: JSON.stringify({ isEnabled: nextState }),
+            });
+
+            const raw = await response.text();
+            let data = null;
+            try {
+                data = raw ? JSON.parse(raw) : null;
+            } catch {
+                data = null;
+            }
+
+            if (!response.ok) {
+                throw new Error(data?.message || 'Không thể cập nhật trạng thái tỉnh/thành phố.');
+            }
+
+            setReloadKey((v) => v + 1);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi cập nhật trạng thái thành phố.');
+        } finally {
+            setActingCity('');
+        }
+    }
+
+    const totalPages = useMemo(() => Math.max(1, Math.ceil(cities.length / PAGE_SIZE)), [cities.length]);
+
+    const pagedCities = useMemo(() => {
+        const start = (currentPage - 1) * PAGE_SIZE;
+        return cities.slice(start, start + PAGE_SIZE);
+    }, [cities, currentPage]);
+
+    const maxTrendValue = useMemo(() => {
+        const max = Math.max(...trend.map((x) => Number(x.averageAqi ?? 0)), 0);
+        return max || 1;
+    }, [trend]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, cityFilter, minAqiFilter, cities.length]);
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 500px', minHeight: 'calc(100vh - 64px - 56px)', background: '#f4f3e8', borderRadius: 16, overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gap: 16 }}>
+            <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16, padding: 18 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div>
+                        <div style={{ fontSize: 12, color: C.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+                            AQI Data Operations Center
+                        </div>
+                        <h1 style={{ margin: '6px 0 0', color: C.text, fontSize: 30 }}>
+                            Giám sát dữ liệu AQI theo tỉnh/thành
+                        </h1>
+                    </div>
 
-            <section style={{ position: 'relative', overflow: 'hidden', background: '#8da28c' }}>
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: 96,
-                        background: '#f5f4ea',
-                        borderBottom: '1px solid #e4e2d4',
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0 28px 0 22px',
-                        zIndex: 5,
-                    }}
-                >
                     <button
-                        type="button"
+                        onClick={() => setReloadKey((v) => v + 1)}
+                        disabled={loading}
                         style={{
-                            ...ghostButton,
-                            width: 560,
-                            height: 60,
-                            borderRadius: 4,
-                            background: '#f0efe5',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 16,
-                            padding: '0 22px',
-                            marginRight: 56,
+                            gap: 8,
+                            borderRadius: 10,
+                            border: `1px solid ${C.cardBorder}`,
+                            padding: '9px 13px',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: C.text,
+                            background: loading ? '#101a26' : '#101c2a',
+                            cursor: loading ? 'not-allowed' : 'pointer',
                         }}
                     >
-                        <span style={{ fontSize: 28, color: '#78806f' }}>⌕</span>
-                        <span style={{ fontSize: 20, color: '#c0c4b6' }}>Tìm kiếm hệ thống...</span>
-                    </button>
-
-                    <div style={{ display: 'flex', gap: 42, alignItems: 'center' }}>
-                        <button
-                            type="button"
-                            style={{
-                                ...ghostButton,
-                                fontSize: 24,
-                                fontWeight: 700,
-                                color: '#1e5d20',
-                                paddingBottom: 10,
-                                borderBottom: '4px solid #1e5d20',
-                            }}
-                        >
-                            Tổng quan
-                        </button>
-                        <button
-                            type="button"
-                            style={{
-                                ...ghostButton,
-                                fontSize: 24,
-                                color: '#71809a',
-                                fontWeight: 500,
-                            }}
-                        >
-                            Dữ liệu khu vực
-                        </button>
-                    </div>
-                </div>
-
-                <div
-                    style={{
-                        position: 'absolute',
-                        inset: 0,
-                        backgroundImage:
-                            "linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)), url('https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1600&q=80')",
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        filter: 'saturate(0.85) blur(0.2px)',
-                    }}
-                />
-
-                <div
-                    style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background:
-                            'linear-gradient(180deg, rgba(194,180,149,0.38) 0%, rgba(131,162,142,0.18) 28%, rgba(80,103,115,0.34) 100%)',
-                    }}
-                />
-
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: 162,
-                        left: 64,
-                        width: 760,
-                        background: 'rgba(248,248,241,0.94)',
-                        borderRadius: 22,
-                        padding: '44px 46px 36px',
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.08)',
-                        zIndex: 2,
-                    }}
-                >
-                    <div
-                        style={{
-                            fontSize: 50,
-                            lineHeight: 1.08,
-                            fontWeight: 800,
-                            color: '#0a5a20',
-                            marginBottom: 18,
-                        }}
-                    >
-                        Giám sát Dữ liệu
-                        <br />
-                        &amp; AQI
-                    </div>
-                    <div style={{ fontSize: 25, color: '#5e6259', marginBottom: 30 }}>
-                        Dữ liệu môi trường trực tiếp từ 1,248 cảm biến
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'stretch', gap: 34 }}>
-                        <div>
-                            <div
-                                style={{
-                                    fontSize: 18,
-                                    fontWeight: 700,
-                                    color: '#7a7e70',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 1,
-                                    marginBottom: 10,
-                                }}
-                            >
-                                Tổng số trạm
-                            </div>
-                            <div style={{ fontSize: 58, fontWeight: 800, color: '#1a2419', lineHeight: 1 }}>
-                                1,248
-                            </div>
-                        </div>
-
-                        <div style={{ width: 1, background: '#d5d5c9' }} />
-
-                        <div>
-                            <div
-                                style={{
-                                    fontSize: 18,
-                                    fontWeight: 700,
-                                    color: '#cf2f28',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 0.5,
-                                    marginBottom: 10,
-                                }}
-                            >
-                                Cảnh báo nghiêm trọng
-                            </div>
-                            <div style={{ fontSize: 58, fontWeight: 800, color: '#cf2f28', lineHeight: 1 }}>
-                                14
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div
-                    style={{
-                        position: 'absolute',
-                        left: '37%',
-                        top: '62%',
-                        width: 30,
-                        height: 30,
-                        borderRadius: '50%',
-                        background: '#00843b',
-                        zIndex: 2,
-                    }}
-                />
-                <div
-                    style={{
-                        position: 'absolute',
-                        left: '41%',
-                        bottom: '17%',
-                        width: 26,
-                        height: 26,
-                        borderRadius: '50%',
-                        background: '#ffd0cf',
-                        zIndex: 2,
-                    }}
-                />
-
-                <button
-                    type="button"
-                    style={{
-                        ...ghostButton,
-                        position: 'absolute',
-                        left: 62,
-                        bottom: 64,
-                        width: 112,
-                        height: 112,
-                        background: '#0a6a1f',
-                        borderRadius: 24,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#fff',
-                        fontSize: 48,
-                        zIndex: 2,
-                    }}
-                >
-                    ⊞
-                </button>
-
-                <div
-                    style={{
-                        position: 'absolute',
-                        right: 160,
-                        bottom: 58,
-                        width: 124,
-                        background: '#f4f4ec',
-                        borderRadius: 10,
-                        overflow: 'hidden',
-                        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-                        zIndex: 2,
-                    }}
-                >
-                    <button type="button" style={{ ...ghostButton, width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 54 }}>+</button>
-                    <div style={{ height: 1, background: '#e4e4d8' }} />
-                    <button type="button" style={{ ...ghostButton, width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 54 }}>−</button>
-                    <div style={{ height: 1, background: '#e4e4d8' }} />
-                    <button type="button" style={{ ...ghostButton, width: '100%', height: 94, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 46 }}>◎</button>
-                </div>
-
-                <div
-                    style={{
-                        position: 'absolute',
-                        right: 52,
-                        bottom: 58,
-                        width: 110,
-                        height: 292,
-                        background: '#f4f4ec',
-                        borderRadius: 10,
-                        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-                        zIndex: 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    <button
-                        type="button"
-                        style={{
-                            ...ghostButton,
-                            width: 66,
-                            height: 66,
-                            borderRadius: 12,
-                            background: '#05691b',
-                            color: '#fff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 34,
-                        }}
-                    >
-                        ◈
+                        <RefreshCcw size={14} /> {loading ? 'Đang tải...' : 'Làm mới'}
                     </button>
                 </div>
-            </section>
 
-            <aside
-                style={{
-                    background: '#f7f6eb',
-                    borderLeft: '1px solid #e4e2d4',
-                    display: 'flex',
-                    flexDirection: 'column',
-                }}
-            >
-                <div
-                    style={{
-                        height: 96,
-                        borderBottom: '1px solid #e4e2d4',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0 22px 0 26px',
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 26 }}>
-                        <button type="button" style={{ ...ghostButton, position: 'relative', fontSize: 34, color: '#66718a' }}>
-                            🔔
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    top: 2,
-                                    right: 0,
-                                    width: 12,
-                                    height: 12,
-                                    background: '#d72622',
-                                    borderRadius: '50%',
-                                }}
-                            />
-                        </button>
-                    </div>
-
-                    <button type="button" style={{ ...ghostButton, display: 'flex', alignItems: 'center', gap: 18 }}>
-                        <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: 22, fontWeight: 700 }}>Quản trị viên</div>
-                            <div style={{ fontSize: 15, color: '#7a7f73', marginTop: 4 }}>QUYỀN TRUY CẬP CẤP 4</div>
-                        </div>
-                        <div
+                <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#101a26', border: `1px solid ${C.cardBorder}`, borderRadius: 10, padding: '9px 12px' }}>
+                        <Search size={15} color={C.textDim} />
+                        <input
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            placeholder="Tìm theo tên tỉnh/thành phố..."
                             style={{
-                                width: 68,
-                                height: 68,
-                                borderRadius: 18,
-                                background: "url('https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80') center/cover",
-                                boxShadow: 'inset 0 0 0 3px #2f8a2d',
+                                width: '100%',
+                                border: 'none',
+                                outline: 'none',
+                                background: 'transparent',
+                                color: C.text,
+                                fontSize: 13,
                             }}
                         />
-                    </button>
-                </div>
-
-                <div style={{ padding: '28px 22px 22px', overflowY: 'auto' }}>
-                    <button
-                        type="button"
-                        style={{
-                            ...ghostButton,
-                            width: '100%',
-                            height: 68,
-                            borderRadius: 18,
-                            background: '#e9e9de',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '0 22px',
-                            marginBottom: 42,
-                        }}
-                    >
-                        <div
-                            style={{
-                                background: '#f7c8da',
-                                color: '#9a325f',
-                                borderRadius: 16,
-                                padding: '8px 18px',
-                                fontSize: 18,
-                                fontWeight: 700,
-                                letterSpacing: 1,
-                            }}
-                        >
-                            Dự báo AI
-                        </div>
-                        <div style={{ fontSize: 28, color: '#8f4d75' }}>✧</div>
-                    </button>
-
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'baseline',
-                            justifyContent: 'space-between',
-                            marginBottom: 26,
-                        }}
-                    >
-                        <div style={{ fontSize: 27, fontWeight: 800, color: '#21271f' }}>Xu hướng AQI Quốc gia</div>
-                        <button type="button" style={{ ...ghostButton, fontSize: 17, color: '#17782f', fontWeight: 700 }}>
-                            Tải CSV
-                        </button>
                     </div>
 
-                    <div
-                        style={{
-                            background: '#fffdfc',
-                            borderRadius: 18,
-                            padding: '24px 24px 22px',
-                            marginBottom: 24,
-                        }}
+                    <select
+                        value={cityFilter}
+                        onChange={(e) => setCityFilter(e.target.value)}
+                        style={{ background: '#101a26', border: `1px solid ${C.cardBorder}`, color: C.text, borderRadius: 10, padding: '9px 10px', fontSize: 13 }}
                     >
-                        <div
-                            style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: 24,
-                            }}
-                        >
-                            <div style={{ fontSize: 18, fontWeight: 700, color: '#4f564d' }}>AQI TRUNG BÌNH 7 NGÀY</div>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#177f3f' }} />
-                                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#95a89b' }} />
-                                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#cfd6ce' }} />
+                        <option value="all">Tất cả tỉnh/thành</option>
+                        {availableCities.map((cityName) => (
+                            <option key={cityName} value={cityName}>{cityName}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={minAqiFilter}
+                        onChange={(e) => setMinAqiFilter(e.target.value)}
+                        style={{ background: '#101a26', border: `1px solid ${C.cardBorder}`, color: C.text, borderRadius: 10, padding: '9px 10px', fontSize: 13 }}
+                    >
+                        <option value="all">Ngưỡng AQI TB</option>
+                        <option value="50">AQI ≥ 50</option>
+                        <option value="100">AQI ≥ 100</option>
+                        <option value="150">AQI ≥ 150</option>
+                        <option value="200">AQI ≥ 200</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 12 }}>
+                <SummaryCard
+                    label="Tổng tỉnh/thành"
+                    value={summary.totalCities}
+                    sub={`${summary.totalSnapshots24h} snapshots / 24h`}
+                    icon={<Activity size={18} color={C.blue} />}
+                    iconBg={C.blueSoft}
+                />
+                <SummaryCard
+                    label="Đang bật"
+                    value={summary.enabledCities}
+                    sub="Thành phố đang giám sát"
+                    icon={<Power size={18} color={C.green} />}
+                    iconBg={C.greenSoft}
+                />
+                <SummaryCard
+                    label="Đang tắt"
+                    value={summary.disabledCities}
+                    sub="Thành phố đã tắt giám sát"
+                    icon={<PowerOff size={18} color={C.red} />}
+                    iconBg={C.redSoft}
+                />
+                <SummaryCard
+                    label="AQI trung bình"
+                    value={summary.averageAqi}
+                    sub={`${summary.freshCities} thành phố có dữ liệu mới`}
+                    icon={<Activity size={18} color={C.orange} />}
+                    iconBg={C.orangeSoft}
+                />
+                <SummaryCard
+                    label="Cảnh báo"
+                    value={summary.criticalAlerts}
+                    sub="Mức cảnh báo tại các thành phố"
+                    icon={<ShieldAlert size={18} color={C.red} />}
+                    iconBg={C.redSoft}
+                />
+            </div>
+
+            {error && (
+                <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.28)', borderRadius: 12, color: '#fca5a5', padding: '10px 12px', fontSize: 13 }}>
+                    {error}
+                </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1.35fr 1fr', gap: 16 }}>
+                <div style={{ display: 'grid', gap: 16 }}>
+                    <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16, padding: 16 }}>
+                        <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                            <div style={{ color: C.text, fontSize: 16, fontWeight: 700 }}>Xu hướng AQI trung bình 7 ngày</div>
+                            <div style={{ color: C.textDim, fontSize: 12 }}>
+                                {trend.length} điểm dữ liệu
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'end', gap: 14, height: 238, marginBottom: 14 }}>
-                            {bars.map((h, i) => (
-                                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'end', alignItems: 'center', gap: 14 }}>
-                                    <div
-                                        style={{
-                                            width: '100%',
-                                            height: h,
-                                            borderRadius: '4px 4px 0 0',
-                                            background: i === 5 ? '#a8ef98' : '#d6f8cb',
-                                        }}
-                                    />
+                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, trend.length)}, minmax(0, 1fr))`, gap: 10, alignItems: 'end', minHeight: 210 }}>
+                            {trend.length === 0 ? (
+                                <div style={{ gridColumn: '1 / -1', color: C.textDim, fontSize: 13 }}>Chưa có dữ liệu xu hướng.</div>
+                            ) : trend.map((point) => {
+                                const value = Number(point.averageAqi ?? 0);
+                                const ratio = Math.max(8, (value / maxTrendValue) * 160);
+
+                                return (
+                                    <div key={point.label} style={{ display: 'grid', gap: 8, justifyItems: 'center' }}>
+                                        <div style={{ fontSize: 12, color: C.textMuted, fontWeight: 700 }}>{value}</div>
+                                        <div style={{ width: '100%', height: ratio, background: point.colorHex || '#3b82f6', borderRadius: '8px 8px 4px 4px', boxShadow: `0 0 16px ${point.colorHex || '#3b82f6'}55` }} />
+                                        <div style={{ fontSize: 11, color: C.textDim }}>{point.label}</div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16, overflow: 'hidden' }}>
+                        <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.cardBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Danh sách tỉnh/thành phố</div>
+                                <div style={{ marginTop: 4, fontSize: 12, color: C.textDim }}>
+                                    {loading ? 'Đang tải dữ liệu...' : `${cities.length} tỉnh/thành phù hợp bộ lọc • Trang ${currentPage}/${totalPages}`}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
+                                <thead>
+                                    <tr style={{ background: '#101a26', borderBottom: `1px solid ${C.cardBorder}` }}>
+                                        {['Tỉnh/Thành phố', 'AQI TB', 'Snapshots 24h', 'Mới', 'Cũ', 'Cập nhật', 'Trạng thái', 'Hành động'].map((header) => (
+                                            <th key={header} style={{ textAlign: 'left', padding: '10px 12px', fontSize: 11, color: C.textDim, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                                                {header}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {pagedCities.length === 0 && (
+                                        <tr>
+                                            <td colSpan={8} style={{ padding: 18, textAlign: 'center', color: C.textDim }}>
+                                                Không có dữ liệu theo bộ lọc hiện tại.
+                                            </td>
+                                        </tr>
+                                    )}
+
+                                    {pagedCities.map((item) => (
+                                        <tr key={item.city} style={{ borderBottom: `1px solid ${C.cardBorder}` }}>
+                                            <td style={{ padding: '11px 12px' }}>
+                                                <div style={{ fontSize: 13, color: C.text, fontWeight: 700 }}>{item.city}</div>
+                                            </td>
+                                            <td style={{ padding: '11px 12px' }}>
+                                                <span style={{ color: item.colorHex || C.text, fontWeight: 800, fontSize: 14 }}>{item.averageAqi}</span>
+                                            </td>
+                                            <td style={{ padding: '11px 12px', fontSize: 13, color: C.textMuted }}>{item.totalStations}</td>
+                                            <td style={{ padding: '11px 12px', fontSize: 13, color: '#86efac' }}>{item.onlineStations}</td>
+                                            <td style={{ padding: '11px 12px', fontSize: 13, color: '#fda4af' }}>{item.offlineStations}</td>
+                                            <td style={{ padding: '11px 12px', fontSize: 12, color: C.textDim }}>{formatDateTime(item.lastObservationAt)}</td>
+                                            <td style={{ padding: '11px 12px' }}>
+                                                {item.isEnabled ? (
+                                                    <span style={{ background: C.greenSoft, color: '#86efac', borderRadius: 999, padding: '4px 10px', fontSize: 11, fontWeight: 700 }}>
+                                                        Đang bật
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ background: C.redSoft, color: '#fda4af', borderRadius: 999, padding: '4px 10px', fontSize: 11, fontWeight: 700 }}>
+                                                        Đang tắt
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td style={{ padding: '11px 12px' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleToggleCity(item.city, item.isEnabled)}
+                                                    disabled={actingCity === item.city}
+                                                    style={{
+                                                        border: `1px solid ${C.cardBorder}`,
+                                                        background: '#101a26',
+                                                        color: item.isEnabled ? '#fda4af' : '#86efac',
+                                                        borderRadius: 8,
+                                                        padding: '6px 10px',
+                                                        fontSize: 12,
+                                                        fontWeight: 700,
+                                                        cursor: actingCity === item.city ? 'not-allowed' : 'pointer',
+                                                    }}
+                                                >
+                                                    {actingCity === item.city
+                                                        ? 'Đang xử lý...'
+                                                        : item.isEnabled ? 'Tắt' : 'Bật'}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                    </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: 16 }}>
+                    <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16, padding: 16 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                            <AlertTriangle size={16} color={C.orange} />
+                            <div style={{ color: C.text, fontSize: 16, fontWeight: 700 }}>Cảnh báo vận hành</div>
+                        </div>
+
+                        <div style={{ display: 'grid', gap: 10, maxHeight: 360, overflowY: 'auto', paddingRight: 4 }}>
+                            {alerts.length === 0 && (
+                                <div style={{ border: `1px dashed ${C.cardBorder}`, borderRadius: 10, padding: 12, color: C.textDim, fontSize: 13 }}>
+                                    Không có cảnh báo nào.
+                                </div>
+                            )}
+
+                            {alerts.map((alert) => {
+                                const tone = getAlertTone(alert.severity);
+                                return (
+                                    <div key={`${alert.city}-${alert.message}`} style={{ background: tone.bg, borderRadius: 12, padding: 11 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                                            <div style={{ fontSize: 13, color: C.text, fontWeight: 700 }}>{alert.city}</div>
+                                            <div style={{ fontSize: 11, color: tone.fg, fontWeight: 700 }}>{alert.severity}</div>
+                                        </div>
+                                        <div style={{ marginTop: 6, fontSize: 12, color: C.textMuted, lineHeight: 1.5 }}>{alert.message}</div>
+                                        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 11, color: C.textDim }}>
+                                            <span>{formatDateTime(alert.lastObservationAt)}</span>
+                                            <span style={{ color: alert.colorHex || C.text }}>{alert.calculatedAqi}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16, padding: 16 }}>
+                        <div style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Top thành phố ô nhiễm</div>
+                        <div style={{ display: 'grid', gap: 8 }}>
+                            {(cityRankings.polluted ?? []).length === 0 ? (
+                                <div style={{ color: C.textDim, fontSize: 13 }}>Chưa có dữ liệu.</div>
+                            ) : (cityRankings.polluted ?? []).map((item, idx) => (
+                                <div key={`${item.city}-${idx}`} style={{ display: 'grid', gridTemplateColumns: '28px 1fr auto', gap: 8, alignItems: 'center', background: '#101a26', border: `1px solid ${C.cardBorder}`, borderRadius: 10, padding: '9px 10px' }}>
+                                    <span style={{ color: C.textDim, fontSize: 12 }}>{idx + 1}</span>
+                                    <span style={{ color: C.text, fontSize: 13 }}>{item.city}</span>
+                                    <span style={{ color: item.colorHex || C.text, fontWeight: 800, fontSize: 13 }}>{item.aqi}</span>
                                 </div>
                             ))}
                         </div>
+                    </div>
 
-                        <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(7, 1fr)',
-                                gap: 10,
-                                textAlign: 'center',
-                                color: '#7b7e72',
-                                fontSize: 15,
-                                fontWeight: 700,
-                                lineHeight: 1.4,
-                            }}
-                        >
-                            <div>THL 2</div>
-                            <div>THL 3</div>
-                            <div>THL 4</div>
-                            <div>THL 5</div>
-                            <div>THL 6</div>
-                            <div>THL 7</div>
-                            <div>CHỦ NHBT</div>
+                    <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16, padding: 16 }}>
+                        <div style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Top thành phố trong lành</div>
+                        <div style={{ display: 'grid', gap: 8 }}>
+                            {(cityRankings.cleanest ?? []).length === 0 ? (
+                                <div style={{ color: C.textDim, fontSize: 13 }}>Chưa có dữ liệu.</div>
+                            ) : (cityRankings.cleanest ?? []).map((item, idx) => (
+                                <div key={`${item.city}-${idx}`} style={{ display: 'grid', gridTemplateColumns: '28px 1fr auto', gap: 8, alignItems: 'center', background: '#101a26', border: `1px solid ${C.cardBorder}`, borderRadius: 10, padding: '9px 10px' }}>
+                                    <span style={{ color: C.textDim, fontSize: 12 }}>{idx + 1}</span>
+                                    <span style={{ color: C.text, fontSize: 13 }}>{item.city}</span>
+                                    <span style={{ color: item.colorHex || C.text, fontWeight: 800, fontSize: 13 }}>{item.aqi}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 44 }}>
-                        <button type="button" style={{ ...ghostButton, background: '#fffdfc', borderRadius: 18, padding: '24px 24px 18px' }}>
-                            <div style={{ fontSize: 34, color: '#0c8c49', marginBottom: 16 }}>◔</div>
-                            <div style={{ fontSize: 30, fontWeight: 800, color: '#097846', marginBottom: 10 }}>82%</div>
-                            <div style={{ fontSize: 16, fontWeight: 700, color: '#52584f', lineHeight: 1.2 }}>
-                                NĂNG LƯỢNG
-                                <br />
-                                XANH
-                            </div>
-                        </button>
-
-                        <button type="button" style={{ ...ghostButton, background: '#fffdfc', borderRadius: 18, padding: '24px 24px 18px' }}>
-                            <div style={{ fontSize: 34, color: '#9b295c', marginBottom: 16 }}>≈</div>
-                            <div style={{ fontSize: 30, fontWeight: 800, color: '#1f2420', marginBottom: 10 }}>12.4</div>
-                            <div style={{ fontSize: 16, fontWeight: 700, color: '#52584f', lineHeight: 1.2 }}>
-                                TỐC ĐỘ GIÓ TB
-                            </div>
-                        </button>
-                    </div>
-
-                    <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 24 }}>Hoạt động hệ thống gần đây</div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                        {activities.map((item) => (
-                            <button
-                                key={item.title}
-                                type="button"
-                                style={{
-                                    ...ghostButton,
-                                    background: '#fffdfc',
-                                    borderRadius: 18,
-                                    padding: '24px 24px 20px',
-                                    display: 'flex',
-                                    gap: 18,
-                                    width: '100%',
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        width: 60,
-                                        height: 60,
-                                        borderRadius: 18,
-                                        background: item.iconBg,
-                                        color: item.iconColor,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 30,
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    {item.icon}
-                                </div>
-
-                                <div style={{ minWidth: 0, textAlign: 'left' }}>
-                                    <div style={{ fontSize: 21, fontWeight: 700, color: '#222622', marginBottom: 6 }}>
-                                        {item.title}
-                                    </div>
-                                    <div style={{ fontSize: 17, color: '#5f655d', lineHeight: 1.35, marginBottom: 10 }}>
-                                        {item.desc}
-                                    </div>
-                                    <div style={{ fontSize: 15, color: '#8b8f84' }}>{item.time}</div>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-
-                    <button
-                        type="button"
-                        style={{
-                            ...ghostButton,
-                            marginTop: 20,
-                            height: 84,
-                            borderRadius: 16,
-                            background: '#0d0d08',
-                            color: '#dedfcf',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 20,
-                            fontWeight: 700,
-                            width: '100%',
-                        }}
-                    >
-                        Xem tất cả nhật ký hoạt động
-                    </button>
                 </div>
-            </aside>
+            </div>
         </div>
     );
 }

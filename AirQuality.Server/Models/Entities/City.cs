@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AirQuality.Server.Models.Entites;
@@ -38,4 +38,5 @@ public class City
     public int IsActive { get; set; } = 1;
 
     public ICollection<CityAirQualitySnapshot> CityAirQualitySnapshots { get; set; } = new List<CityAirQualitySnapshot>();
+    public ICollection<UserFavoriteCity> UserFavoriteCities { get; set; } = new List<UserFavoriteCity>();
 }

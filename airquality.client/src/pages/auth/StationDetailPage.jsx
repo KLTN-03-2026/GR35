@@ -4,6 +4,7 @@ import { MapContainer, Marker, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import MainLayout from "../../components/layout/MainLayout";
+import { useAuth } from "../../hooks/useAuth";
 
 /* ─── Design tokens ──────────────────────────────────────────── */
 const T = {
@@ -171,6 +172,8 @@ export default function StationDetailPage() {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [isFav, setIsFav] = useState(false);
+    const { isLoggedIn, accessToken } = useAuth();
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -196,6 +199,29 @@ export default function StationDetailPage() {
     }, [stationId]);
 
     useEffect(() => { loadData(); }, [loadData]);
+
+    // Check favorite status
+    useEffect(() => {
+        if (!isLoggedIn) return;
+        fetch(`/api/favorite-places/check?type=station&id=${stationId}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+        })
+            .then(r => r.ok ? r.json() : { isFavorite: false })
+            .then(d => setIsFav(d.isFavorite))
+            .catch(() => { });
+    }, [stationId, isLoggedIn, accessToken]);
+
+    const toggleFav = async () => {
+        if (!isLoggedIn) return;
+        const method = isFav ? "DELETE" : "POST";
+        try {
+            const res = await fetch(`/api/favorite-places/stations/${stationId}`, {
+                method,
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            if (res.ok) setIsFav(!isFav);
+        } catch { }
+    };
 
     useEffect(() => {
         if (loading) {
@@ -278,8 +304,24 @@ export default function StationDetailPage() {
 
                         {/* Action buttons */}
                         <div style={{ display: "flex", gap: 8 }}>
+                            {isLoggedIn && (
+                                <button
+                                    onClick={toggleFav}
+                                    title={isFav ? "Bỏ yêu thích" : "Yêu thích"}
+                                    style={{
+                                        padding: "7px 12px", borderRadius: 99,
+                                        background: isFav ? "rgba(239,68,68,0.15)" : T.card,
+                                        border: `1px solid ${isFav ? "#ef4444" : T.border}`,
+                                        color: isFav ? "#ef4444" : T.textSub,
+                                        cursor: "pointer", fontSize: 13, fontWeight: 600,
+                                        boxShadow: T.shadow,
+                                        transition: "all 0.2s",
+                                    }}
+                                >
+                                    {isFav ? "Đã theo dõi" : "Theo dõi"}
+                                </button>
+                            )}
                             {[
-                                { icon: "♥", label: "Yêu thích" },
                                 { icon: "🔔", label: "Cảnh báo" },
                                 { icon: "↗", label: "Chia sẻ" },
                             ].map((b) => (
