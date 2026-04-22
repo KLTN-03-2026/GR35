@@ -24,6 +24,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<CommunityReport> CommunityReports => Set<CommunityReport>();
     public DbSet<City> Cities => Set<City>();
     public DbSet<CityAirQualitySnapshot> CityAirQualitySnapshots => Set<CityAirQualitySnapshot>();
+    public DbSet<UserFavoriteCity> UserFavoriteCities => Set<UserFavoriteCity>();
+    public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,6 +33,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<UserFavoriteStation>()
             .HasKey(x => new { x.UserId, x.StationId });
+
+        modelBuilder.Entity<UserFavoriteCity>()
+            .HasKey(x => new { x.UserId, x.CityId });
 
         modelBuilder.Entity<User>()
             .HasOne(x => x.Role)
@@ -60,6 +65,18 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasOne(x => x.Station)
             .WithMany(x => x.UserFavoriteStations)
             .HasForeignKey(x => x.StationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<UserFavoriteCity>()
+            .HasOne(x => x.User)
+            .WithMany(x => x.UserFavoriteCities)
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<UserFavoriteCity>()
+            .HasOne(x => x.City)
+            .WithMany(x => x.UserFavoriteCities)
+            .HasForeignKey(x => x.CityId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<AirQualityObservation>()
@@ -146,6 +163,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<SubscriptionPayment>()
+            .HasOne(x => x.User)
+            .WithMany(x => x.SubscriptionPayments)
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<SubscriptionPayment>()
+            .HasIndex(x => x.TxnRef)
+            .IsUnique();
+
         modelBuilder.Entity<User>().Property(x => x.Status).HasDefaultValue(1);
         modelBuilder.Entity<Station>().Property(x => x.IsActive).HasDefaultValue(1);
         modelBuilder.Entity<AirQualityObservation>().Property(x => x.IsValid).HasDefaultValue(1);
@@ -158,5 +185,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<CommunityReport>().Property(x => x.ReportTime).HasDefaultValueSql("GETDATE()");
         modelBuilder.Entity<CommunityReport>().Property(x => x.Upvotes).HasDefaultValue(0);
         modelBuilder.Entity<CommunityReport>().Property(x => x.Status).HasDefaultValue("Pending");
+        modelBuilder.Entity<User>().Property(x => x.SubscriptionTier).HasDefaultValue("Free");
+        modelBuilder.Entity<SubscriptionPayment>().Property(x => x.AmountVnd).HasPrecision(18, 2);
+        modelBuilder.Entity<SubscriptionPayment>().Property(x => x.Provider).HasDefaultValue("VNPAY");
+        modelBuilder.Entity<SubscriptionPayment>().Property(x => x.Status).HasDefaultValue("Pending");
     }
 }

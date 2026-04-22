@@ -45,13 +45,26 @@ public class User
     [Column("role_id")]
     public int RoleId { get; set; }
 
+    [Required]
+    [MaxLength(20)]
+    [Column("subscription_tier")]
+    public string SubscriptionTier { get; set; } = "Free";
+
+    [Column("subscription_started_at")]
+    public DateTime? SubscriptionStartedAt { get; set; }
+
+    [Column("subscription_expires_at")]
+    public DateTime? SubscriptionExpiresAt { get; set; }
+
     [ForeignKey(nameof(RoleId))]
     public Role Role { get; set; } = null!;
 
     public ICollection<UserLinkedAccount> UserLinkedAccounts { get; set; } = new List<UserLinkedAccount>();
     public ICollection<UserFavoriteStation> UserFavoriteStations { get; set; } = new List<UserFavoriteStation>();
+    public ICollection<UserFavoriteCity> UserFavoriteCities { get; set; } = new List<UserFavoriteCity>();
     public ICollection<AlertConfig> AlertConfigs { get; set; } = new List<AlertConfig>();
     public ICollection<NotificationHistory> NotificationHistories { get; set; } = new List<NotificationHistory>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
     public ICollection<CommunityReport> CommunityReports { get; set; } = new List<CommunityReport>();
+    public ICollection<SubscriptionPayment> SubscriptionPayments { get; set; } = new List<SubscriptionPayment>();
 }

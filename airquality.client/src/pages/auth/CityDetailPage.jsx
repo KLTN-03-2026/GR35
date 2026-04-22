@@ -1,10 +1,12 @@
-﻿import { useCallback, useEffect, useState } from "react";
+﻿/* eslint-disable no-unused-vars */
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { MapContainer, Marker, TileLayer, Circle } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import MainLayout from "../../components/layout/MainLayout";
 import { getLevel, getHealthTiles } from "../../utils/aqiHelper";
+import { useAuth } from "../../hooks/useAuth";
 
 /* ─── Design tokens ─────────────────────────────────────────────── */
 const C = {
@@ -190,6 +192,8 @@ export default function CityDetailPage() {
     const [stations, setStations] = useState(null);  // null = loading
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [isFav, setIsFav] = useState(false);
+    const { isLoggedIn, accessToken } = useAuth();
 
     const loadAll = useCallback(async () => {
         setLoading(true);
@@ -221,6 +225,29 @@ export default function CityDetailPage() {
     }, [slug]);
 
     useEffect(() => { loadAll(); }, [loadAll]);
+
+    // Check favorite status once city data is loaded
+    useEffect(() => {
+        if (!isLoggedIn || !city?.cityId) return;
+        fetch(`/api/favorite-places/check?type=city&id=${city.cityId}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+        })
+            .then(r => r.ok ? r.json() : { isFavorite: false })
+            .then(d => setIsFav(d.isFavorite))
+            .catch(() => { });
+    }, [city?.cityId, isLoggedIn, accessToken]);
+
+    const toggleFav = async () => {
+        if (!isLoggedIn || !city?.cityId) return;
+        const method = isFav ? "DELETE" : "POST";
+        try {
+            const res = await fetch(`/api/favorite-places/cities/${city.cityId}`, {
+                method,
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            if (res.ok) setIsFav(!isFav);
+        } catch { /* empty */ }
+    };
 
     useEffect(() => {
         if (loading) {
@@ -326,6 +353,22 @@ export default function CityDetailPage() {
                             <Link to="/du-lieu" style={{ color: C.textSub, textDecoration: "none" }}>Bản đồ</Link>
                             <span style={{ color: C.textMuted }}>›</span>
                             <span style={{ color: C.text, fontWeight: 600 }}>{city.provinceName}</span>
+                            {isLoggedIn && (
+                                <button
+                                    onClick={toggleFav}
+                                    title={isFav ? "Bỏ Yêu thích" : "Yêu thích"}
+                                    style={{
+                                        marginLeft: 8, padding: "5px 14px", borderRadius: 99,
+                                        background: isFav ? "rgba(239,68,68,0.15)" : hexToRgb("#fff", 0.06),
+                                        border: `1px solid ${isFav ? "#ef4444" : C.cardBorder}`,
+                                        color: isFav ? "#ef4444" : C.textSub,
+                                        cursor: "pointer", fontSize: 12, fontWeight: 600,
+                                        transition: "all 0.2s",
+                                    }}
+                                >
+                                    {isFav ? "Đã theo dõi" : "Theo dõi"}
+                                </button>
+                            )}
                         </div>
 
                         {/* Title row */}
@@ -610,7 +653,7 @@ export default function CityDetailPage() {
 
                 </div>
             </div>
-        </MainLayout>
+        </MainLayout >
     );
 }
 

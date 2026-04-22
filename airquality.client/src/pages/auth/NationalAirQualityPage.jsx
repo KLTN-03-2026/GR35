@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import DeckGL from "@deck.gl/react";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
-import { ScatterplotLayer } from "@deck.gl/layers";
+import { ScatterplotLayer, IconLayer } from "@deck.gl/layers";
 import Map, { NavigationControl } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import MainLayout from "../../components/layout/MainLayout";
@@ -13,6 +13,7 @@ const METRICS = {
         label: "AQI",
         stationKey: "aqi",
         provinceKey: "avgAqi",
+        thresholds: [50, 100, 150, 200, 300],
         legend: ["0", "50", "100", "150", "200", "300+"],
     },
     pm25: {
@@ -20,6 +21,7 @@ const METRICS = {
         label: "PM2.5",
         stationKey: "pm25",
         provinceKey: "avgPm25",
+        thresholds: [15, 35, 55, 150, 250],
         legend: ["0", "15", "35", "55", "150", "250+"],
     },
     pm10: {
@@ -27,6 +29,7 @@ const METRICS = {
         label: "PM10",
         stationKey: "pm10",
         provinceKey: "avgPm10",
+        thresholds: [50, 100, 150, 250, 350],
         legend: ["0", "50", "100", "150", "250", "350+"],
     },
 };
@@ -60,9 +63,17 @@ function getHeatmapRadiusPixels(zoom) {
     return 220;
 }
 
+function getMetricColor(metricCfg, value, alpha = 220) {
+    const numericValue = Number(value ?? 0);
+    const idx = metricCfg.thresholds.findIndex((threshold) => numericValue <= threshold);
+    const color = idx === -1 ? COLOR_RANGE[COLOR_RANGE.length - 1] : COLOR_RANGE[idx];
+    return [color[0], color[1], color[2], alpha];
+}
+
 export default function NationalAirQualityPage() {
     const [stations, setStations] = useState([]);
     const [provinces, setProvinces] = useState([]);
+    const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [metric, setMetric] = useState("aqi");
@@ -81,28 +92,32 @@ export default function NationalAirQualityPage() {
             setError("");
 
             try {
-                const [stationsRes, provincesRes] = await Promise.all([
+                const [stationsRes, provincesRes, reportsRes] = await Promise.all([
                     fetch("/api/airquality/stations-latest", { cache: "no-store" }),
                     fetch("/api/airquality/provinces-summary", { cache: "no-store" }),
+                    fetch("/api/community-reports/map", { cache: "no-store" }),
                 ]);
 
                 if (!stationsRes.ok || !provincesRes.ok) {
                     throw new Error("Không tải được dữ liệu bản đồ toàn quốc.");
                 }
 
-                const [stationsData, provincesData] = await Promise.all([
+                const [stationsData, provincesData, reportsData] = await Promise.all([
                     stationsRes.json(),
                     provincesRes.json(),
+                    reportsRes.ok ? reportsRes.json() : Promise.resolve([]),
                 ]);
 
                 if (ignore) return;
 
                 setStations(Array.isArray(stationsData) ? stationsData : []);
                 setProvinces(Array.isArray(provincesData) ? provincesData : []);
+                setReports(Array.isArray(reportsData) ? reportsData : []);
             } catch (e) {
                 if (ignore) return;
                 setStations([]);
                 setProvinces([]);
+                setReports([]);
                 setError(e instanceof Error ? e.message : "Đã xảy ra lỗi khi tải dữ liệu.");
             } finally {
                 if (!ignore) {
@@ -151,6 +166,55 @@ export default function NationalAirQualityPage() {
             .sort((a, b) => Number(b[provinceMetricKey] ?? 0) - Number(a[provinceMetricKey] ?? 0));
     }, [provinces, normalizedSearch, metricConfig]);
 
+    const reportPoints = useMemo(() => {
+        if (!reports.length) return [];
+
+        const provinceMetricKey = metricConfig.provinceKey;
+
+        return reports.map((report) => {
+            const reportLng = Number(report.longitude);
+            const reportLat = Number(report.latitude);
+
+            if (!Number.isFinite(reportLng) || !Number.isFinite(reportLat) || provinces.length === 0) {
+                return {
+                    ...report,
+                    metricValue: null,
+                    metricColor: getMetricColor(metricConfig, 0, 230),
+                };
+            }
+
+            const nearestProvince = provinces.reduce(
+                (nearest, province) => {
+                    const provinceLng = Number(province.lng);
+                    const provinceLat = Number(province.lat);
+
+                    if (!Number.isFinite(provinceLng) || !Number.isFinite(provinceLat)) {
+                        return nearest;
+                    }
+
+                    const distance = (provinceLng - reportLng) ** 2 + (provinceLat - reportLat) ** 2;
+
+                    if (distance < nearest.distance) {
+                        return { distance, province };
+                    }
+
+                    return nearest;
+                },
+                { distance: Number.POSITIVE_INFINITY, province: null },
+            );
+
+            const metricValue = nearestProvince.province
+                ? Number(nearestProvince.province[provinceMetricKey] ?? 0)
+                : null;
+
+            return {
+                ...report,
+                metricValue,
+                metricColor: getMetricColor(metricConfig, metricValue ?? 0, 230),
+            };
+        });
+    }, [reports, provinces, metricConfig]);
+
     const layers = useMemo(() => {
         const stationMetricKey = metricConfig.stationKey;
         const provinceMetricKey = metricConfig.provinceKey;
@@ -179,12 +243,59 @@ export default function NationalAirQualityPage() {
                 stroked: true,
                 filled: true,
                 lineWidthMinPixels: 1,
-                getFillColor: [255, 255, 255, 185],
+                getFillColor: (d) => getMetricColor(metricConfig, d[stationMetricKey], 190),
                 getLineColor: [17, 24, 39, 190],
                 pickable: true,
             }),
+            new ScatterplotLayer({
+                id: "national-air-reports-bg",
+                data: reportPoints,
+                getPosition: (d) => [Number(d.longitude), Number(d.latitude)],
+                getRadius: 5000,
+                radiusMinPixels: 10,
+                radiusMaxPixels: 20,
+                getFillColor: (d) => d.metricColor,
+                getLineColor: [255, 255, 255, 255],
+                stroked: true,
+                pickable: true,
+                onClick: ({ object }) => {
+                    if (object) {
+                        setViewState({
+                            ...viewState,
+                            longitude: Number(object.longitude),
+                            latitude: Number(object.latitude),
+                            zoom: 14,
+                            transitionDuration: 800
+                        });
+                    }
+                }
+            }),
+            new IconLayer({
+                id: "national-air-reports",
+                data: reportPoints,
+                getPosition: (d) => [Number(d.longitude), Number(d.latitude)],
+                getIcon: () => ({
+                    url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><text x="50%" y="50%" font-size="40" text-anchor="middle" dominant-baseline="central">🔥</text></svg>'),
+                    width: 48,
+                    height: 48,
+                    anchorY: 24
+                }),
+                getSize: 40,
+                pickable: true,
+                onClick: ({ object }) => {
+                    if (object) {
+                        setViewState({
+                            ...viewState,
+                            longitude: Number(object.longitude),
+                            latitude: Number(object.latitude),
+                            zoom: 14,
+                            transitionDuration: 800
+                        });
+                    }
+                }
+            }),
         ];
-    }, [provinces, stations, metricConfig, viewState.zoom]);
+    }, [provinces, stations, reportPoints, metricConfig, viewState]);
 
     const tableRows = viewMode === "stations" ? filteredAndSortedStationRows : filteredAndSortedProvinceRows;
 
@@ -238,8 +349,35 @@ export default function NationalAirQualityPage() {
                                 onViewStateChange={({ viewState: nextViewState }) => setViewState(nextViewState)}
                                 controller={true}
                                 layers={layers}
-                                getTooltip={({ object }) => {
+                                getTooltip={({ object, layer }) => {
                                     if (!object) return null;
+                                    if (layer.id === "national-air-reports" || layer.id === "national-air-reports-bg") {
+                                        const metricText = Number.isFinite(object.metricValue)
+                                            ? `${metricConfig.label} khu vực gần nhất: ${Number(object.metricValue).toFixed(1)}`
+                                            : `${metricConfig.label} khu vực gần nhất: N/A`;
+
+                                        return {
+                                            html: `
+                                                <div style="font-family: 'Be Vietnam Pro', sans-serif; font-size: 13px; color: #1f2937; max-width: 240px; padding: 4px;">
+                                                    <div style="color: #ef4444; font-weight: 800; text-transform: uppercase; font-size: 11px; margin-bottom: 6px; letter-spacing: 0.5px;">Báo cáo cộng đồng</div>
+                                                    <div style="font-weight: 600; margin-bottom: 8px; line-height: 1.4;">${object.description}</div>
+                                                    <div style="color: #6b7280; font-size: 11px; margin-bottom: ${object.imageUrl ? '10px' : '0'};">
+                                                        Báo cáo bởi: ${object.userFullName || 'N/A'}<br/>
+                                                        Lúc: ${new Date(object.reportTime).toLocaleString('vi-VN')}<br/>
+                                                        ${metricText}
+                                                    </div>
+                                                    ${object.imageUrl ? `<img src="${object.imageUrl}" style="width: 100%; border-radius: 8px; border: 1px solid #e5e7eb; object-fit: cover; max-height: 150px;" />` : ''}
+                                                </div>
+                                            `,
+                                            style: {
+                                                backgroundColor: '#ffffff',
+                                                borderRadius: '12px',
+                                                boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                                                border: '1px solid #e5e7eb',
+                                                padding: '12px'
+                                            }
+                                        };
+                                    }
                                     const value = Number(object[metricConfig.stationKey] ?? 0);
                                     return {
                                         text: `Trạm: ${object.stationName}\nTỉnh: ${object.provinceName}\n${metricConfig.label}: ${value.toFixed(1)}`,
