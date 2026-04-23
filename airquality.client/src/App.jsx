@@ -22,6 +22,7 @@ import GiamSatDuLieuAQI from './pages/auth/GiamSatDuLieuAQI';
 import DuyetBaoCaoDiemNongCongDong from './pages/auth/DuyetBaoCaoDiemNongCongDong';
 import PricingPage from './pages/auth/PricingPage';
 import ContactPage from './pages/auth/ContactPage';
+import ApiDocumentationPage from './pages/auth/ApiDocumentationPage';
 
 function getPageTitle(pathname) {
     if (pathname === '/') return 'Trang chủ | EcoAir VN';
@@ -33,6 +34,7 @@ function getPageTitle(pathname) {
     if (pathname === '/ban-do') return 'Bản đồ nhiệt toàn quốc | EcoAir VN';
     if (pathname === '/lien-he') return 'Liên hệ | EcoAir VN';
     if (pathname === '/goi') return 'Gói dịch vụ | EcoAir VN';
+    if (pathname === '/tai-lieu-api') return 'Tài liệu API | EcoAir VN';
     if (pathname.startsWith('/tram/')) return 'Chi tiết trạm quan trắc | EcoAir VN';
     if (pathname.startsWith('/thanh-pho/')) return 'Chi tiết thành phố | EcoAir VN';
     if (pathname === '/dashboard') return 'Dashboard | EcoAir VN';
@@ -77,6 +79,7 @@ export default function App() {
                 <Route path="/ban-do" element={<NationalAirQualityPage />} />
                 <Route path="/lien-he" element={<ContactPage />} />
                 <Route path="/goi" element={<PricingPage />} />
+                <Route path="/tai-lieu-api" element={<ApiDocumentationPage />} />
                 <Route path="/tram/:stationId" element={<StationDetailPage />} />
                 <Route path="/thanh-pho/:slug" element={<CityDetailPage />} />
                 <Route path="/404" element={<NotFoundPage />} />

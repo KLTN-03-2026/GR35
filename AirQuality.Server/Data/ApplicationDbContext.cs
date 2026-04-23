@@ -9,6 +9,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<NotificationPlatform> NotificationPlatforms => Set<NotificationPlatform>();
     public DbSet<AqiCategory> AqiCategories => Set<AqiCategory>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<UserLinkedAccount> UserLinkedAccounts => Set<UserLinkedAccount>();
     public DbSet<Station> Stations => Set<Station>();
     public DbSet<UserFavoriteStation> UserFavoriteStations => Set<UserFavoriteStation>();
@@ -42,6 +43,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(x => x.Users)
             .HasForeignKey(x => x.RoleId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ApiKey>()
+            .HasOne(x => x.User)
+            .WithMany(x => x.ApiKeys)
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<UserLinkedAccount>()
             .HasOne(x => x.User)

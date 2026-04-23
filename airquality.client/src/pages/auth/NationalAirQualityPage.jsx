@@ -2,8 +2,8 @@
 import DeckGL from "@deck.gl/react";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import { ScatterplotLayer, IconLayer } from "@deck.gl/layers";
-import Map, { NavigationControl } from "react-map-gl/mapbox";
-import "mapbox-gl/dist/mapbox-gl.css";
+import Map, { NavigationControl } from "react-map-gl/maplibre";
+import "ndamap-gl/dist/ndamap-gl.css";
 import MainLayout from "../../components/layout/MainLayout";
 import "./NationalAirQualityPage.css";
 
@@ -46,21 +46,22 @@ const COLOR_RANGE = [
 const HEATMAP_OPACITY = 0.35;
 
 const INITIAL_VIEW_STATE = {
-    longitude: 106.2,
-    latitude: 16.3,
-    zoom: 5.3,
+    longitude: 106.0,
+    latitude: 15.5,
+    zoom: 4.5,
     pitch: 0,
     bearing: 0,
 };
 
-const MAPBOX_TOKEN = "";
+const NDAMAPS_STYLE = import.meta.env.VITE_NDAMAPS_STYLE || "https://nda-tiles.openmap.vn/styles/ndamap/style.json";
 
 function getHeatmapRadiusPixels(zoom) {
-    if (zoom <= 5) return 90;
-    if (zoom <= 6) return 110;
-    if (zoom <= 7) return 140;
-    if (zoom <= 8) return 180;
-    return 220;
+    // Scale radius exponentially with zoom so that the geographic coverage
+    // stays roughly constant (~80-100 km per point), keeping the full
+    // 63-province color blanket even when zoomed in.
+    const base = 90;
+    const factor = Math.pow(2, Math.max(0, zoom - 4.5));
+    return Math.round(base * factor);
 }
 
 function getMetricColor(metricCfg, value, alpha = 220) {
@@ -82,7 +83,6 @@ export default function NationalAirQualityPage() {
     const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 
     const metricConfig = METRICS[metric];
-    const mapboxToken = MAPBOX_TOKEN;
 
     useEffect(() => {
         let ignore = false;
@@ -227,10 +227,11 @@ export default function NationalAirQualityPage() {
                 getPosition: (d) => [Number(d.lng), Number(d.lat)],
                 getWeight: (d) => Number(d[provinceMetricKey] ?? 0),
                 radiusPixels,
-                intensity: 2.5,
-                threshold: 0.03,
+                intensity: 1.8,
+                threshold: 0.01,
                 opacity: HEATMAP_OPACITY,
                 colorRange: COLOR_RANGE,
+                aggregation: 'SUM',
                 pickable: false,
             }),
             new ScatterplotLayer({
@@ -386,18 +387,13 @@ export default function NationalAirQualityPage() {
                             >
                                 <Map
                                     reuseMaps
-                                    mapStyle="mapbox://styles/mapbox/dark-v11"
-                                    mapboxAccessToken={mapboxToken}
+                                    mapStyle={NDAMAPS_STYLE}
                                 >
                                     <NavigationControl position="top-right" />
                                 </Map>
                             </DeckGL>
 
-                            {!mapboxToken && (
-                                <div className="national-air-mapbox-warning">
-                                    Thiếu token Mapbox. Hãy cấu hình `VITE_MAPBOX_TOKEN` (hoặc `VITE_MAPBOX_ACCESS_TOKEN`) trong `airquality.client/.env.local` và khởi động lại frontend.
-                                </div>
-                            )}
+
 
                             <div className="national-air-legend">
                                 <div className="legend-title">Thang màu {metricConfig.label}</div>
