@@ -59,6 +59,7 @@ public class User
     [ForeignKey(nameof(RoleId))]
     public Role Role { get; set; } = null!;
 
+    public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
     public ICollection<UserLinkedAccount> UserLinkedAccounts { get; set; } = new List<UserLinkedAccount>();
     public ICollection<UserFavoriteStation> UserFavoriteStations { get; set; } = new List<UserFavoriteStation>();
     public ICollection<UserFavoriteCity> UserFavoriteCities { get; set; } = new List<UserFavoriteCity>();

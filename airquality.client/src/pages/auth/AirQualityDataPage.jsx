@@ -1,21 +1,11 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import ndamapgl from "ndamap-gl";
+import "ndamap-gl/dist/ndamap-gl.css";
 import MainLayout from "../../components/layout/MainLayout";
 import theme from "../../components/layout/theme";
 
 import { AQI_LEVELS, getLevel } from "../../utils/aqiHelper";
-
-function createAqiIcon(aqi, colorHex) {
-    return L.divIcon({
-        className: "",
-        html: `<div style="width:34px;height:34px;border-radius:50%;background:${colorHex};border:2px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;">${aqi}</div>`,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
-    });
-}
 
 function StatCard({ title, value, sub, tone = "default" }) {
     const tones = {
@@ -81,65 +71,23 @@ function RankingList({ title, dotColor, rows, emptyText }) {
     );
 }
 
-function StationMarker({ station }) {
-    const navigate = useNavigate();
-    const map = useMap();
-    const lv = getLevel(station.calculatedAqi ?? 0);
 
-    return (
-        <Marker
-            position={[Number(station.latitude), Number(station.longitude)]}
-            icon={createAqiIcon(station.calculatedAqi ?? "--", lv.color)}
-            eventHandlers={{
-                click: () => {
-                    map.flyTo([Number(station.latitude), Number(station.longitude)], 14, {
-                        duration: 1.2,
-                    });
-                },
-            }}
-        >
-            <Popup autoPan={false}>
-                <div style={{ minWidth: 200 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                        <img src={lv.icon} alt={lv.label} style={{ width: 22, height: 22 }} />
-                        <div style={{ fontWeight: 700 }}>{station.stationName}</div>
-                    </div>
-                    <div style={{ fontSize: 12, marginBottom: 8, color: "#64748b" }}>{station.city}</div>
-                    <div>
-                        <b>AQI:</b> {station.calculatedAqi} - <span style={{ color: lv.color, fontWeight: "bold" }}>{lv.label}</span>
-                    </div>
-                    <div><b>PM2.5:</b> {station.pm25 ?? "--"}</div>
-                    <div><b>Nhiệt độ:</b> {station.temperature ?? "--"}°C</div>
-                    <button
-                        onClick={() => navigate(`/tram/${station.stationId}`)}
-                        style={{
-                            marginTop: 10,
-                            width: "100%",
-                            padding: "7px 0",
-                            borderRadius: 8,
-                            border: "none",
-                            background: "#0d6e4e",
-                            color: "#fff",
-                            fontWeight: 700,
-                            fontSize: 13,
-                            cursor: "pointer",
-                        }}
-                    >
-                        Xem chi tiết →
-                    </button>
-                </div>
-            </Popup>
-        </Marker>
-    );
-}
+
+
+const NDAMAPS_STYLE = import.meta.env.VITE_NDAMAPS_STYLE || "https://nda-tiles.openmap.vn/styles/ndamap/style.json";
 
 export default function AirQualityDataPage() {
+    const navigate = useNavigate();
     const [activeLayer, setActiveLayer] = useState("aqi");
     const [stations, setStations] = useState([]);
     const [rankings, setRankings] = useState({ polluted: [], cleanest: [], totalCities: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [lastUpdated, setLastUpdated] = useState("");
+
+    const mapContainerRef = useRef(null);
+    const mapRef = useRef(null);
+    const markersRef = useRef([]);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -178,7 +126,7 @@ export default function AirQualityDataPage() {
         loadData();
     }, [loadData]);
 
-    const defaultCenter = [16.3, 106.2];
+    const defaultCenter = [106.2, 16.3]; // [lng, lat] for ndamap-gl
     const validStations = useMemo(
         () => stations.filter((s) => Number.isFinite(Number(s.latitude)) && Number.isFinite(Number(s.longitude))),
         [stations],
@@ -191,8 +139,77 @@ export default function AirQualityDataPage() {
 
         const avgLat = validStations.reduce((sum, s) => sum + Number(s.latitude), 0) / validStations.length;
         const avgLng = validStations.reduce((sum, s) => sum + Number(s.longitude), 0) / validStations.length;
-        return [avgLat, avgLng];
+        return [avgLng, avgLat]; // [lng, lat] for ndamap-gl
     }, [validStations]);
+
+    // Initialize the ndamap-gl map
+    useEffect(() => {
+        if (!mapContainerRef.current || mapRef.current) return;
+        const map = new ndamapgl.Map({
+            container: mapContainerRef.current,
+            style: NDAMAPS_STYLE,
+            center: [106.0, 15.5], // Center of Vietnam [lng, lat]
+            zoom: 4.5,
+        });
+        map.addControl(new ndamapgl.NavigationControl(), "top-right");
+        mapRef.current = map;
+        return () => {
+            map.remove();
+            mapRef.current = null;
+        };
+    }, []);
+
+    // Update markers when stations change
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map) return;
+
+        // Remove old markers
+        markersRef.current.forEach((m) => m.remove());
+        markersRef.current = [];
+
+        validStations.forEach((station) => {
+            const lv = getLevel(station.calculatedAqi ?? 0);
+            const aqi = station.calculatedAqi ?? "--";
+
+            // Create marker element
+            const el = document.createElement("div");
+            el.style.cssText = `width:34px;height:34px;border-radius:50%;background:${lv.color};border:2px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.22);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px;cursor:pointer;`;
+            el.textContent = String(aqi);
+
+            // Create popup
+            const popup = new ndamapgl.Popup({ offset: 20, closeButton: true, maxWidth: "260px" });
+            const popupContent = document.createElement("div");
+            popupContent.style.minWidth = "200px";
+            popupContent.innerHTML = `
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+                    <img src="${lv.icon}" alt="${lv.label}" style="width:22px;height:22px" />
+                    <div style="font-weight:700">${station.stationName}</div>
+                </div>
+                <div style="font-size:12px;margin-bottom:8px;color:#64748b">${station.city}</div>
+                <div><b>AQI:</b> ${aqi} - <span style="color:${lv.color};font-weight:bold">${lv.label}</span></div>
+                <div><b>PM2.5:</b> ${station.pm25 ?? "--"}</div>
+                <div><b>Nhiệt độ:</b> ${station.temperature ?? "--"}°C</div>
+            `;
+            const btn = document.createElement("button");
+            btn.textContent = "Xem chi tiết →";
+            btn.style.cssText = "margin-top:10px;width:100%;padding:7px 0;border-radius:8px;border:none;background:#0d6e4e;color:#fff;font-weight:700;font-size:13px;cursor:pointer;";
+            btn.addEventListener("click", () => navigate(`/tram/${station.stationId}`));
+            popupContent.appendChild(btn);
+            popup.setDOMContent(popupContent);
+
+            const marker = new ndamapgl.Marker({ element: el })
+                .setLngLat([Number(station.longitude), Number(station.latitude)])
+                .setPopup(popup)
+                .addTo(map);
+
+            el.addEventListener("click", () => {
+                map.flyTo({ center: [Number(station.longitude), Number(station.latitude)], zoom: 14, duration: 1200 });
+            });
+
+            markersRef.current.push(marker);
+        });
+    }, [validStations, navigate]);
 
     const averageAqi = useMemo(() => {
         const list = validStations
@@ -407,15 +424,7 @@ export default function AirQualityDataPage() {
                             )}
 
                             <div style={{ height: 560, borderRadius: 14, overflow: "hidden", border: `1px solid ${theme.border}`, position: "relative" }}>
-                                <MapContainer center={mapCenter} zoom={6} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
-                                    <TileLayer
-                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                        attribution="&copy; OpenStreetMap contributors"
-                                    />
-                                    {validStations.map((station) => (
-                                        <StationMarker key={station.stationId} station={station} />
-                                    ))}
-                                </MapContainer>
+                                <div ref={mapContainerRef} style={{ height: "100%", width: "100%" }} />
 
                                 {loading && (
                                     <div

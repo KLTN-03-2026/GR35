@@ -1,8 +1,10 @@
-﻿import { useState } from "react";
+﻿﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import PlacesTab from "./PlacesTab";
 import ReportTab from "./ReportTab";
+import ProfileHealthTab from "./ProfileHealthTab";
+import DeveloperApiTab from "./DeveloperApiTab";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -58,7 +60,7 @@ function NavItem({ icon, label, active, onClick }) {
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
-function Sidebar({ activeTab, setActiveTab, onLogout, userName }) {
+function Sidebar({ activeTab, setActiveTab, onLogout, userName, isPro }) {
     const navigate = useNavigate();
 
     const navItems = [
@@ -138,11 +140,13 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userName }) {
                     </div>
                     <div>
                         <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{userName}</div>
-                        <div style={{
-                            display: "inline-flex", alignItems: "center", gap: 4,
-                            background: C.yellow, borderRadius: 4, padding: "1px 7px",
-                            fontSize: 10, fontWeight: 700, color: "white", marginTop: 2,
-                        }}>⭐ PRO</div>
+                        {isPro && (
+                            <div style={{
+                                display: "inline-flex", alignItems: "center", gap: 4,
+                                background: C.yellow, borderRadius: 4, padding: "1px 7px",
+                                fontSize: 10, fontWeight: 700, color: "white", marginTop: 2,
+                            }}>⭐ PRO</div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -596,9 +600,10 @@ function PlaceholderTab({ title }) {
 
 // ─── Main Dashboard Page ──────────────────────────────────────────────────────
 export default function EcoAirDashboard() {
-    const { userName, logout } = useAuth();
+    const { userName, logout, subscriptionTier } = useAuth();
     const [activeTab, setActiveTab] = useState("overview");
-
+    const [displayName, setDisplayName] = useState(userName || "");
+    const isPro = (subscriptionTier ?? "").toLowerCase() === "pro";
     const tabTitles = {
         overview: "Tổng quan",
         places: "Địa điểm",
@@ -613,10 +618,10 @@ export default function EcoAirDashboard() {
 
     return (
         <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: C.bg, fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif" }}>
-            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={logout} userName={userName} />
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={logout} userName={displayName} isPro={isPro} />
 
             <div style={{ marginLeft: C.sidebarW, flex: 1, display: "flex", flexDirection: "column", height: "100vh" }}>
-                <DashboardHeader userName={userName} />
+                <DashboardHeader userName={displayName} />
 
                 <main style={{ marginTop: 60, flex: 1, padding: "28px 28px 24px", overflowY: "auto" }}>
                     {/* Breadcrumb */}
@@ -627,7 +632,9 @@ export default function EcoAirDashboard() {
                     {activeTab === "overview" && <OverviewTab />}
                     {activeTab === "places" && <PlacesTab />}
                     {activeTab === "report" && <ReportTab />}
-                    {activeTab !== "overview" && activeTab !== "places" && activeTab !== "report" && <PlaceholderTab title={tabTitles[activeTab]} />}
+                    {activeTab === "developer" && <DeveloperApiTab />}
+                    {activeTab === "profile" && <ProfileHealthTab onProfileUpdated={setDisplayName} />}
+                    {activeTab !== "overview" && activeTab !== "places" && activeTab !== "report" && activeTab !== "developer" && activeTab !== "profile" && <PlaceholderTab title={tabTitles[activeTab]} />}
                 </main>
 
                 <DashboardFooter />
