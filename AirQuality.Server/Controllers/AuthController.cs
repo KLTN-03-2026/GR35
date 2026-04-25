@@ -340,14 +340,56 @@ public class AuthController(
 
         user.HealCondition = normalizedConditions.Count == 0 ? null : string.Join(",", normalizedConditions);
 
+        // Auto-update alert config thresholds based on new health conditions
+        var newThreshold = GetSuggestedAqiThreshold(normalizedConditions);
+        var alertConfigs = await dbContext.AlertConfigs
+            .Where(x => x.UserId == userId)
+            .ToListAsync();
+
+        foreach (var config in alertConfigs)
+        {
+            config.AqiThreshold = newThreshold;
+        }
+
         await dbContext.SaveChangesAsync();
 
         return Ok(new
         {
             message = "Đã cập nhật hồ sơ sức khỏe.",
             fullName = user.FullName,
-            healthConditions = normalizedConditions
+            healthConditions = normalizedConditions,
+            updatedAlertConfigs = alertConfigs.Count
         });
+    }
+
+    /// <summary>
+    /// Returns the suggested AQI threshold based on exact HEALTH_OPTIONS from ProfileHealthTab.jsx.
+    /// Shared logic used by both UpdateProfileHealth (auto-sync) and AlertConfigController (suggestions).
+    /// </summary>
+    private static int GetSuggestedAqiThreshold(List<string> conditions)
+    {
+        if (conditions.Count == 0) return 150;
+
+        if (conditions.Any(c =>
+            c.Equals("Hen suyễn", StringComparison.OrdinalIgnoreCase) ||
+            c.Equals("COPD / bệnh phổi tắc nghẽn", StringComparison.OrdinalIgnoreCase)))
+            return 50;
+
+        if (conditions.Any(c =>
+            c.Equals("Bệnh tim mạch", StringComparison.OrdinalIgnoreCase)))
+            return 75;
+
+        if (conditions.Any(c =>
+            c.Equals("Phụ nữ mang thai", StringComparison.OrdinalIgnoreCase) ||
+            c.Equals("Trẻ nhỏ", StringComparison.OrdinalIgnoreCase) ||
+            c.Equals("Người cao tuổi", StringComparison.OrdinalIgnoreCase)))
+            return 100;
+
+        if (conditions.Any(c =>
+            c.Equals("Viêm mũi dị ứng", StringComparison.OrdinalIgnoreCase)))
+            return 100;
+
+        return 100;
     }
 
     [Authorize]

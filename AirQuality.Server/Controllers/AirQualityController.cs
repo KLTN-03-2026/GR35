@@ -290,10 +290,8 @@ public class AirQualityController(ApplicationDbContext dbContext) : ControllerBa
     }
 
     [HttpGet("station/{id:int}/history")]
-    public async Task<IActionResult> GetStationHistory(int id, [FromQuery] int hours = 24)
+    public async Task<IActionResult> GetStationHistory(int id, [FromQuery] int hours = 24, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null)
     {
-        hours = Math.Clamp(hours, 1, 168);
-
         var stationState = await dbContext.Stations
             .AsNoTracking()
             .Where(s => s.StationId == id)
@@ -306,15 +304,28 @@ public class AirQualityController(ApplicationDbContext dbContext) : ControllerBa
         if (stationState.IsActive != 1)
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Trạm đang bảo trì, vui lòng quay lại sau." });
 
-        var since = DateTime.UtcNow.AddHours(-hours);
+        DateTime end = endDate ?? DateTime.UtcNow;
+        DateTime since;
+
+        if (startDate.HasValue)
+        {
+            since = startDate.Value;
+        }
+        else
+        {
+            hours = Math.Clamp(hours, 1, 168);
+            since = end.AddHours(-hours);
+        }
+        
+        int maxRecords = startDate.HasValue ? 5000 : Math.Max(hours * 4, 100);
 
         var rawHistory = await dbContext.Stations
             .AsNoTracking()
             .Where(s => s.StationId == id)
             .SelectMany(s => s.AirQualityObservations)
-            .Where(o => o.IsValid == 1 && o.CalculatedAqi.HasValue && o.Timestamp >= since)
+            .Where(o => o.IsValid == 1 && o.CalculatedAqi.HasValue && o.Timestamp >= since && o.Timestamp <= end)
             .OrderByDescending(o => o.Timestamp)
-            .Take(hours)
+            .Take(maxRecords)
             .Select(o => new
             {
                 o.Timestamp,

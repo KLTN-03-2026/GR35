@@ -92,6 +92,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey(x => x.StationId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<AirQualityObservation>()
+            .HasIndex(x => new { x.StationId, x.Timestamp })
+            .IsDescending(false, true);
+
         modelBuilder.Entity<ModelEvaluation>()
             .HasOne(x => x.AiModel)
             .WithMany(x => x.ModelEvaluations)
@@ -157,6 +161,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(x => x.CityAirQualitySnapshots)
             .HasForeignKey(x => x.CityId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CityAirQualitySnapshot>()
+            .HasIndex(x => new { x.CityId, x.Timestamp })
+            .IsDescending(false, true);
 
         modelBuilder.Entity<City>()
             .HasIndex(x => x.Slug)

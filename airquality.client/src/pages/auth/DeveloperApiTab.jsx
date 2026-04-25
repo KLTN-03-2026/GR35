@@ -199,7 +199,7 @@ export default function DeveloperApiTab() {
             }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 18 }}>
                     <div>
-                        <h3 style={{ margin: 0, color: C.text, fontSize: 40, lineHeight: 1.1 }}>Air Quality API</h3>
+                        <h3 style={{ margin: 0, color: C.text, fontSize: 30, lineHeight: 1.1 }}>Air Quality API</h3>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <button
@@ -212,7 +212,7 @@ export default function DeveloperApiTab() {
                                 borderRadius: 8,
                                 padding: "8px 10px",
                                 fontWeight: 600,
-                                fontSize: 18,
+                                fontSize: 15,
                                 cursor: "pointer",
                             }}
                         >
@@ -229,7 +229,7 @@ export default function DeveloperApiTab() {
                                 borderRadius: 12,
                                 padding: "12px 20px",
                                 fontWeight: 700,
-                                fontSize: 18,
+                                fontSize: 15,
                                 cursor: "pointer",
                             }}
                         >

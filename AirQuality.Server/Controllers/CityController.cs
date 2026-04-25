@@ -11,10 +11,42 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
 {
     /// <summary>
     /// Danh sách tất cả thành phố + snapshot mới nhất.
+    /// Tối ưu: lấy latest snapshot IDs trước bằng GroupBy, rồi join lại.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetAllCities()
     {
+        // Bước 1: Tìm snapshot_id mới nhất cho mỗi city (1 query duy nhất)
+        var latestSnapshotIds = await dbContext.CityAirQualitySnapshots
+            .AsNoTracking()
+            .GroupBy(s => s.CityId)
+            .Select(g => g.OrderByDescending(s => s.Timestamp).Select(s => s.SnapshotId).FirstOrDefault())
+            .ToListAsync();
+
+        // Bước 2: Lấy dữ liệu snapshot theo IDs đã tìm
+        var latestSnapshots = await dbContext.CityAirQualitySnapshots
+            .AsNoTracking()
+            .Where(s => latestSnapshotIds.Contains(s.SnapshotId))
+            .Select(s => new
+            {
+                s.CityId,
+                s.Timestamp,
+                s.Temperature,
+                s.WeatherMain,
+                s.WeatherIcon,
+                s.Humidity,
+                s.Pm25,
+                s.CalculatedAqi,
+                s.AqiPm25,
+                s.AqiPm10,
+                s.AqiCo,
+                s.AqiNo2,
+                s.AqiSo2,
+                s.AqiO3
+            })
+            .ToDictionaryAsync(s => s.CityId);
+
+        // Bước 3: Lấy danh sách city
         var cities = await dbContext.Cities
             .AsNoTracking()
             .Where(c => c.IsActive == 1)
@@ -25,38 +57,21 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
                 c.Slug,
                 Latitude = (double)c.Latitude,
                 Longitude = (double)c.Longitude,
-                c.Region,
-                Latest = c.CityAirQualitySnapshots
-                    .OrderByDescending(s => s.Timestamp)
-                    .Select(s => new
-                    {
-                        s.Timestamp,
-                        s.Temperature,
-                        s.WeatherMain,
-                        s.WeatherIcon,
-                        s.Humidity,
-                        s.Pm25,
-                        s.CalculatedAqi,
-                        s.AqiPm25,
-                        s.AqiPm10,
-                        s.AqiCo,
-                        s.AqiNo2,
-                        s.AqiSo2,
-                        s.AqiO3
-                    })
-                    .FirstOrDefault()
+                c.Region
             })
             .OrderBy(c => c.ProvinceName)
             .ToListAsync();
 
+        // Bước 4: Ghép client-side
         var result = cities.Select(c =>
         {
-            var aqi = c.Latest?.CalculatedAqi ?? 0;
+            latestSnapshots.TryGetValue(c.CityId, out var latest);
+            var aqi = latest?.CalculatedAqi ?? 0;
             var classification = AqiClassifier.Classify(aqi);
-            var dominant = c.Latest != null
+            var dominant = latest != null
                 ? AqiCalculator.GetDominantPollutant(
-                    c.Latest.AqiPm25, c.Latest.AqiPm10, c.Latest.AqiCo,
-                    c.Latest.AqiNo2, c.Latest.AqiSo2, c.Latest.AqiO3)
+                    latest.AqiPm25, latest.AqiPm10, latest.AqiCo,
+                    latest.AqiNo2, latest.AqiSo2, latest.AqiO3)
                 : null;
 
             return new
@@ -67,12 +82,12 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
                 c.Latitude,
                 c.Longitude,
                 c.Region,
-                Timestamp = c.Latest?.Timestamp,
-                Temperature = c.Latest?.Temperature,
-                WeatherMain = c.Latest?.WeatherMain,
-                WeatherIcon = c.Latest?.WeatherIcon,
-                Humidity = c.Latest?.Humidity,
-                Pm25 = c.Latest?.Pm25,
+                Timestamp = latest?.Timestamp,
+                Temperature = latest?.Temperature,
+                WeatherMain = latest?.WeatherMain,
+                WeatherIcon = latest?.WeatherIcon,
+                Humidity = latest?.Humidity,
+                Pm25 = latest?.Pm25,
                 CalculatedAqi = classification.Aqi,
                 Level = classification.Level,
                 ColorHex = classification.ColorHex,
@@ -100,56 +115,56 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
                 c.Slug,
                 Latitude = (double)c.Latitude,
                 Longitude = (double)c.Longitude,
-                c.Region,
-                Latest = c.CityAirQualitySnapshots
-                    .OrderByDescending(s => s.Timestamp)
-                    .Select(s => new
-                    {
-                        s.Timestamp,
-                        // Thời tiết
-                        s.Temperature,
-                        s.FeelsLike,
-                        s.Humidity,
-                        s.Pressure,
-                        s.WindSpeed,
-                        s.WindDeg,
-                        s.CloudCover,
-                        s.Visibility,
-                        s.WeatherMain,
-                        s.WeatherDescription,
-                        s.WeatherIcon,
-                        // Raw pollutants
-                        s.Pm25,
-                        s.Pm10,
-                        s.Co,
-                        s.No2,
-                        s.So2,
-                        s.O3,
-                        s.Nh3,
-                        // AQI sub-indices
-                        s.AqiPm25,
-                        s.AqiPm10,
-                        s.AqiCo,
-                        s.AqiNo2,
-                        s.AqiSo2,
-                        s.AqiO3,
-                        s.CalculatedAqi
-                    })
-                    .FirstOrDefault()
+                c.Region
             })
             .FirstOrDefaultAsync();
 
         if (city == null)
             return NotFound(new { message = "Thành phố không tồn tại." });
 
-        if (city.Latest == null)
+        var latest = await dbContext.CityAirQualitySnapshots
+            .AsNoTracking()
+            .Where(s => s.CityId == city.CityId)
+            .OrderByDescending(s => s.Timestamp)
+            .Select(s => new
+            {
+                s.Timestamp,
+                s.Temperature,
+                s.FeelsLike,
+                s.Humidity,
+                s.Pressure,
+                s.WindSpeed,
+                s.WindDeg,
+                s.CloudCover,
+                s.Visibility,
+                s.WeatherMain,
+                s.WeatherDescription,
+                s.WeatherIcon,
+                s.Pm25,
+                s.Pm10,
+                s.Co,
+                s.No2,
+                s.So2,
+                s.O3,
+                s.Nh3,
+                s.AqiPm25,
+                s.AqiPm10,
+                s.AqiCo,
+                s.AqiNo2,
+                s.AqiSo2,
+                s.AqiO3,
+                s.CalculatedAqi
+            })
+            .FirstOrDefaultAsync();
+
+        if (latest == null)
             return NotFound(new { message = "Chưa có dữ liệu cho thành phố này." });
 
-        var aqi = city.Latest.CalculatedAqi ?? 0;
+        var aqi = latest.CalculatedAqi ?? 0;
         var classification = AqiClassifier.Classify(aqi);
         var dominant = AqiCalculator.GetDominantPollutant(
-            city.Latest.AqiPm25, city.Latest.AqiPm10, city.Latest.AqiCo,
-            city.Latest.AqiNo2, city.Latest.AqiSo2, city.Latest.AqiO3);
+            latest.AqiPm25, latest.AqiPm10, latest.AqiCo,
+            latest.AqiNo2, latest.AqiSo2, latest.AqiO3);
 
         return Ok(new
         {
@@ -159,39 +174,36 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
             city.Latitude,
             city.Longitude,
             city.Region,
-            city.Latest.Timestamp,
-            // Thời tiết
-            city.Latest.Temperature,
-            city.Latest.FeelsLike,
-            city.Latest.Humidity,
-            city.Latest.Pressure,
-            city.Latest.WindSpeed,
-            city.Latest.WindDeg,
-            city.Latest.CloudCover,
-            city.Latest.Visibility,
-            city.Latest.WeatherMain,
-            city.Latest.WeatherDescription,
-            city.Latest.WeatherIcon,
-            // Raw pollutants
-            city.Latest.Pm25,
-            city.Latest.Pm10,
-            city.Latest.Co,
-            city.Latest.No2,
-            city.Latest.So2,
-            city.Latest.O3,
-            city.Latest.Nh3,
-            // AQI
+            latest.Timestamp,
+            latest.Temperature,
+            latest.FeelsLike,
+            latest.Humidity,
+            latest.Pressure,
+            latest.WindSpeed,
+            latest.WindDeg,
+            latest.CloudCover,
+            latest.Visibility,
+            latest.WeatherMain,
+            latest.WeatherDescription,
+            latest.WeatherIcon,
+            latest.Pm25,
+            latest.Pm10,
+            latest.Co,
+            latest.No2,
+            latest.So2,
+            latest.O3,
+            latest.Nh3,
             CalculatedAqi = classification.Aqi,
             Level = classification.Level,
             ColorHex = classification.ColorHex,
             HealthAdvice = classification.HealthAdvice,
             DominantPollutant = dominant,
-            city.Latest.AqiPm25,
-            city.Latest.AqiPm10,
-            city.Latest.AqiCo,
-            city.Latest.AqiNo2,
-            city.Latest.AqiSo2,
-            city.Latest.AqiO3
+            latest.AqiPm25,
+            latest.AqiPm10,
+            latest.AqiCo,
+            latest.AqiNo2,
+            latest.AqiSo2,
+            latest.AqiO3
         });
     }
 
@@ -199,24 +211,39 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
     /// Lịch sử snapshot theo giờ cho 1 thành phố.
     /// </summary>
     [HttpGet("{slug}/history")]
-    public async Task<IActionResult> GetCityHistory(string slug, [FromQuery] int hours = 24)
+    public async Task<IActionResult> GetCityHistory(string slug, [FromQuery] int hours = 24, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null)
     {
-        hours = Math.Clamp(hours, 1, 168);
+        // Lấy CityId qua slug (nhanh nhờ unique index trên Slug)
+        var cityId = await dbContext.Cities
+            .AsNoTracking()
+            .Where(c => c.Slug == slug && c.IsActive == 1)
+            .Select(c => (int?)c.CityId)
+            .FirstOrDefaultAsync();
 
-        var cityExists = await dbContext.Cities
-            .AnyAsync(c => c.Slug == slug && c.IsActive == 1);
-
-        if (!cityExists)
+        if (cityId == null)
             return NotFound(new { message = "Thành phố không tồn tại." });
 
-        var since = DateTime.UtcNow.AddHours(-hours);
+        DateTime end = endDate ?? DateTime.UtcNow;
+        DateTime since;
+
+        if (startDate.HasValue)
+        {
+            since = startDate.Value;
+        }
+        else
+        {
+            hours = Math.Clamp(hours, 1, 168);
+            since = end.AddHours(-hours);
+        }
+        
+        int maxRecords = startDate.HasValue ? 5000 : Math.Max(hours * 4, 100);
 
         var rawHistory = await dbContext.CityAirQualitySnapshots
             .AsNoTracking()
-            .Where(s => s.City.Slug == slug &&
-                        s.Timestamp >= since)
+            .Where(s => s.CityId == cityId.Value &&
+                        s.Timestamp >= since && s.Timestamp <= end)
             .OrderByDescending(s => s.Timestamp)
-            .Take(hours)
+            .Take(maxRecords)
             .Select(s => new
             {
                 s.Timestamp,
@@ -264,9 +291,16 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
     [HttpGet("nearest")]
     public async Task<IActionResult> GetNearestCity([FromQuery] double lat, [FromQuery] double lon)
     {
+        // Lấy danh sách cityId có snapshot (nhanh nhờ index)
+        var cityIdsWithData = await dbContext.CityAirQualitySnapshots
+            .AsNoTracking()
+            .Select(s => s.CityId)
+            .Distinct()
+            .ToListAsync();
+
         var city = await dbContext.Cities
             .AsNoTracking()
-            .Where(c => c.IsActive == 1 && c.CityAirQualitySnapshots.Any())
+            .Where(c => c.IsActive == 1 && cityIdsWithData.Contains(c.CityId))
             .OrderBy(c => ((double)c.Latitude - lat) * ((double)c.Latitude - lat) + ((double)c.Longitude - lon) * ((double)c.Longitude - lon))
             .Select(c => new { c.Slug, c.ProvinceName })
             .FirstOrDefaultAsync();
@@ -281,9 +315,15 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
     [HttpGet("random")]
     public async Task<IActionResult> GetRandomCity()
     {
+        var cityIdsWithData = await dbContext.CityAirQualitySnapshots
+            .AsNoTracking()
+            .Select(s => s.CityId)
+            .Distinct()
+            .ToListAsync();
+
         var city = await dbContext.Cities
             .AsNoTracking()
-            .Where(c => c.IsActive == 1 && c.CityAirQualitySnapshots.Any())
+            .Where(c => c.IsActive == 1 && cityIdsWithData.Contains(c.CityId))
             .OrderBy(c => Guid.NewGuid())
             .Select(c => new { c.Slug, c.ProvinceName })
             .FirstOrDefaultAsync();
@@ -294,27 +334,56 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
 
     /// <summary>
     /// Xếp hạng AQI tất cả thành phố (mới nhất).
+    /// Tối ưu: dùng GroupBy lấy latest snapshot 1 lần.
     /// </summary>
     [HttpGet("rankings")]
     public async Task<IActionResult> GetRankings([FromQuery] int top = 10)
     {
         top = Math.Clamp(top, 1, 63);
 
-        var latestByCities = await dbContext.Cities
+        // Bước 1: Lấy latest snapshot IDs
+        var latestSnapshotIds = await dbContext.CityAirQualitySnapshots
             .AsNoTracking()
-            .Where(c => c.IsActive == 1)
+            .GroupBy(s => s.CityId)
+            .Select(g => g.OrderByDescending(s => s.Timestamp).Select(s => s.SnapshotId).FirstOrDefault())
+            .ToListAsync();
+
+        // Bước 2: Lấy AQI từ snapshot mới nhất
+        var latestData = await dbContext.CityAirQualitySnapshots
+            .AsNoTracking()
+            .Where(s => latestSnapshotIds.Contains(s.SnapshotId) && s.CalculatedAqi.HasValue)
+            .Select(s => new
+            {
+                s.CityId,
+                s.CalculatedAqi
+            })
+            .ToListAsync();
+
+        // Bước 3: Lấy thông tin city
+        var cityIds = latestData.Select(d => d.CityId).ToList();
+        var cityInfos = await dbContext.Cities
+            .AsNoTracking()
+            .Where(c => c.IsActive == 1 && cityIds.Contains(c.CityId))
             .Select(c => new
             {
+                c.CityId,
                 c.ProvinceName,
                 c.Slug,
-                c.Region,
-                CalculatedAqi = c.CityAirQualitySnapshots
-                    .OrderByDescending(s => s.Timestamp)
-                    .Select(s => s.CalculatedAqi)
-                    .FirstOrDefault()
+                c.Region
             })
-            .Where(x => x.CalculatedAqi.HasValue)
-            .ToListAsync();
+            .ToDictionaryAsync(c => c.CityId);
+
+        // Bước 4: Ghép dữ liệu
+        var latestByCities = latestData
+            .Where(d => cityInfos.ContainsKey(d.CityId))
+            .Select(d => new
+            {
+                cityInfos[d.CityId].ProvinceName,
+                cityInfos[d.CityId].Slug,
+                cityInfos[d.CityId].Region,
+                d.CalculatedAqi
+            })
+            .ToList();
 
         var polluted = latestByCities
             .OrderByDescending(x => x.CalculatedAqi)
@@ -360,10 +429,33 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
 
     /// <summary>
     /// Dữ liệu cho bản đồ (lat, lon, aqi, level, color).
+    /// Tối ưu: dùng GroupBy lấy latest snapshot 1 lần.
     /// </summary>
     [HttpGet("map")]
     public async Task<IActionResult> GetMapData()
     {
+        // Bước 1: Lấy latest snapshot IDs
+        var latestSnapshotIds = await dbContext.CityAirQualitySnapshots
+            .AsNoTracking()
+            .GroupBy(s => s.CityId)
+            .Select(g => g.OrderByDescending(s => s.Timestamp).Select(s => s.SnapshotId).FirstOrDefault())
+            .ToListAsync();
+
+        // Bước 2: Lấy dữ liệu snapshot
+        var latestSnapshots = await dbContext.CityAirQualitySnapshots
+            .AsNoTracking()
+            .Where(s => latestSnapshotIds.Contains(s.SnapshotId))
+            .Select(s => new
+            {
+                s.CityId,
+                s.Timestamp,
+                s.Temperature,
+                s.Pm25,
+                s.CalculatedAqi
+            })
+            .ToDictionaryAsync(s => s.CityId);
+
+        // Bước 3: Lấy thông tin city
         var cities = await dbContext.Cities
             .AsNoTracking()
             .Where(c => c.IsActive == 1)
@@ -373,43 +465,37 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
                 c.ProvinceName,
                 c.Slug,
                 Latitude = (double)c.Latitude,
-                Longitude = (double)c.Longitude,
-                Latest = c.CityAirQualitySnapshots
-                    .OrderByDescending(s => s.Timestamp)
-                    .Select(s => new
-                    {
-                        s.Timestamp,
-                        s.Temperature,
-                        s.Pm25,
-                        s.CalculatedAqi
-                    })
-                    .FirstOrDefault()
+                Longitude = (double)c.Longitude
             })
-            .Where(x => x.Latest != null)
             .ToListAsync();
 
-        var result = cities.Select(c =>
-        {
-            var aqi = c.Latest!.CalculatedAqi ?? 0;
-            var classification = AqiClassifier.Classify(aqi);
-            return new
+        // Bước 4: Ghép và lọc
+        var result = cities
+            .Where(c => latestSnapshots.ContainsKey(c.CityId))
+            .Select(c =>
             {
-                c.CityId,
-                c.ProvinceName,
-                c.Slug,
-                c.Latitude,
-                c.Longitude,
-                c.Latest.Timestamp,
-                c.Latest.Temperature,
-                c.Latest.Pm25,
-                CalculatedAqi = classification.Aqi,
-                Level = classification.Level,
-                ColorHex = classification.ColorHex
-            };
-        });
+                var latest = latestSnapshots[c.CityId];
+                var aqi = latest.CalculatedAqi ?? 0;
+                var classification = AqiClassifier.Classify(aqi);
+                return new
+                {
+                    c.CityId,
+                    c.ProvinceName,
+                    c.Slug,
+                    c.Latitude,
+                    c.Longitude,
+                    latest.Timestamp,
+                    latest.Temperature,
+                    latest.Pm25,
+                    CalculatedAqi = classification.Aqi,
+                    Level = classification.Level,
+                    ColorHex = classification.ColorHex
+                };
+            });
 
         return Ok(result);
     }
+
     /// <summary>
     /// Danh sách trạm quan trắc thuộc thành phố (khớp tên tỉnh).
     /// </summary>
@@ -427,14 +513,15 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
             return NotFound(new { message = "Thành phố không tồn tại." });
 
         var provinceName = city.ProvinceName;
+        var shortName = provinceName.Replace("TP. ", "").Replace("Thành phố ", "");
 
-        // Lấy các trạm có City chứa tên tỉnh (khớp substring)
-        var rawStations = await dbContext.Stations
+        // Bước 1: Lấy danh sách trạm (nhẹ, chỉ tìm station)
+        var stations = await dbContext.Stations
             .AsNoTracking()
             .Where(s => s.IsActive == 1
                         && s.Latitude != 0 && s.Longitude != 0
                         && (s.City.Contains(provinceName)
-                            || s.City.Contains(provinceName.Replace("TP. ", "").Replace("Thành phố ", ""))))
+                            || s.City.Contains(shortName)))
             .Select(s => new
             {
                 s.StationId,
@@ -442,27 +529,52 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
                 s.City,
                 Latitude = (double)s.Latitude,
                 Longitude = (double)s.Longitude,
-                s.Provider,
-                Latest = s.AirQualityObservations
-                    .Where(o => o.IsValid == 1 && o.CalculatedAqi.HasValue)
-                    .OrderByDescending(o => o.Timestamp)
-                    .Select(o => new
-                    {
-                        o.Timestamp,
-                        o.CalculatedAqi,
-                        o.Pm25,
-                        o.Pm10,
-                        o.Temperature,
-                        o.Humidity,
-                        o.WindSpeed
-                    })
-                    .FirstOrDefault()
+                s.Provider
             })
             .ToListAsync();
 
-        var result = rawStations.Select(s =>
+        if (stations.Count == 0)
         {
-            var aqi = s.Latest?.CalculatedAqi ?? 0;
+            return Ok(new
+            {
+                CitySlug = slug,
+                ProvinceName = city.ProvinceName,
+                Stations = Array.Empty<object>(),
+                TotalStations = 0,
+                HasStations = false
+            });
+        }
+
+        // Bước 2: Lấy latest observation cho các station đã tìm được
+        var stationIds = stations.Select(s => s.StationId).ToList();
+        var latestObsIds = await dbContext.AirQualityObservations
+            .AsNoTracking()
+            .Where(o => stationIds.Contains(o.StationId) && o.IsValid == 1 && o.CalculatedAqi.HasValue)
+            .GroupBy(o => o.StationId)
+            .Select(g => g.OrderByDescending(o => o.Timestamp).Select(o => o.ObservationId).FirstOrDefault())
+            .ToListAsync();
+
+        var latestObs = await dbContext.AirQualityObservations
+            .AsNoTracking()
+            .Where(o => latestObsIds.Contains(o.ObservationId))
+            .Select(o => new
+            {
+                o.StationId,
+                o.Timestamp,
+                o.CalculatedAqi,
+                o.Pm25,
+                o.Pm10,
+                o.Temperature,
+                o.Humidity,
+                o.WindSpeed
+            })
+            .ToDictionaryAsync(o => o.StationId);
+
+        // Bước 3: Ghép client-side
+        var result = stations.Select(s =>
+        {
+            latestObs.TryGetValue(s.StationId, out var latest);
+            var aqi = latest?.CalculatedAqi ?? 0;
             var classification = AqiClassifier.Classify(aqi);
             return new
             {
@@ -472,16 +584,16 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
                 s.Latitude,
                 s.Longitude,
                 s.Provider,
-                HasData = s.Latest != null,
-                Timestamp = s.Latest?.Timestamp,
+                HasData = latest != null,
+                Timestamp = latest?.Timestamp,
                 CalculatedAqi = classification.Aqi,
                 Level = classification.Level,
                 ColorHex = classification.ColorHex,
-                Pm25 = s.Latest?.Pm25,
-                Pm10 = s.Latest?.Pm10,
-                Temperature = s.Latest?.Temperature,
-                Humidity = s.Latest?.Humidity,
-                WindSpeed = s.Latest?.WindSpeed
+                Pm25 = latest?.Pm25,
+                Pm10 = latest?.Pm10,
+                Temperature = latest?.Temperature,
+                Humidity = latest?.Humidity,
+                WindSpeed = latest?.WindSpeed
             };
         }).OrderByDescending(s => s.HasData).ThenByDescending(s => s.CalculatedAqi);
 
@@ -490,8 +602,8 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
             CitySlug = slug,
             ProvinceName = city.ProvinceName,
             Stations = result,
-            TotalStations = rawStations.Count,
-            HasStations = rawStations.Count > 0
+            TotalStations = stations.Count,
+            HasStations = stations.Count > 0
         });
     }
 }
