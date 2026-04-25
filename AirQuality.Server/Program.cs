@@ -14,14 +14,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.CommandTimeout(120)));
 
-//builder.Services.AddHttpClient();
-//builder.Services.AddHostedService<TedpDataFetchService>();
-//builder.Services.AddHostedService<WeatherDataFetchService>();
-
-//builder.Services.AddHttpClient();
-//builder.Services.AddHostedService<OwmCityDataFetchService>();
+builder.Services.AddHttpClient();
+builder.Services.AddHostedService<TedpDataFetchService>();
+builder.Services.AddHostedService<WeatherDataFetchService>();
+builder.Services.AddHostedService<TelegramDailyAlertService>();
+builder.Services.AddHostedService<TelegramThresholdAlertService>();
+builder.Services.AddHostedService<OwmCityDataFetchService>();
+//builder.Services.AddHostedService<HistoricalDataSyncService>();
 
 builder.Services
     .AddOptions<JwtOptions>()

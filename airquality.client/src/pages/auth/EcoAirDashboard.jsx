@@ -1,10 +1,12 @@
-﻿﻿import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import PlacesTab from "./PlacesTab";
 import ReportTab from "./ReportTab";
 import ProfileHealthTab from "./ProfileHealthTab";
 import DeveloperApiTab from "./DeveloperApiTab";
+import AlertConfigTab from "./AlertConfigTab";
+import HistoryExportTab from "./HistoryExportTab";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -633,8 +635,10 @@ export default function EcoAirDashboard() {
                     {activeTab === "places" && <PlacesTab />}
                     {activeTab === "report" && <ReportTab />}
                     {activeTab === "developer" && <DeveloperApiTab />}
+                    {activeTab === "alert" && <AlertConfigTab />}
                     {activeTab === "profile" && <ProfileHealthTab onProfileUpdated={setDisplayName} />}
-                    {activeTab !== "overview" && activeTab !== "places" && activeTab !== "report" && activeTab !== "developer" && activeTab !== "profile" && <PlaceholderTab title={tabTitles[activeTab]} />}
+                    {activeTab === "history" && <HistoryExportTab />}
+                    {activeTab !== "overview" && activeTab !== "places" && activeTab !== "report" && activeTab !== "developer" && activeTab !== "alert" && activeTab !== "profile" && activeTab !== "history" && <PlaceholderTab title={tabTitles[activeTab]} />}
                 </main>
 
                 <DashboardFooter />
