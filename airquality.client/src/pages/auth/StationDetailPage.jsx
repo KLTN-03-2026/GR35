@@ -5,6 +5,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import MainLayout from "../../components/layout/MainLayout";
 import { useAuth } from "../../hooks/useAuth";
+import HistoryChart from "../../components/common/HistoryChart";
 
 /* ─── Design tokens ──────────────────────────────────────────── */
 const T = {
@@ -114,31 +115,7 @@ function WeatherItem({ icon, label, value }) {
 }
 
 /* ─── History sparkline bar ───────────────────────────────────── */
-function HistoryBar({ entry, maxAqi }) {
-    const heightPct = maxAqi > 0 ? Math.max(Math.round((entry.calculatedAqi / maxAqi) * 64), 8) : 20;
-    const lv = getLevel(entry.calculatedAqi);
-    const ts = new Date(entry.timestamp);
-    const timeLabel = `${ts.getHours().toString().padStart(2, "0")}:00`;
 
-    return (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flex: "1 0 0", minWidth: 0 }}>
-            <span style={{ fontSize: 9, fontWeight: 700, color: lv.color }}>{entry.calculatedAqi}</span>
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", height: 64 }}>
-                <div
-                    style={{
-                        width: "100%",
-                        minWidth: 12,
-                        height: heightPct,
-                        background: lv.color,
-                        borderRadius: "4px 4px 2px 2px",
-                        opacity: 0.85,
-                    }}
-                />
-            </div>
-            <span style={{ fontSize: 9, color: T.textLight, whiteSpace: "nowrap" }}>{timeLabel}</span>
-        </div>
-    );
-}
 
 /* ─── Health icon ─────────────────────────────────────────────── */
 function HealthTile({ icon, label, active }) {
@@ -276,7 +253,7 @@ export default function StationDetailPage() {
     const district = cityParts[0] ?? "";
 
     const updatedAt = station.timestamp
-        ? new Date(station.timestamp).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
+        ? new Date(typeof station.timestamp === 'string' && !station.timestamp.endsWith('Z') ? station.timestamp + 'Z' : station.timestamp).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
         : "--";
 
 
@@ -476,13 +453,12 @@ export default function StationDetailPage() {
                         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
                             {/* History */}
-                            <Card style={{ padding: "24px" }}>
-                                <SectionTitle icon="📈">Lịch sử 24 giờ gần nhất</SectionTitle>
-                                {history.length > 0 ? (
-                                    <div style={{ display: "flex", gap: 4, alignItems: "flex-end", overflowX: "auto", paddingBottom: 4 }}>
-                                        {history.map((h, i) => <HistoryBar key={i} entry={h} maxAqi={maxHistAqi} />)}
-                                    </div>
-                                ) : (
+                            {/* History */}
+                            {history.length > 0 ? (
+                                <HistoryChart history={history} locationName={station.stationName} />
+                            ) : (
+                                <Card style={{ padding: "24px" }}>
+                                    <SectionTitle icon="📈">Lịch sử 24 giờ gần nhất</SectionTitle>
                                     <div style={{ textAlign: "center", padding: "36px 0" }}>
                                         <div style={{ fontSize: 32, marginBottom: 8 }}>🔒</div>
                                         <div style={{ fontWeight: 700, fontSize: 14, color: T.text, marginBottom: 4 }}>Tính năng giới hạn</div>
@@ -493,8 +469,8 @@ export default function StationDetailPage() {
                                             Nâng cấp Pro
                                         </button>
                                     </div>
-                                )}
-                            </Card>
+                                </Card>
+                            )}
 
                             {/* Health */}
                             <Card style={{ padding: "24px" }}>

@@ -25,7 +25,8 @@ function getAuthHeaders() {
 
 function formatDateTime(value) {
     if (!value) return '--';
-    const date = new Date(value);
+    const tsStr = typeof value === 'string' && !value.endsWith('Z') ? value + 'Z' : value;
+    const date = new Date(tsStr);
     if (Number.isNaN(date.getTime())) return '--';
 
     return date.toLocaleString('vi-VN', {

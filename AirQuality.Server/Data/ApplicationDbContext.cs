@@ -170,6 +170,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasIndex(x => x.Slug)
             .IsUnique();
 
+        // Index cho tìm kiếm tên thành phố
+        modelBuilder.Entity<City>()
+            .HasIndex(x => x.ProvinceName);
+
+        // Index cho tìm kiếm tên trạm + thành phố
+        modelBuilder.Entity<Station>()
+            .HasIndex(x => x.StationName);
+        modelBuilder.Entity<Station>()
+            .HasIndex(x => x.City);
+
         modelBuilder.Entity<City>().Property(x => x.IsActive).HasDefaultValue(1);
 
         modelBuilder.Entity<CommunityReport>()

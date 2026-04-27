@@ -211,7 +211,7 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
     /// Lịch sử snapshot theo giờ cho 1 thành phố.
     /// </summary>
     [HttpGet("{slug}/history")]
-    public async Task<IActionResult> GetCityHistory(string slug, [FromQuery] int hours = 24, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null)
+    public async Task<IActionResult> GetCityHistory(string slug, [FromQuery] int hours = 24, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null, [FromQuery] double? minPm25 = null, [FromQuery] double? maxPm25 = null)
     {
         // Lấy CityId qua slug (nhanh nhờ unique index trên Slug)
         var cityId = await dbContext.Cities
@@ -238,10 +238,17 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
         
         int maxRecords = startDate.HasValue ? 5000 : Math.Max(hours * 4, 100);
 
-        var rawHistory = await dbContext.CityAirQualitySnapshots
+        var query = dbContext.CityAirQualitySnapshots
             .AsNoTracking()
             .Where(s => s.CityId == cityId.Value &&
-                        s.Timestamp >= since && s.Timestamp <= end)
+                        s.Timestamp >= since && s.Timestamp <= end);
+
+        if (minPm25.HasValue)
+            query = query.Where(s => s.Pm25 >= minPm25.Value);
+        if (maxPm25.HasValue)
+            query = query.Where(s => s.Pm25 <= maxPm25.Value);
+
+        var rawHistory = await query
             .OrderByDescending(s => s.Timestamp)
             .Take(maxRecords)
             .Select(s => new
@@ -253,6 +260,18 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
                 s.WeatherIcon,
                 s.Pm25,
                 s.Pm10,
+                s.Co,
+                s.No2,
+                s.So2,
+                s.O3,
+                s.Nh3,
+                s.FeelsLike,
+                s.Pressure,
+                s.WindSpeed,
+                s.WindDeg,
+                s.CloudCover,
+                s.Visibility,
+                s.WeatherDescription,
                 s.CalculatedAqi,
                 s.AqiPm25,
                 s.AqiPm10,
@@ -276,6 +295,24 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
                 s.WeatherIcon,
                 s.Pm25,
                 s.Pm10,
+                s.Co,
+                s.No2,
+                s.So2,
+                s.O3,
+                s.Nh3,
+                s.FeelsLike,
+                s.Pressure,
+                s.WindSpeed,
+                s.WindDeg,
+                s.CloudCover,
+                s.Visibility,
+                s.WeatherDescription,
+                s.AqiPm25,
+                s.AqiPm10,
+                s.AqiCo,
+                s.AqiNo2,
+                s.AqiSo2,
+                s.AqiO3,
                 CalculatedAqi = classification.Aqi,
                 Level = classification.Level,
                 ColorHex = classification.ColorHex

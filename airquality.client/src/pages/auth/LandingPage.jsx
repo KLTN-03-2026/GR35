@@ -94,7 +94,8 @@ function getCharacterByAqi(aqiValue) {
 
 function formatLocalTime(timestamp) {
   if (!timestamp) return "--";
-  const date = new Date(timestamp);
+  const tsStr = typeof timestamp === 'string' && !timestamp.endsWith('Z') ? timestamp + 'Z' : timestamp;
+  const date = new Date(tsStr);
   if (Number.isNaN(date.getTime())) return "--";
   return date.toLocaleString("vi-VN");
 }
@@ -281,8 +282,9 @@ function HeroSection() {
   const [searching, setSearching] = useState(false);
   const searchRef = useRef(null);
   const debounceRef = useRef(null);
+  const abortRef = useRef(null);
 
-  /* Server-side search with 300ms debounce */
+  /* Server-side search with 400ms debounce + AbortController */
   const doSearch = useCallback(async (term) => {
     if (!term || term.trim().length < 2) {
       setSearchResults({ cities: [], stations: [] });
@@ -290,9 +292,16 @@ function HeroSection() {
       setSearching(false);
       return;
     }
+    // Cancel any in-flight request
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setSearching(true);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(term.trim())}&limit=6`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(term.trim())}&limit=6`, {
+        signal: controller.signal,
+      });
       if (res.ok) {
         const data = await res.json();
         setSearchResults({
@@ -301,7 +310,9 @@ function HeroSection() {
         });
         setShowDrop(true);
       }
-    } catch { /* silent */ } finally {
+    } catch (err) {
+      if (err.name === "AbortError") return; // Silently ignore cancelled requests
+    } finally {
       setSearching(false);
     }
   }, []);
@@ -313,10 +324,11 @@ function HeroSection() {
     if (val.trim().length < 2) {
       setSearchResults({ cities: [], stations: [] });
       setShowDrop(false);
+      if (abortRef.current) abortRef.current.abort();
       return;
     }
     setSearching(true);
-    debounceRef.current = setTimeout(() => doSearch(val), 300);
+    debounceRef.current = setTimeout(() => doSearch(val), 400);
   }
 
   /* Close dropdown on outside click */

@@ -364,7 +364,7 @@ export default function NationalAirQualityPage() {
                                                     <div style="font-weight: 600; margin-bottom: 8px; line-height: 1.4;">${object.description}</div>
                                                     <div style="color: #6b7280; font-size: 11px; margin-bottom: ${object.imageUrl ? '10px' : '0'};">
                                                         Báo cáo bởi: ${object.userFullName || 'N/A'}<br/>
-                                                        Lúc: ${new Date(object.reportTime).toLocaleString('vi-VN')}<br/>
+                                                        Lúc: ${new Date(typeof object.reportTime === 'string' && !object.reportTime.endsWith('Z') ? object.reportTime + 'Z' : object.reportTime).toLocaleString('vi-VN')}<br/>
                                                         ${metricText}
                                                     </div>
                                                     ${object.imageUrl ? `<img src="${object.imageUrl}" style="width: 100%; border-radius: 8px; border: 1px solid #e5e7eb; object-fit: cover; max-height: 150px;" />` : ''}

@@ -8,6 +8,10 @@ namespace AirQuality.Server.Controllers;
 /// <summary>
 /// Endpoint tìm kiếm thống nhất: thành phố + trạm quan trắc.
 /// GET /api/search?q=Ha Noi&limit=8
+///
+/// ĐÃ TỐI ƯU: Tách thành 2 bước
+///   Bước 1 – Lọc tên trên bảng nhỏ (Cities/Stations)
+///   Bước 2 – Lấy latest data bằng flat query riêng trên bảng snapshot/observation
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -26,62 +30,54 @@ public class SearchController(ApplicationDbContext dbContext) : ControllerBase
             return Ok(new { Cities = Array.Empty<object>(), Stations = Array.Empty<object>(), Query = q });
 
         var term = q.Trim();
+        var termLower = term.ToLowerInvariant();
 
-        // ── Tìm thành phố ─────────────────────────────────────────────
-        var rawCities = await dbContext.Cities
+        // ═══════════════════════════════════════════════════════════════════
+        // CITY SEARCH – 2 bước tách biệt
+        // ═══════════════════════════════════════════════════════════════════
+
+        // Bước 1: Lọc tên – CHỈ query trên bảng Cities (≤63 rows)
+        var matchedCities = await dbContext.Cities
             .AsNoTracking()
             .Where(c => c.IsActive == 1 &&
                         (EF.Functions.Like(c.ProvinceName, $"{term}%") ||
                          EF.Functions.Like(c.ProvinceName, $"% {term}%") ||
                          EF.Functions.Like(c.Slug, $"{term}%") ||
                          EF.Functions.Like(c.Slug, $"%-{term}%")))
-            .Select(c => new
-            {
-                c.CityId,
-                c.ProvinceName,
-                c.Slug,
-                Latitude = (double)c.Latitude,
-                Longitude = (double)c.Longitude,
-                c.Region,
-                Latest = c.CityAirQualitySnapshots
-                    .OrderByDescending(s => s.Timestamp)
-                    .Select(s => new
-                    {
-                        s.Timestamp,
-                        s.Temperature,
-                        s.WeatherIcon,
-                        s.WeatherMain,
-                        s.Pm25,
-                        s.CalculatedAqi,
-                        s.AqiPm25,
-                        s.AqiPm10,
-                        s.AqiCo,
-                        s.AqiNo2,
-                        s.AqiSo2,
-                        s.AqiO3,
-                    })
-                    .FirstOrDefault()
-            })
             .OrderBy(c => c.ProvinceName)
             .Take(limit)
             .ToListAsync();
 
-        // Sắp xếp: khớp tên từ đầu → khớp slug từ đầu → còn lại (alphabetical)
-        var termLower = term.ToLowerInvariant();
-        rawCities = rawCities
+        // Sắp xếp: khớp tên từ đầu → khớp slug từ đầu → alphabetical
+        matchedCities = matchedCities
             .OrderByDescending(c => c.ProvinceName.StartsWith(term, StringComparison.OrdinalIgnoreCase))
             .ThenByDescending(c => c.Slug.StartsWith(termLower, StringComparison.OrdinalIgnoreCase))
             .ThenBy(c => c.ProvinceName)
             .ToList();
 
-        var cities = rawCities.Select(c =>
+        // Bước 2: Lấy latest snapshot CHO CÁC CITY ĐÃ MATCH bằng 1 flat query
+        var cityIds = matchedCities.Select(c => c.CityId).ToList();
+        var latestSnapshots = await dbContext.CityAirQualitySnapshots
+            .AsNoTracking()
+            .Where(s => cityIds.Contains(s.CityId))
+            .GroupBy(s => s.CityId)
+            .Select(g => g.OrderByDescending(s => s.Timestamp).FirstOrDefault())
+            .ToListAsync();
+
+        var snapshotMap = latestSnapshots
+            .Where(s => s != null)
+            .ToDictionary(s => s!.CityId);
+
+        // Map kết quả
+        var cities = matchedCities.Select(c =>
         {
-            var aqi = c.Latest?.CalculatedAqi ?? 0;
+            snapshotMap.TryGetValue(c.CityId, out var snap);
+            var aqi = snap?.CalculatedAqi ?? 0;
             var cls = AqiClassifier.Classify(aqi);
-            var dominant = c.Latest != null
+            var dominant = snap != null
                 ? AqiCalculator.GetDominantPollutant(
-                    c.Latest.AqiPm25, c.Latest.AqiPm10, c.Latest.AqiCo,
-                    c.Latest.AqiNo2, c.Latest.AqiSo2, c.Latest.AqiO3)
+                    snap.AqiPm25, snap.AqiPm10, snap.AqiCo,
+                    snap.AqiNo2, snap.AqiSo2, snap.AqiO3)
                 : null;
 
             return new
@@ -90,25 +86,30 @@ public class SearchController(ApplicationDbContext dbContext) : ControllerBase
                 c.CityId,
                 c.ProvinceName,
                 c.Slug,
-                c.Latitude,
-                c.Longitude,
+                Latitude = (double)c.Latitude,
+                Longitude = (double)c.Longitude,
                 c.Region,
-                Timestamp = c.Latest?.Timestamp,
-                Temperature = c.Latest?.Temperature,
-                WeatherIcon = c.Latest?.WeatherIcon,
-                WeatherMain = c.Latest?.WeatherMain,
-                Pm25 = c.Latest?.Pm25,
+                Timestamp = snap?.Timestamp,
+                Temperature = snap?.Temperature,
+                WeatherIcon = snap?.WeatherIcon,
+                WeatherMain = snap?.WeatherMain,
+                Pm25 = snap?.Pm25,
                 CalculatedAqi = cls.Aqi,
                 Level = cls.Level,
                 ColorHex = cls.ColorHex,
                 HealthAdvice = cls.HealthAdvice,
                 DominantPollutant = dominant,
-                HasData = c.Latest != null,
+                HasData = snap != null,
             };
         });
 
-        // ── Tìm trạm quan trắc ────────────────────────────────────────
-        var rawStations = await dbContext.Stations
+        // ═══════════════════════════════════════════════════════════════════
+        // STATION SEARCH – 2 bước tách biệt
+        // ═══════════════════════════════════════════════════════════════════
+
+        // Bước 1: Lọc tên – CHỈ query trên bảng Stations
+        // BỎ .Any() filter tốn kém – thay bằng HasData flag ở kết quả
+        var matchedStations = await dbContext.Stations
             .AsNoTracking()
             .Where(s => s.IsActive == 1 &&
                         s.Latitude != 0 && s.Longitude != 0 &&
@@ -116,43 +117,37 @@ public class SearchController(ApplicationDbContext dbContext) : ControllerBase
                          EF.Functions.Like(s.StationName, $"% {term}%") ||
                          EF.Functions.Like(s.City, $"{term}%") ||
                          EF.Functions.Like(s.City, $"% {term}%") ||
-                         EF.Functions.Like(s.City, $"%-{term}%")) &&
-                        s.AirQualityObservations.Any(o => o.IsValid == 1 && o.CalculatedAqi.HasValue))
-            .Select(s => new
-            {
-                s.StationId,
-                s.StationName,
-                s.City,
-                Latitude = (double)s.Latitude,
-                Longitude = (double)s.Longitude,
-                s.Provider,
-                Latest = s.AirQualityObservations
-                    .Where(o => o.IsValid == 1 && o.CalculatedAqi.HasValue)
-                    .OrderByDescending(o => o.Timestamp)
-                    .Select(o => new
-                    {
-                        o.Timestamp,
-                        o.CalculatedAqi,
-                        o.Pm25,
-                        o.Pm10,
-                        o.Temperature
-                    })
-                    .FirstOrDefault()
-            })
+                         EF.Functions.Like(s.City, $"%-{term}%")))
             .OrderBy(s => s.StationName)
             .Take(limit)
             .ToListAsync();
 
         // Sắp xếp: khớp tên từ đầu → khớp city từ đầu → còn lại
-        rawStations = rawStations
+        matchedStations = matchedStations
             .OrderByDescending(s => s.StationName.StartsWith(term, StringComparison.OrdinalIgnoreCase))
             .ThenByDescending(s => s.City.StartsWith(term, StringComparison.OrdinalIgnoreCase))
             .ThenBy(s => s.StationName)
             .ToList();
 
-        var stations = rawStations.Select(s =>
+        // Bước 2: Lấy latest observation CHO CÁC STATION ĐÃ MATCH
+        var stationIds = matchedStations.Select(s => s.StationId).ToList();
+        var latestObservations = await dbContext.AirQualityObservations
+            .AsNoTracking()
+            .Where(o => stationIds.Contains(o.StationId) &&
+                        o.IsValid == 1 && o.CalculatedAqi.HasValue)
+            .GroupBy(o => o.StationId)
+            .Select(g => g.OrderByDescending(o => o.Timestamp).FirstOrDefault())
+            .ToListAsync();
+
+        var observationMap = latestObservations
+            .Where(o => o != null)
+            .ToDictionary(o => o!.StationId);
+
+        // Map kết quả
+        var stations = matchedStations.Select(s =>
         {
-            var aqi = s.Latest?.CalculatedAqi ?? 0;
+            observationMap.TryGetValue(s.StationId, out var obs);
+            var aqi = obs?.CalculatedAqi ?? 0;
             var cls = AqiClassifier.Classify(aqi);
             return new
             {
@@ -160,17 +155,17 @@ public class SearchController(ApplicationDbContext dbContext) : ControllerBase
                 s.StationId,
                 s.StationName,
                 s.City,
-                s.Latitude,
-                s.Longitude,
+                Latitude = (double)s.Latitude,
+                Longitude = (double)s.Longitude,
                 s.Provider,
-                Timestamp = s.Latest?.Timestamp,
-                Temperature = s.Latest?.Temperature,
-                Pm25 = s.Latest?.Pm25,
-                Pm10 = s.Latest?.Pm10,
+                Timestamp = obs?.Timestamp,
+                Temperature = obs?.Temperature,
+                Pm25 = obs?.Pm25,
+                Pm10 = obs?.Pm10,
                 CalculatedAqi = cls.Aqi,
                 Level = cls.Level,
                 ColorHex = cls.ColorHex,
-                HasData = s.Latest != null,
+                HasData = obs != null,
             };
         });
 
@@ -179,8 +174,8 @@ public class SearchController(ApplicationDbContext dbContext) : ControllerBase
             Query = term,
             Cities = cities,
             Stations = stations,
-            TotalCities = rawCities.Count,
-            TotalStations = rawStations.Count,
+            TotalCities = matchedCities.Count,
+            TotalStations = matchedStations.Count,
         });
     }
 }

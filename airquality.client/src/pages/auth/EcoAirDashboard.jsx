@@ -7,6 +7,7 @@ import ProfileHealthTab from "./ProfileHealthTab";
 import DeveloperApiTab from "./DeveloperApiTab";
 import AlertConfigTab from "./AlertConfigTab";
 import HistoryExportTab from "./HistoryExportTab";
+import MapRoutingTab from "./MapRoutingTab";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -235,7 +236,7 @@ function DashboardHeader({ userName }) {
                 color: "white", border: "none", borderRadius: 10,
                 fontSize: 13, fontWeight: 600, cursor: "pointer",
                 boxShadow: "0 2px 8px rgba(245,158,11,0.3)",
-            }}>
+            }} onClick={() => navigate('/goi')}>
                 ✦ Nâng cấp Pro
             </button>
 
@@ -638,7 +639,8 @@ export default function EcoAirDashboard() {
                     {activeTab === "alert" && <AlertConfigTab />}
                     {activeTab === "profile" && <ProfileHealthTab onProfileUpdated={setDisplayName} />}
                     {activeTab === "history" && <HistoryExportTab />}
-                    {activeTab !== "overview" && activeTab !== "places" && activeTab !== "report" && activeTab !== "developer" && activeTab !== "alert" && activeTab !== "profile" && activeTab !== "history" && <PlaceholderTab title={tabTitles[activeTab]} />}
+                    {activeTab === "map" && <MapRoutingTab />}
+                    {activeTab !== "overview" && activeTab !== "places" && activeTab !== "report" && activeTab !== "developer" && activeTab !== "alert" && activeTab !== "profile" && activeTab !== "history" && activeTab !== "map" && <PlaceholderTab title={tabTitles[activeTab]} />}
                 </main>
 
                 <DashboardFooter />

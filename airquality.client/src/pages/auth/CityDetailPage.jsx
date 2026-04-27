@@ -7,6 +7,7 @@ import "leaflet/dist/leaflet.css";
 import MainLayout from "../../components/layout/MainLayout";
 import { getLevel, getHealthTiles } from "../../utils/aqiHelper";
 import { useAuth } from "../../hooks/useAuth";
+import HistoryChart from "../../components/common/HistoryChart";
 
 /* ─── Design tokens ─────────────────────────────────────────────── */
 const C = {
@@ -40,7 +41,8 @@ function fmt(val, decimals = 1) {
 
 function fmtTime(ts) {
     if (!ts) return "—";
-    return new Date(ts).toLocaleString("vi-VN", {
+    const tsStr = typeof ts === 'string' && !ts.endsWith('Z') ? ts + 'Z' : ts;
+    return new Date(tsStr).toLocaleString("vi-VN", {
         hour: "2-digit", minute: "2-digit",
         day: "2-digit", month: "2-digit", year: "numeric"
     });
@@ -99,22 +101,7 @@ function AqiBar({ label, value, max = 300, color }) {
     );
 }
 
-function SparkBar({ aqi, maxAqi, timestamp }) {
-    const lv = getLevel(aqi);
-    const h = maxAqi > 0 ? Math.max(Math.round((aqi / maxAqi) * 56), 6) : 10;
-    const ts = new Date(timestamp);
-    return (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, flex: "1 0 0", minWidth: 0 }}>
-            <span style={{ fontSize: 9, fontWeight: 700, color: lv.color }}>{aqi}</span>
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", height: 56 }}>
-                <div style={{ width: "100%", minWidth: 10, height: h, background: lv.color, borderRadius: "3px 3px 2px 2px", opacity: 0.85 }} />
-            </div>
-            <span style={{ fontSize: 8, color: C.textMuted, whiteSpace: "nowrap" }}>
-                {ts.getHours().toString().padStart(2, "0")}h
-            </span>
-        </div>
-    );
-}
+
 
 function StationCard({ station, onNavigate }) {
     const lv = getLevel(station.calculatedAqi ?? 0);
@@ -497,42 +484,10 @@ export default function CityDetailPage() {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16, marginBottom: 16 }}>
 
                         {/* History sparkline */}
-                        <GlassCard style={{ padding: "22px 24px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Lịch sử AQI 24 giờ gần nhất</div>
-                                <span style={{ fontSize: 11, color: C.textMuted }}>
-                                    {history.length > 0 ? `${history.length} bản ghi` : "Không có dữ liệu"}
-                                </span>
-                            </div>
-
-                            {history.length > 0 ? (
-                                <div style={{ display: "flex", gap: 4, alignItems: "flex-end", overflowX: "auto", paddingBottom: 4 }}>
-                                    {history.map((h, i) => (
-                                        <SparkBar key={i} aqi={h.calculatedAqi ?? 0} maxAqi={maxHist} timestamp={h.timestamp} />
-                                    ))}
-                                </div>
-                            ) : (
-                                <div style={{ textAlign: "center", padding: "32px 0", color: C.textMuted, fontSize: 14 }}>
-                                    Chưa có lịch sử dữ liệu
-                                </div>
-                            )}
-
-                            {/* AQI level legend */}
-                            <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
-                                {[
-                                    { label: "Tốt", color: "#16a34a" },
-                                    { label: "TB", color: "#ca8a04" },
-                                    { label: "Kém", color: "#ea580c" },
-                                    { label: "Xấu", color: "#dc2626" },
-                                    { label: "Rất xấu", color: "#9333ea" },
-                                ].map(l => (
-                                    <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                        <div style={{ width: 8, height: 8, borderRadius: 2, background: l.color }} />
-                                        <span style={{ fontSize: 10, color: C.textMuted }}>{l.label}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </GlassCard>
+                        {/* History sparkline replaced with HistoryChart */}
+                        <div style={{ minWidth: 0 }}>
+                            <HistoryChart history={history} locationName={city.provinceName} />
+                        </div>
 
                         {/* Mini map */}
                         <GlassCard style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
