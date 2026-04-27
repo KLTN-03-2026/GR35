@@ -42,6 +42,19 @@ public class CommunityReport
     public string Status { get; set; } = "Pending";
 
     [Required]
+    [MaxLength(50)]
+    [Column("report_type")]
+    public string ReportType { get; set; } = "Khác";
+
+    [Required]
+    [Column("expires_at")]
+    public DateTime ExpiresAt { get; set; }
+
+    [MaxLength(500)]
+    [Column("reject_reason", TypeName = "nvarchar(500)")]
+    public string? RejectReason { get; set; }
+
+    [Required]
     [Column("user_id")]
     public int UserId { get; set; }
 

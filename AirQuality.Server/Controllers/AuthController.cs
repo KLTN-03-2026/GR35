@@ -1,15 +1,18 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 using AirQuality.Server.Data;
+using AirQuality.Server.Models.Configurations;
 using AirQuality.Server.Models.Entites;
 using AirQuality.Server.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using AirQuality.Server.Models.Configurations;
+using Microsoft.IdentityModel.Tokens;
 using Google.Apis.Auth;
 using Microsoft.Extensions.Options;
+using System.Text;
 
 namespace AirQuality.Server.Controllers;
 
@@ -20,7 +23,8 @@ public class AuthController(
     ITokenService tokenService,
     IEmailService emailService,
     IOtpService otpService,
-    IOptions<GoogleAuthOptions> googleOptions) : ControllerBase
+    IOptions<GoogleAuthOptions> googleOptions,
+    IOptions<JwtOptions> jwtOptions) : ControllerBase
 {
     private static readonly EmailAddressAttribute EmailValidator = new();
     private static readonly Regex PasswordRegex = new(@"^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$", RegexOptions.Compiled);
@@ -137,6 +141,86 @@ public class AuthController(
         return Ok(new { message = "Đăng ký tài khoản thành công." });
     }
 
+
+    [AllowAnonymous]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        var email = request.Email.Trim().ToLowerInvariant();
+        if (!EmailValidator.IsValid(email))
+        {
+            return BadRequest(new { message = "Email không đúng định dạng." });
+        }
+
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Email.ToLower() == email);
+        if (user is not null && user.Status == 1)
+        {
+            var token = GeneratePasswordResetToken(user);
+            var resetUrl = $"{Request.Scheme}://{Request.Host}/reset-password?token={Uri.EscapeDataString(token)}";
+
+            var emailBody = $@"
+                <html>
+                <body style='font-family: Arial, sans-serif;'>
+                    <h2>Đặt lại mật khẩu EcoAir</h2>
+                    <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>
+                    <p>Nhấn vào nút bên dưới để tạo mật khẩu mới (liên kết có hiệu lực trong 15 phút):</p>
+                    <p style='margin: 24px 0;'>
+                        <a href='{resetUrl}'
+                           style='background:#16a34a;color:white;text-decoration:none;padding:12px 18px;border-radius:8px;display:inline-block;font-weight:600;'>
+                            Đặt lại mật khẩu
+                        </a>
+                    </p>
+                    <p>Nếu bạn không thực hiện yêu cầu này, có thể bỏ qua email này.</p>
+                </body>
+                </html>";
+
+            await emailService.SendEmailAsync(email, "EcoAir - Đặt lại mật khẩu", emailBody);
+        }
+
+        return Ok(new { message = "Nếu email tồn tại trong hệ thống, chúng tôi đã gửi liên kết đặt lại mật khẩu." });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Token))
+        {
+            return BadRequest(new { message = "Liên kết đặt lại mật khẩu không hợp lệ." });
+        }
+
+        if (!PasswordRegex.IsMatch(request.NewPassword))
+        {
+            return BadRequest(new { message = "Mật khẩu mới phải có ít nhất 8 ký tự, gồm chữ, số và ký tự đặc biệt." });
+        }
+
+        if (request.NewPassword != request.ConfirmPassword)
+        {
+            return BadRequest(new { message = "Xác nhận mật khẩu mới không khớp." });
+        }
+
+        var userId = ValidatePasswordResetToken(request.Token);
+        if (userId is null)
+        {
+            return BadRequest(new { message = "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn." });
+        }
+
+        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.UserId == userId.Value);
+        if (user is null || user.Status != 1)
+        {
+            return BadRequest(new { message = "Không thể đặt lại mật khẩu cho tài khoản này." });
+        }
+
+        if (BCrypt.Net.BCrypt.Verify(request.NewPassword, user.PasswordHash))
+        {
+            return BadRequest(new { message = "Mật khẩu mới phải khác mật khẩu hiện tại." });
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        await dbContext.SaveChangesAsync();
+
+        return Ok(new { message = "Đặt lại mật khẩu thành công." });
+    }
 
     [AllowAnonymous]
     [HttpPost("login")]
@@ -592,6 +676,10 @@ public class AuthController(
     public sealed record RegisterRequest(string UserName, string Email, string Password, string ConfirmPassword);
 
     public sealed record LoginRequest(string Email, string Password);
+    
+    public sealed record ForgotPasswordRequest(string Email);
+
+    public sealed record ResetPasswordRequest(string Token, string NewPassword, string ConfirmPassword);
 
     public sealed record VerifyOtpRequest(string UserName, string Email, string Password, string ConfirmPassword, string Otp);
     
@@ -616,5 +704,63 @@ public class AuthController(
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private string GeneratePasswordResetToken(User user)
+    {
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Value.SecretKey));
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+        var now = DateTime.UtcNow;
+
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+            new("purpose", "password_reset")
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: jwtOptions.Value.Issuer,
+            audience: jwtOptions.Value.Audience,
+            claims: claims,
+            notBefore: now,
+            expires: now.AddMinutes(15),
+            signingCredentials: credentials
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private int? ValidatePasswordResetToken(string token)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = Encoding.UTF8.GetBytes(jwtOptions.Value.SecretKey);
+
+        try
+        {
+            var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateIssuerSigningKey = true,
+                ValidateLifetime = true,
+                ValidIssuer = jwtOptions.Value.Issuer,
+                ValidAudience = jwtOptions.Value.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ClockSkew = TimeSpan.Zero
+            }, out _);
+
+            var purpose = principal.FindFirst("purpose")?.Value;
+            if (!string.Equals(purpose, "password_reset", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            var userIdRaw = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return int.TryParse(userIdRaw, out var userId) ? userId : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

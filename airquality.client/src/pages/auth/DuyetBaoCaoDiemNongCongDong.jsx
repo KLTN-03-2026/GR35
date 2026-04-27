@@ -1,714 +1,364 @@
-﻿export default function DuyetBaoCaoDiemNongCongDong() {
-    const sideItems = [
-        { icon: '◫', label: 'Bảng điều khiển', active: false },
-        { icon: '▣', label: 'Báo cáo', active: true },
-        { icon: '◉', label: 'Người dùng', active: false },
-        { icon: '◌', label: 'Trạm đo', active: false },
-        { icon: '◔', label: 'Cấu hình AI', active: false },
-    ];
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "../../hooks/useAuth";
 
-    const reports = [
-        {
-            image: "url('https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=300&q=80')",
-            name: 'Linh Trần',
-            id: 'ID: #44921',
-            location: 'Quận 1, TP.HCM',
-            coords: '10.762622, 106.660172',
-            type: 'Khói bụi',
-            typeBg: '#fde4e1',
-            typeColor: '#d35243',
-            status: 'Đang chờ duyệt',
-            statusColor: '#8d2452',
-            statusDot: '#8d2452',
-            action1: '✓',
-            action2: '✕',
-            action1Bg: '#0a6a1f',
-            action1Color: '#fff',
-            action2Bg: '#fff',
-            action2Color: '#333',
-        },
-        {
-            image: "url('https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=300&q=80')",
-            name: 'Minh Phúc',
-            id: 'ID: #44802',
-            location: 'Bình Thạnh, TP.HCM',
-            coords: '10.801655, 106.702315',
-            type: 'Cháy nổ',
-            typeBg: '#d52b1e',
-            typeColor: '#fff',
-            status: 'Đã duyệt',
-            statusColor: '#117742',
-            statusDot: '#117742',
-            action1: 'Chi tiết',
-            action2: '',
-            action1Bg: 'transparent',
-            action1Color: '#0d5f20',
-            action2Bg: 'transparent',
-            action2Color: 'transparent',
-        },
-        {
-            image: "url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=300&q=80')",
-            name: 'Lan Anh',
-            id: 'ID: #44773',
-            location: 'TP. Thủ Đức',
-            coords: '10.8231, 106.7630',
-            type: 'Cơ sở hạ tầng',
-            typeBg: '#8ff0b2',
-            typeColor: '#0b7340',
-            status: 'Từ chối',
-            statusColor: '#70756b',
-            statusDot: '#8e9487',
-            action1: 'Đánh giá lại',
-            action2: '',
-            action1Bg: 'transparent',
-            action1Color: '#4b4f47',
-            action2Bg: 'transparent',
-            action2Color: 'transparent',
-        },
-    ];
+const STATUS_LABELS = {
+    Pending: "Đang chờ duyệt",
+    Approved: "Đã duyệt",
+    Rejected: "Từ chối",
+};
 
-    const buttonReset = {
-        border: 'none',
-        background: 'transparent',
-        padding: 0,
-        margin: 0,
-        font: 'inherit',
-        cursor: 'pointer',
-        textAlign: 'left',
+const STATUS_STYLE = {
+    Pending: { bg: "rgba(234,179,8,0.18)", color: "#facc15" },
+    Approved: { bg: "rgba(34,197,94,0.18)", color: "#4ade80" },
+    Rejected: { bg: "rgba(239,68,68,0.18)", color: "#f87171" },
+};
+
+const pageWrap = {
+    color: "#e8edf3",
+    fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif",
+};
+
+const card = {
+    background: "#14202e",
+    border: "1px solid #1e3048",
+    borderRadius: 12,
+};
+
+function StatusBadge({ status }) {
+    const style = STATUS_STYLE[status] || STATUS_STYLE.Pending;
+    return (
+        <span
+            style={{
+                padding: "6px 10px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 700,
+                background: style.bg,
+                color: style.color,
+            }}
+        >
+            {STATUS_LABELS[status] ?? status}
+        </span>
+    );
+}
+
+function StatCard({ title, value, active, onClick }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            style={{
+                ...card,
+                width: "100%",
+                textAlign: "left",
+                padding: "14px 16px",
+                cursor: "pointer",
+                background: active ? "rgba(34,197,94,0.15)" : card.background,
+                borderColor: active ? "#22c55e" : "#1e3048",
+            }}
+        >
+            <div style={{ fontSize: 12, color: "#7a8da0", marginBottom: 8 }}>{title}</div>
+            <div style={{ fontSize: 24, fontWeight: 800 }}>{value}</div>
+        </button>
+    );
+}
+
+export default function DuyetBaoCaoDiemNongCongDong() {
+    const { accessToken } = useAuth();
+    const [statusFilter, setStatusFilter] = useState("All");
+    const [keyword, setKeyword] = useState("");
+    const [searchText, setSearchText] = useState("");
+    const [page, setPage] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [updatingId, setUpdatingId] = useState(null);
+    const [reports, setReports] = useState([]);
+    const [summary, setSummary] = useState({ Total: 0, Pending: 0, Approved: 0, Rejected: 0 });
+    const [pagination, setPagination] = useState({ page: 1, totalPages: 1, totalCount: 0, pageSize: 20 });
+
+    const normalizeSummary = (raw) => ({
+        Total: Number(raw?.total ?? raw?.Total ?? 0),
+        Pending: Number(raw?.pending ?? raw?.Pending ?? 0),
+        Approved: Number(raw?.approved ?? raw?.Approved ?? 0),
+        Rejected: Number(raw?.rejected ?? raw?.Rejected ?? 0),
+    });
+
+    const normalizePagination = (raw) => ({
+        page: Number(raw?.page ?? 1),
+        totalPages: Number(raw?.totalPages ?? 1),
+        totalCount: Number(raw?.totalCount ?? 0),
+        pageSize: Number(raw?.pageSize ?? 20),
+    });
+
+    const fetchReports = useCallback(async () => {
+        if (!accessToken) return;
+        setLoading(true);
+        setError("");
+
+        const query = new URLSearchParams({
+            page: String(page),
+            pageSize: "10",
+        });
+
+        if (statusFilter !== "All") query.set("status", statusFilter);
+        if (keyword.trim()) query.set("q", keyword.trim());
+
+        try {
+            const response = await fetch(`/api/community-reports/admin?${query.toString()}`, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data?.message || "Không thể tải danh sách báo cáo.");
+            }
+
+            setReports(data?.reports ?? data?.Reports ?? []);
+            setSummary(normalizeSummary(data?.summary ?? data?.Summary));
+            setPagination(normalizePagination(data?.pagination ?? data?.Pagination));
+        } catch (err) {
+            setError(err.message || "Đã xảy ra lỗi khi tải dữ liệu.");
+        } finally {
+            setLoading(false);
+        }
+    }, [accessToken, keyword, page, statusFilter]);
+
+    useEffect(() => {
+        fetchReports();
+    }, [fetchReports]);
+
+    const updateStatus = async (reportId, status) => {
+        if (!accessToken) return;
+        let rejectReason = "";
+        if (status === "Rejected") {
+            const input = window.prompt("Nhập lý do từ chối báo cáo:");
+            if (input === null) return;
+            rejectReason = input.trim();
+            if (!rejectReason) {
+                setError("Bạn cần nhập lý do từ chối.");
+                return;
+            }
+        }
+
+        setUpdatingId(reportId);
+        setError("");
+        try {
+            const response = await fetch(`/api/community-reports/${reportId}/status`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({ status, rejectReason }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data?.message || "Không thể cập nhật trạng thái báo cáo.");
+            }
+            await fetchReports();
+        } catch (err) {
+            setError(err.message || "Cập nhật thất bại.");
+        } finally {
+            setUpdatingId(null);
+        }
     };
 
+    const canPrev = pagination.page > 1;
+    const canNext = pagination.page < pagination.totalPages;
+    const titleFilter = useMemo(() => {
+        if (statusFilter === "All") return "Tất cả báo cáo";
+        return STATUS_LABELS[statusFilter] ?? "Danh sách báo cáo";
+    }, [statusFilter]);
+
     return (
-        <div>
-            <style>{`
-                * { box-sizing: border-box; }
-            `}</style>
-
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '18px 24px', background: '#fff', borderBottom: '1px solid #e3e4d6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 8, marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#f4f4ec', padding: '10px 18px', borderRadius: 8, width: 400 }}>
-                        <span style={{ fontSize: 18, color: '#9ca191' }}>⌕</span>
-                        <input placeholder="Tìm kiếm sự cố, vị trí hoặc người dùng..." style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 14, width: '100%', color: '#333' }} />
-                    </div>
-                    <div style={{ display: 'flex', gap: 24 }}>
-                        <button type="button" style={{ ...buttonReset, fontSize: 14, color: '#657281', fontWeight: 500 }}>Tổng quan</button>
-                        <button type="button" style={{ ...buttonReset, fontSize: 14, color: '#0b641f', fontWeight: 700, paddingBottom: 4, borderBottom: '2px solid #0b641f' }}>Dữ liệu Vùng</button>
-                    </div>
+        <div style={pageWrap}>
+            <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 12, color: "#7a8da0", letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>
+                    Duyệt báo cáo cộng đồng
                 </div>
+                <h1 style={{ margin: 0, fontSize: 28 }}>Kiểm duyệt báo cáo người dùng</h1>
+                <p style={{ margin: "8px 0 0", color: "#93a4b8" }}>
+                    Role Admin có thể duyệt hoặc từ chối báo cáo trước khi hiển thị trên bản đồ cộng đồng.
+                </p>
+            </div>
 
-                <div style={{ padding: '18px 34px 30px' }}>
-                    <div style={{ fontSize: 14, color: '#0a7b3a', fontWeight: 700, letterSpacing: 2.2, textTransform: 'uppercase', marginBottom: 14 }}>
-                        Duyệt Báo cáo điểm nóng cộng đồng
-                    </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 12, marginBottom: 16 }}>
+                <StatCard title="Tổng báo cáo" value={summary.Total} active={statusFilter === "All"} onClick={() => { setStatusFilter("All"); setPage(1); }} />
+                <StatCard title="Chờ duyệt" value={summary.Pending} active={statusFilter === "Pending"} onClick={() => { setStatusFilter("Pending"); setPage(1); }} />
+                <StatCard title="Đã duyệt" value={summary.Approved} active={statusFilter === "Approved"} onClick={() => { setStatusFilter("Approved"); setPage(1); }} />
+                <StatCard title="Từ chối" value={summary.Rejected} active={statusFilter === "Rejected"} onClick={() => { setStatusFilter("Rejected"); setPage(1); }} />
+            </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 24, marginBottom: 28 }}>
-                        <div style={{ maxWidth: 980 }}>
-                            <h1 style={{ margin: 0, fontSize: 42, lineHeight: 1.08, fontWeight: 800, color: '#1f2520' }}>
-                                Quản lý Báo cáo Môi trường Cộng đồng
-                            </h1>
-                            <p style={{ margin: '24px 0 0', fontSize: 22, lineHeight: 1.55, color: '#4f564d' }}>
-                                Phân tích và xác thực các bất thường về môi trường do người dùng gửi. Ưu tiên các mối nguy khí
-                                quyển nghiêm trọng để đảm bảo an toàn công cộng và tính toàn vẹn của dữ liệu.
-                            </p>
-                        </div>
-
-                        <div
-                            style={{
-                                minWidth: 360,
-                                height: 132,
-                                background: '#f2f2e6',
-                                borderRadius: 18,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '12px 22px',
-                            }}
-                        >
-                            <button
-                                type="button"
-                                style={{
-                                    ...buttonReset,
-                                    width: 92,
-                                    height: 116,
-                                    borderRadius: 18,
-                                    background: '#fff',
-                                    color: '#0b6021',
-                                    fontSize: 18,
-                                    fontWeight: 700,
-                                    lineHeight: 1.35,
-                                    textAlign: 'center',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                Tất
-                                <br />
-                                cả
-                                <br />
-                                báo
-                                <br />
-                                cáo
-                            </button>
-
-                            <button
-                                type="button"
-                                style={{
-                                    ...buttonReset,
-                                    width: 90,
-                                    textAlign: 'center',
-                                    fontSize: 18,
-                                    color: '#4d544c',
-                                    lineHeight: 1.4,
-                                }}
-                            >
-                                Đang
-                                <br />
-                                chờ
-                            </button>
-
-                            <button
-                                type="button"
-                                style={{
-                                    ...buttonReset,
-                                    width: 50,
-                                    textAlign: 'center',
-                                    fontSize: 32,
-                                    color: '#2b2f2b',
-                                    lineHeight: 1,
-                                }}
-                            >
-                                !
-                            </button>
-
-                            <button
-                                type="button"
-                                style={{
-                                    ...buttonReset,
-                                    width: 90,
-                                    textAlign: 'center',
-                                    fontSize: 18,
-                                    color: '#4d544c',
-                                    lineHeight: 1.4,
-                                }}
-                            >
-                                Ưu
-                                <br />
-                                tiên
-                                <br />
-                                cao
-                            </button>
-                        </div>
-                    </div>
-
-                    <button
-                        type="button"
-                        style={{
-                            ...buttonReset,
-                            width: '100%',
-                            height: 144,
-                            borderRadius: 18,
-                            background: '#f1f1e7',
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '0 28px',
-                            marginBottom: 26,
-                            position: 'relative',
-                            overflow: 'hidden',
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: 76,
-                                height: 76,
-                                borderRadius: 10,
-                                background: '#94375f',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#fff',
-                                fontSize: 30,
-                                flexShrink: 0,
-                            }}
-                        >
-                            ✧
-                        </div>
-
-                        <div style={{ marginLeft: 28, textAlign: 'left', position: 'relative', zIndex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 10 }}>
-                                <span style={{ fontSize: 20, fontWeight: 800, color: '#262b26' }}>Phát hiện Bất thường bằng AI</span>
-                                <span
-                                    style={{
-                                        padding: '8px 14px',
-                                        background: '#8c2f56',
-                                        borderRadius: 18,
-                                        color: '#fff',
-                                        fontSize: 13,
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    LOGIC MỚI
-                                </span>
-                            </div>
-                            <div style={{ maxWidth: 860, fontSize: 17, lineHeight: 1.45, color: '#555b53' }}>
-                                Dựa trên hình ảnh vệ tinh và mô hình gió lịch sử, 3 báo cáo đang chờ xử lý từ <b>Quận 7</b> có khả
-                                năng là dương tính giả do hoạt động đốt nông nghiệp có kiểm soát. Khuyến nghị xác minh.
-                            </div>
-                        </div>
-
-                        <div
-                            style={{
-                                position: 'absolute',
-                                right: 34,
-                                top: 18,
-                                fontSize: 82,
-                                color: '#d7c2cb',
-                                fontWeight: 300,
-                                letterSpacing: 2,
-                            }}
-                        >
-                            RK
-                        </div>
-                    </button>
-
-                    <div
-                        style={{
-                            background: '#f0f0e6',
-                            borderRadius: 18,
-                            overflow: 'hidden',
-                            marginBottom: 34,
-                        }}
-                    >
-                        <div
-                            style={{
-                                height: 66,
-                                display: 'grid',
-                                gridTemplateColumns: '180px 1.1fr 1.3fr 180px 210px 170px',
-                                alignItems: 'center',
-                                padding: '0 28px',
-                                color: '#5a5f56',
-                                fontSize: 14,
-                                fontWeight: 700,
-                                letterSpacing: 1.2,
-                                textTransform: 'uppercase',
-                            }}
-                        >
-                            <div>Ảnh thực tế</div>
-                            <div>Người báo cáo</div>
-                            <div>Vị trí</div>
-                            <div>Phân loại</div>
-                            <div>Trạng thái</div>
-                            <div style={{ textAlign: 'center' }}>Hành động</div>
-                        </div>
-
-                        <div style={{ background: '#fffefb' }}>
-                            {reports.map((report, index) => (
-                                <div
-                                    key={report.name}
-                                    style={{
-                                        height: 124,
-                                        display: 'grid',
-                                        gridTemplateColumns: '180px 1.1fr 1.3fr 180px 210px 170px',
-                                        alignItems: 'center',
-                                        padding: '0 28px',
-                                        borderTop: index === 0 ? '1px solid #efeee4' : '1px solid #f0efe7',
-                                    }}
-                                >
-                                    <div>
-                                        <div
-                                            style={{
-                                                width: 108,
-                                                height: 72,
-                                                borderRadius: 6,
-                                                background: `${report.image} center/cover`,
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                                        <div
-                                            style={{
-                                                width: 46,
-                                                height: 46,
-                                                borderRadius: '50%',
-                                                background: "url('https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80') center/cover",
-                                            }}
-                                        />
-                                        <div>
-                                            <div style={{ fontSize: 18, fontWeight: 700, color: '#232823' }}>{report.name}</div>
-                                            <div style={{ fontSize: 14, color: '#757b72', marginTop: 4 }}>{report.id}</div>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <div style={{ fontSize: 18, color: '#2f342f', lineHeight: 1.3 }}>{report.location}</div>
-                                        <div style={{ fontSize: 14, color: '#6e736c', marginTop: 6 }}>{report.coords}</div>
-                                    </div>
-
-                                    <div>
-                                        <div
-                                            style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: 8,
-                                                padding: '7px 14px',
-                                                borderRadius: 999,
-                                                background: report.typeBg,
-                                                color: report.typeColor,
-                                                fontSize: 14,
-                                                fontWeight: 700,
-                                            }}
-                                        >
-                                            <span style={{ fontSize: 12 }}>◌</span>
-                                            <span>{report.type}</span>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <span
-                                            style={{
-                                                width: 10,
-                                                height: 10,
-                                                borderRadius: '50%',
-                                                background: report.statusDot,
-                                                flexShrink: 0,
-                                            }}
-                                        />
-                                        <span style={{ fontSize: 18, color: report.statusColor, fontWeight: 600 }}>{report.status}</span>
-                                    </div>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                                        <button
-                                            type="button"
-                                            style={{
-                                                ...buttonReset,
-                                                minWidth: report.action1 === '✓' ? 44 : 'auto',
-                                                height: report.action1 === '✓' ? 44 : 'auto',
-                                                borderRadius: 8,
-                                                background: report.action1Bg,
-                                                color: report.action1Color,
-                                                fontSize: report.action1 === '✓' ? 28 : 16,
-                                                fontWeight: 700,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                            }}
-                                        >
-                                            {report.action1}
-                                        </button>
-
-                                        {report.action2 ? (
-                                            <button
-                                                type="button"
-                                                style={{
-                                                    ...buttonReset,
-                                                    width: 44,
-                                                    height: 44,
-                                                    borderRadius: 8,
-                                                    background: report.action2Bg,
-                                                    color: report.action2Color,
-                                                    fontSize: 24,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    border: '1px solid #e5e5db',
-                                                }}
-                                            >
-                                                {report.action2}
-                                            </button>
-                                        ) : null}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div
-                            style={{
-                                height: 82,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '0 28px',
-                                color: '#4f554d',
-                                fontSize: 14,
-                                fontWeight: 500,
-                            }}
-                        >
-                            <div>ĐANG HIỂN THỊ 3 TRONG TỔNG SỐ 42 BÁO CÁO HOẠT ĐỘNG</div>
-
-                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                                <button
-                                    type="button"
-                                    style={{
-                                        ...buttonReset,
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 6,
-                                        background: '#fff',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 24,
-                                    }}
-                                >
-                                    ‹
-                                </button>
-                                <button
-                                    type="button"
-                                    style={{
-                                        ...buttonReset,
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 6,
-                                        background: '#065f17',
-                                        color: '#fff',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 18,
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    1
-                                </button>
-                                <button
-                                    type="button"
-                                    style={{
-                                        ...buttonReset,
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 6,
-                                        background: '#fff',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 18,
-                                        fontWeight: 700,
-                                    }}
-                                >
-                                    2
-                                </button>
-                                <button
-                                    type="button"
-                                    style={{
-                                        ...buttonReset,
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 6,
-                                        background: '#fff',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 24,
-                                    }}
-                                >
-                                    ›
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.6fr', gap: 28 }}>
-                        <div
-                            style={{
-                                background: '#222928',
-                                borderRadius: 16,
-                                minHeight: 540,
-                                position: 'relative',
-                                overflow: 'hidden',
-                            }}
-                        >
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    background:
-                                        "linear-gradient(rgba(17,23,20,0.18), rgba(17,23,20,0.18)), url('https://images.unsplash.com/photo-1526778548025-fa2f459cd5ce?auto=format&fit=crop&w=1400&q=80') center/cover",
-                                    opacity: 0.92,
-                                }}
-                            />
-
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    top: 34,
-                                    left: 34,
-                                    width: 360,
-                                    background: 'rgba(246,247,239,0.96)',
-                                    borderRadius: 8,
-                                    padding: '24px 24px 20px',
-                                }}
-                            >
-                                <div style={{ fontSize: 18, fontWeight: 800, color: '#146029', marginBottom: 18 }}>
-                                    Bản đồ nhiệt sự cố
-                                </div>
-                                <div style={{ fontSize: 16, lineHeight: 1.55, color: '#4f554d', marginBottom: 24 }}>
-                                    Phân cụm báo cáo cộng đồng theo thời gian thực đối chiếu với các nút cảm biến công nghiệp.
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                                    <div style={{ fontSize: 14, color: '#575d55', fontWeight: 600 }}>MẬT ĐỘ CẢNH BÁO</div>
-                                    <div style={{ fontSize: 14, color: '#d7332d', fontWeight: 700 }}>12 Khu vực</div>
-                                </div>
-                                <div style={{ height: 6, background: '#eadfdc', borderRadius: 999 }}>
-                                    <div style={{ width: '72%', height: '100%', background: '#d7332d', borderRadius: 999 }} />
-                                </div>
-                            </div>
-
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    right: 26,
-                                    bottom: 26,
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 10,
-                                }}
-                            >
-                                <button
-                                    type="button"
-                                    style={{
-                                        ...buttonReset,
-                                        width: 48,
-                                        height: 48,
-                                        borderRadius: 4,
-                                        background: '#f5f5ec',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 32,
-                                    }}
-                                >
-                                    +
-                                </button>
-                                <button
-                                    type="button"
-                                    style={{
-                                        ...buttonReset,
-                                        width: 48,
-                                        height: 48,
-                                        borderRadius: 4,
-                                        background: '#f5f5ec',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 32,
-                                    }}
-                                >
-                                    −
-                                </button>
-                                <button
-                                    type="button"
-                                    style={{
-                                        ...buttonReset,
-                                        width: 48,
-                                        height: 48,
-                                        borderRadius: 4,
-                                        background: '#065f17',
-                                        color: '#fff',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 24,
-                                    }}
-                                >
-                                    ◈
-                                </button>
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                            <div
-                                style={{
-                                    background: '#0b6518',
-                                    borderRadius: 16,
-                                    padding: '34px 34px 30px',
-                                    color: '#fff',
-                                    minHeight: 318,
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        width: 62,
-                                        height: 62,
-                                        borderRadius: 12,
-                                        border: '2px solid rgba(255,255,255,0.3)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 28,
-                                        marginBottom: 34,
-                                    }}
-                                >
-                                    ▣
-                                </div>
-                                <div style={{ fontSize: 16, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 20, opacity: 0.95 }}>
-                                    Tỷ lệ xác thực
-                                </div>
-                                <div style={{ fontSize: 66, fontWeight: 800, lineHeight: 1, marginBottom: 26 }}>94.2%</div>
-                                <div style={{ fontSize: 18, lineHeight: 1.65, color: '#d2e5d4' }}>
-                                    Báo cáo cộng đồng được xác thực thành công bởi hệ thống cảm biến trạm quan trắc trong tháng này.
-                                </div>
-                            </div>
-
-                            <div
-                                style={{
-                                    background: '#93efaf',
-                                    borderRadius: 16,
-                                    padding: '30px 34px 28px',
-                                    minHeight: 288,
-                                    color: '#0c4c1f',
-                                }}
-                            >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 26 }}>
-                                    <div style={{ fontSize: 44 }}>◔</div>
-                                    <div
-                                        style={{
-                                            padding: '10px 18px',
-                                            borderRadius: 999,
-                                            background: '#0d7d38',
-                                            color: '#d8ffdf',
-                                            fontSize: 14,
-                                            fontWeight: 700,
-                                            textTransform: 'uppercase',
-                                        }}
-                                    >
-                                        Xu hướng
-                                    </div>
-                                </div>
-
-                                <div style={{ fontSize: 16, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
-                                    Tình nguyện viên tích cực
-                                </div>
-                                <div style={{ fontSize: 62, fontWeight: 800, lineHeight: 1, marginBottom: 26 }}>1,204</div>
-                                <div style={{ fontSize: 18, lineHeight: 1.55, color: '#22653a' }}>
-                                    Quận có nhiều báo cáo nhất: <b>Bình Chánh</b>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+            <div style={{ ...card, padding: 14, marginBottom: 12, display: "flex", gap: 10 }}>
+                <input
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            setKeyword(searchText);
+                            setPage(1);
+                        }
+                    }}
+                    placeholder="Tìm theo mô tả, tên người báo cáo, email..."
+                    style={{
+                        flex: 1,
+                        height: 42,
+                        borderRadius: 8,
+                        border: "1px solid #1e3048",
+                        background: "#0f1923",
+                        color: "#e8edf3",
+                        padding: "0 12px",
+                    }}
+                />
                 <button
                     type="button"
+                    onClick={() => { setKeyword(searchText); setPage(1); }}
                     style={{
-                        ...buttonReset,
-                        position: 'fixed',
-                        right: 24,
-                        bottom: 24,
-                        width: 64,
-                        height: 64,
-                        borderRadius: 18,
-                        background: '#0a681b',
-                        color: '#fff',
-                        fontSize: 42,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 18px 28px rgba(13,70,25,0.25)',
+                        height: 42,
+                        borderRadius: 8,
+                        border: "none",
+                        background: "#22c55e",
+                        color: "#0b1219",
+                        fontWeight: 700,
+                        padding: "0 16px",
+                        cursor: "pointer",
                     }}
                 >
-                    +
+                    Tìm kiếm
                 </button>
+            </div>
+
+            <div style={{ ...card, overflow: "hidden" }}>
+                <div style={{ padding: "12px 16px", borderBottom: "1px solid #1e3048", color: "#93a4b8", fontSize: 13 }}>
+                    {titleFilter} - {pagination.totalCount} kết quả
+                </div>
+
+                {error ? (
+                    <div style={{ padding: 16, color: "#fda4af" }}>{error}</div>
+                ) : loading ? (
+                    <div style={{ padding: 16 }}>Đang tải dữ liệu...</div>
+                ) : reports.length === 0 ? (
+                    <div style={{ padding: 16, color: "#93a4b8" }}>Không có báo cáo phù hợp bộ lọc.</div>
+                ) : (
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                        {reports.map((r) => (
+                            <div
+                                key={r.reportId}
+                                style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "88px 1.2fr 1.3fr 0.7fr 0.9fr",
+                                    gap: 12,
+                                    padding: 14,
+                                    alignItems: "center",
+                                    borderTop: "1px solid #1e3048",
+                                }}
+                            >
+                                <div>
+                                    {r.imageUrl ? (
+                                        <img src={r.imageUrl} alt="report" style={{ width: 74, height: 54, objectFit: "cover", borderRadius: 6 }} />
+                                    ) : (
+                                        <div style={{ width: 74, height: 54, borderRadius: 6, background: "#0f1923", border: "1px solid #1e3048" }} />
+                                    )}
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 14, fontWeight: 700 }}>{r.reporterName}</div>
+                                    <div style={{ fontSize: 12, color: "#93a4b8" }}>{r.reporterEmail}</div>
+                                    <div style={{ fontSize: 12, color: "#7a8da0", marginTop: 4 }}>
+                                        #{r.reportId} - {new Date(r.reportTime).toLocaleString("vi-VN")}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 13, color: "#e8edf3", marginBottom: 4 }}>{r.description}</div>
+                                    <div style={{ fontSize: 12, color: "#7a8da0" }}>
+                                        ({Number(r.latitude).toFixed(5)}, {Number(r.longitude).toFixed(5)})
+                                    </div>
+                                    {r.status === "Rejected" && r.rejectReason ? (
+                                        <div style={{ fontSize: 12, color: "#fda4af", marginTop: 6 }}>
+                                            Lý do từ chối: {r.rejectReason}
+                                        </div>
+                                    ) : null}
+                                </div>
+                                <div><StatusBadge status={r.status} /></div>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <button
+                                        type="button"
+                                        disabled={updatingId === r.reportId || r.status !== "Pending"}
+                                        onClick={() => updateStatus(r.reportId, "Approved")}
+                                        style={{
+                                            border: "none",
+                                            borderRadius: 8,
+                                            padding: "8px 10px",
+                                            background: "#22c55e",
+                                            color: "#052e16",
+                                            fontWeight: 700,
+                                            cursor: "pointer",
+                                            opacity: updatingId === r.reportId || r.status !== "Pending" ? 0.5 : 1,
+                                        }}
+                                    >
+                                        Duyệt
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={updatingId === r.reportId || r.status !== "Pending"}
+                                        onClick={() => updateStatus(r.reportId, "Rejected")}
+                                        style={{
+                                            border: "none",
+                                            borderRadius: 8,
+                                            padding: "8px 10px",
+                                            background: "#ef4444",
+                                            color: "#fff",
+                                            fontWeight: 700,
+                                            cursor: "pointer",
+                                            opacity: updatingId === r.reportId || r.status !== "Pending" ? 0.5 : 1,
+                                        }}
+                                    >
+                                        Từ chối
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div style={{ borderTop: "1px solid #1e3048", padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ color: "#93a4b8", fontSize: 12 }}>
+                        Trang {pagination.page}/{Math.max(1, pagination.totalPages)}
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                            type="button"
+                            disabled={!canPrev}
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            style={{
+                                border: "1px solid #1e3048",
+                                borderRadius: 8,
+                                background: "#0f1923",
+                                color: "#e8edf3",
+                                padding: "8px 12px",
+                                cursor: "pointer",
+                                opacity: canPrev ? 1 : 0.5,
+                            }}
+                        >
+                            Trước
+                        </button>
+                        <button
+                            type="button"
+                            disabled={!canNext}
+                            onClick={() => setPage((p) => p + 1)}
+                            style={{
+                                border: "1px solid #1e3048",
+                                borderRadius: 8,
+                                background: "#0f1923",
+                                color: "#e8edf3",
+                                padding: "8px 12px",
+                                cursor: "pointer",
+                                opacity: canNext ? 1 : 0.5,
+                            }}
+                        >
+                            Sau
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
