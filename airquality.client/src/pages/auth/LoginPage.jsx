@@ -1,4 +1,5 @@
 ﻿import { useState } from "react";
+import { GoogleLogin } from "@react-oauth/google";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import {
     AuthLayout,
@@ -133,6 +134,30 @@ export default function LoginPage() {
         return valid;
     }
 
+    function processAuthResult(result, fallbackName) {
+        const normalizedRole = (result.role ?? "")
+            .toString()
+            .trim()
+            .toLowerCase()
+            .replace(/[_-]/g, " ")
+            .replace(/\s+/g, " ");
+
+        const roleToStore = normalizedRole === "superadmin" ? "super admin" : normalizedRole;
+
+        if (result.accessToken) {
+            localStorage.setItem("accessToken", result.accessToken);
+            localStorage.setItem("role", roleToStore);
+            localStorage.setItem("userName", result.fullName ?? result.userName ?? result.FullName ?? fallbackName);
+            localStorage.setItem("subscriptionTier", result.subscriptionTier ?? "Free");
+        }
+
+        if (roleToStore === "admin" || roleToStore === "super admin") {
+            navigate("/admin");
+        } else {
+            navigate("/dashboard");
+        }
+    }
+
     // ── Submit login ──
     async function handleLogin() {
         setError("");
@@ -153,31 +178,31 @@ export default function LoginPage() {
                 return;
             }
 
-            const normalizedRole = (result.role ?? "")
-                .toString()
-                .trim()
-                .toLowerCase()
-                .replace(/[_-]/g, " ")
-                .replace(/\s+/g, " ");
+            processAuthResult(result, email.split("@")[0]);
+        } catch {
+            setError("Không kết nối được tới máy chủ. Vui lòng thử lại sau.");
+        } finally {
+            setLoading(false);
+        }
+    }
 
-            const roleToStore = normalizedRole === "superadmin" ? "super admin" : normalizedRole;
+    async function handleGoogleSuccess(credentialResponse) {
+        setLoading(true);
+        try {
+            const response = await fetch("/api/auth/google-login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ credential: credentialResponse.credential }),
+            });
 
-            // Lưu token vào localStorage
-            if (result.accessToken) {
-                localStorage.setItem("accessToken", result.accessToken);
-                localStorage.setItem("role", roleToStore);
-                // Lưu tên hiển thị (nếu API trả về)
-                localStorage.setItem("userName", result.fullName ?? result.userName ?? result.FullName ?? email.split("@")[0]);
-                localStorage.setItem("subscriptionTier", result.subscriptionTier ?? "Free");
+            const result = await response.json();
+
+            if (!response.ok) {
+                setError(result.message || "Đăng nhập Google thất bại.");
+                return;
             }
 
-            // Điều hướng: admin/super admin -> /admin, còn lại -> /dashboard
-            if (roleToStore === "admin" || roleToStore === "super admin") {
-                navigate("/admin");
-            } else {
-                navigate("/dashboard");
-            }
-
+            processAuthResult(result, "Người dùng Google");
         } catch {
             setError("Không kết nối được tới máy chủ. Vui lòng thử lại sau.");
         } finally {
@@ -346,13 +371,13 @@ export default function LoginPage() {
             <Divider text="Hoặc tiếp tục với" />
 
             {/* Social buttons */}
-            <div style={{ display: "flex", gap: 12 }}>
-                <SocialButton label="Google" onClick={() => { }}>
-                    {Icons.google}
-                </SocialButton>
-                <SocialButton label="Facebook" onClick={() => { }}>
-                    {Icons.facebook}
-                </SocialButton>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+                <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => setError("Đăng nhập Google thất bại.")}
+                    text="signin_with"
+                    shape="rectangular"
+                />
             </div>
 
             {/* Register link */}

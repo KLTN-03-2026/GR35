@@ -1,11 +1,8 @@
 # =============================================================================
 # EcoAir — Air Quality Forecasting Pipeline (Google Colab)
 # =============================================================================
-# This script is structured as Colab cells (separated by "# %%").
-# Copy each cell into a new Google Colab notebook or upload this .py file.
-#
-# ✅ Automatically loops through ALL 63 Vietnamese provinces.
-# Each province gets its own: data, scaler, trained model, ONNX export.
+# Architecture: Seq2Seq Bi-LSTM (Encoder-Decoder)
+# Preprocessing: Outlier clipping (1st-99th pct) + StandardScaler
 #
 # Pipeline:
 #   Cell 1: Install dependencies
@@ -18,9 +15,8 @@
 
 # %% [markdown]
 # # 🌍 EcoAir — Air Quality Forecasting Pipeline
-# **Goal**: Train a Bi-LSTM model per Vietnamese province on 2 years of hourly
-# air quality + weather data, then export each to ONNX for C# .NET inference.
-# **Runs all 63 provinces automatically — no manual changes needed.**
+# **Model**: Encoder-Decoder Bi-LSTM (Seq2Seq)
+# **Runs all 63 provinces automatically.**
 
 # %%
 # =============================================================================
@@ -53,7 +49,7 @@ import json
 import os
 import joblib
 from datetime import datetime, timedelta, timezone
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import torch
 import torch.nn as nn
@@ -144,18 +140,19 @@ FEATURE_COLUMNS = [
     "pm25", "pm10", "co", "no2", "so2", "o3",
     "temperature_2m", "relative_humidity_2m",
     "wind_speed_10m", "wind_direction_10m", "surface_pressure",
+    "hour_sin", "hour_cos", "dow_sin", "dow_cos",
 ]
-TARGET_COLUMNS = ["pm25", "pm10", "co", "no2", "so2", "o3"]
+TARGET_COLUMNS = ["pm25"]  # PM2.5-only objective
 TARGET_INDICES = [FEATURE_COLUMNS.index(c) for c in TARGET_COLUMNS]
 
-NUM_FEATURES    = len(FEATURE_COLUMNS)   # 11
-NUM_TARGETS     = len(TARGET_COLUMNS)    # 6
+NUM_FEATURES    = len(FEATURE_COLUMNS)   # 15
+NUM_TARGETS     = len(TARGET_COLUMNS)    # 1
 LOOKBACK_HOURS  = 336   # 14 days × 24 hours
-FORECAST_HOURS  = 168   # 7 days × 24 hours
+FORECAST_HOURS  = 48    # 48h forecast horizon (for 24h/48h use-cases)
 BATCH_SIZE      = 32
-NUM_EPOCHS      = 50
+NUM_EPOCHS      = 100
 LEARNING_RATE   = 1e-3
-PATIENCE        = 10
+PATIENCE        = 15
 
 # Time range
 END_DATE   = datetime.now(timezone.utc)
@@ -173,16 +170,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"🖥️  Device: {device}")
 print(f"📅 Date range: {START_DATE.strftime('%Y-%m-%d')} → {END_DATE.strftime('%Y-%m-%d')}")
 print(f"🏙️  Total provinces: {len(VIETNAM_PROVINCES)}")
-print(f"📊 Config: lookback={LOOKBACK_HOURS}h, forecast={FORECAST_HOURS}h")
+print(f"📊 Config: lookback={LOOKBACK_HOURS}h, forecast={FORECAST_HOURS}h (evaluate @24h & @48h)")
 print(f"   Features: {NUM_FEATURES}, Targets: {NUM_TARGETS}")
 
 # %%
 # =============================================================================
 # CELL 3: Data Collection — Automatically fetch ALL 63 provinces
-# =============================================================================
-# This cell loops through every province, fetches air quality (OpenWeatherMap)
-# and weather (Open-Meteo) data, merges them, and saves a CSV per province.
-# Already-downloaded provinces are SKIPPED (resume-safe).
 # =============================================================================
 
 def fetch_air_quality_data(lat, lon, start_dt, end_dt, api_key):
@@ -220,7 +213,7 @@ def fetch_air_quality_data(lat, lon, start_dt, end_dt, api_key):
         chunk_start = chunk_end
         if (i + 1) % 30 == 0:
             print(f"      Air quality: {i+1}/{total_chunks} chunks")
-        time.sleep(1.1)  # Rate limit
+        time.sleep(1.1)
 
     df = pd.DataFrame(all_records)
     if not df.empty:
@@ -280,7 +273,6 @@ for idx, (province, (lat, lon)) in enumerate(VIETNAM_PROVINCES.items(), 1):
     prov_dir  = os.path.join(ROOT_OUTPUT, safe_name)
     csv_path  = os.path.join(prov_dir, "raw_merged_data.csv")
 
-    # ── Skip if already downloaded ───────────────────────────────────────
     if os.path.exists(csv_path):
         df_existing = pd.read_csv(csv_path)
         collection_results[province] = len(df_existing)
@@ -290,15 +282,12 @@ for idx, (province, (lat, lon)) in enumerate(VIETNAM_PROVINCES.items(), 1):
     os.makedirs(prov_dir, exist_ok=True)
     print(f"\n  [{idx:2d}/63] 🌐 {province} ({lat}, {lon})")
 
-    # Fetch air quality
     df_air = fetch_air_quality_data(lat, lon, START_DATE, END_DATE, OPENWEATHERMAP_API_KEY)
     print(f"      🌫️  Air quality: {len(df_air)} records")
 
-    # Fetch weather
     df_weather = fetch_weather_data(lat, lon, START_DATE, END_DATE)
     print(f"      🌤️  Weather: {len(df_weather)} records")
 
-    # Merge
     if df_air.empty or df_weather.empty:
         print(f"      ⚠️  Skipped — insufficient data")
         collection_results[province] = 0
@@ -313,7 +302,6 @@ for idx, (province, (lat, lon)) in enumerate(VIETNAM_PROVINCES.items(), 1):
     collection_results[province] = len(df_merged)
     print(f"      ✅ Merged: {len(df_merged)} rows → {csv_path}")
 
-# Summary
 collected = sum(1 for v in collection_results.values() if v > 0)
 print(f"\n{'=' * 70}")
 print(f"📊 Collection complete: {collected}/{len(VIETNAM_PROVINCES)} provinces have data")
@@ -323,17 +311,13 @@ print(f"{'=' * 70}")
 # =============================================================================
 # CELL 4: Helper Functions — Preprocessing, Model, Training, Export
 # =============================================================================
-# All reusable functions wrapped so we can call them per province in Cell 5.
+# Model: Encoder-Decoder Bi-LSTM (Seq2Seq)
+# Preprocessing: Outlier clipping (1st-99th percentile) + StandardScaler
 # =============================================================================
 
 # ── Dataset class ────────────────────────────────────────────────────────────
 
 class TimeSeriesDataset(Dataset):
-    """
-    Sliding window dataset.
-      X: (lookback, num_features)   e.g. (336, 11)
-      y: (forecast, num_targets)    e.g. (168, 6)
-    """
     def __init__(self, data, lookback, forecast, target_indices):
         self.data = data
         self.lookback = lookback
@@ -350,113 +334,141 @@ class TimeSeriesDataset(Dataset):
         return torch.FloatTensor(X), torch.FloatTensor(y)
 
 
-# ── Model architecture — TCN (Temporal Convolutional Network) ────────────────
-# TCN uses dilated causal Conv1D layers to capture long-range dependencies.
-# Advantages over LSTM:
-#   - 3-5x FASTER training (fully parallel — no sequential bottleneck)
-#   - Equal or better accuracy on time-series benchmarks
-#   - Cleaner ONNX export (only Conv1D + ReLU ops)
-#   - Lower memory usage
+# ── Model: Encoder-Decoder Bi-LSTM ──────────────────────────────────────────
+#
+# WHY Seq2Seq LSTM WORKS (where TCN failed):
+#
+#   TCN approach:  336 timesteps → compress → 1 vector → FC → 48×1 values
+#                  PROBLEM: destroys temporal info, impossible regression
+#
+#   Seq2Seq approach:
+#     Encoder: Bi-LSTM reads 336h → accumulates hidden state (memory)
+#     Decoder: LSTM uses that memory to generate 48h step-by-step
+#              Each output hour is conditioned on the decoder's evolving state
+#
+#   This is how machine translation works (sentence in → sentence out)
+#   and it's proven for time-series forecasting.
 
-class TemporalBlock(nn.Module):
-    """Single TCN block: two dilated causal Conv1D layers + residual connection."""
-    def __init__(self, in_channels, out_channels, kernel_size, dilation, dropout):
-        super().__init__()
-        padding = (kernel_size - 1) * dilation  # Causal padding
-
-        self.conv1 = nn.Conv1d(in_channels, out_channels, kernel_size,
-                               padding=padding, dilation=dilation)
-        self.bn1   = nn.BatchNorm1d(out_channels)
-        self.conv2 = nn.Conv1d(out_channels, out_channels, kernel_size,
-                               padding=padding, dilation=dilation)
-        self.bn2   = nn.BatchNorm1d(out_channels)
-
-        self.dropout = nn.Dropout(dropout)
-        self.relu    = nn.ReLU()
-
-        # Residual connection (1x1 conv if channel sizes differ)
-        self.residual = nn.Conv1d(in_channels, out_channels, 1) if in_channels != out_channels else nn.Identity()
-
-    def forward(self, x):
-        # x shape: (batch, channels, seq_len)
-        out = self.conv1(x)[:, :, :x.size(2)]  # Trim to causal (remove future)
-        out = self.relu(self.bn1(out))
-        out = self.dropout(out)
-
-        out = self.conv2(out)[:, :, :x.size(2)]
-        out = self.relu(self.bn2(out))
-        out = self.dropout(out)
-
-        return self.relu(out + self.residual(x))
-
-
-class TCNForecaster(nn.Module):
+class Seq2SeqBiLSTM(nn.Module):
     """
-    Temporal Convolutional Network for multivariate time-series forecasting.
+    Encoder-Decoder Bidirectional LSTM for time-series forecasting.
 
-    Architecture:
-        Input (batch, 336, 11) → transpose → (batch, 11, 336)
-        → 4 TemporalBlocks with exponentially increasing dilation [1, 2, 4, 8]
-        → Global Average Pooling → FC layers → (batch, 168, 6)
+    Encoder: Bi-LSTM reads (batch, 336, 15) → hidden state
+    Decoder: LSTM generates (batch, 48, 1) using encoder's hidden state
 
-    The dilated convolutions give a receptive field of:
-        kernel_size=7, dilations=[1,2,4,8] → receptive field ≈ 2*(7-1)*(1+2+4+8) = 180 timesteps
-        With 2 conv layers per block: effective RF > 336 timesteps ✓
+    Input:  (batch, 336, 15)
+    Output: (batch, 48, 1)
     """
-    def __init__(self, num_features=11, num_channels=128, kernel_size=7,
-                 num_layers=4, forecast_horizon=168, num_targets=6, dropout=0.2):
+    def __init__(self, num_features=15, hidden_size=256, num_layers=2,
+                 forecast_horizon=48, num_targets=1, dropout=0.2):
         super().__init__()
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
         self.forecast_horizon = forecast_horizon
         self.num_targets = num_targets
 
-        # Build TCN backbone: stack TemporalBlocks with exponential dilation
-        layers = []
-        for i in range(num_layers):
-            in_ch = num_features if i == 0 else num_channels
-            layers.append(TemporalBlock(in_ch, num_channels, kernel_size,
-                                        dilation=2**i, dropout=dropout))
-        self.tcn = nn.Sequential(*layers)
+        # Encoder: Bidirectional LSTM
+        self.encoder = nn.LSTM(
+            input_size=num_features,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout if num_layers > 1 else 0.0,
+        )
 
-        # Output head: Global Average Pooling → FC
-        self.fc = nn.Sequential(
-            nn.Linear(num_channels, 512), nn.ReLU(), nn.Dropout(dropout),
-            nn.Linear(512, forecast_horizon * num_targets),
+        # Bridge: convert bidirectional hidden → unidirectional decoder
+        self.h_bridge = nn.Linear(hidden_size * 2, hidden_size)
+        self.c_bridge = nn.Linear(hidden_size * 2, hidden_size)
+
+        # Decoder: Unidirectional LSTM
+        self.decoder = nn.LSTM(
+            input_size=num_targets,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=dropout if num_layers > 1 else 0.0,
+        )
+
+        # Output projection
+        self.output_proj = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size // 2),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_size // 2, num_targets),
         )
 
     def forward(self, x):
-        # x: (batch, seq_len=336, features=11)
-        x = x.transpose(1, 2)     # → (batch, 11, 336) for Conv1D
-        x = self.tcn(x)            # → (batch, 128, 336)
-        x = x.mean(dim=2)         # Global Average Pooling → (batch, 128)
-        x = self.fc(x)             # → (batch, 168*6)
-        return x.view(-1, self.forecast_horizon, self.num_targets)  # → (batch, 168, 6)
+        batch_size = x.size(0)
+
+        # ── Encode ──────────────────────────────────────────────────────
+        _, (h_n, c_n) = self.encoder(x)
+        # h_n: (num_layers*2, batch, hidden) → merge directions
+
+        h_n = h_n.view(self.num_layers, 2, batch_size, self.hidden_size)
+        c_n = c_n.view(self.num_layers, 2, batch_size, self.hidden_size)
+
+        # Concat forward + backward → bridge to decoder size
+        h_combined = torch.cat([h_n[:, 0], h_n[:, 1]], dim=2)
+        c_combined = torch.cat([c_n[:, 0], c_n[:, 1]], dim=2)
+        h_dec = torch.tanh(self.h_bridge(h_combined))
+        c_dec = torch.tanh(self.c_bridge(c_combined))
+
+        # ── Decode ──────────────────────────────────────────────────────
+        # Feed zeros as decoder input (the hidden state carries the info)
+        decoder_input = torch.zeros(
+            batch_size, self.forecast_horizon, self.num_targets, device=x.device
+        )
+        decoder_out, _ = self.decoder(decoder_input, (h_dec, c_dec))
+
+        # Project to target dimensions
+        output = self.output_proj(decoder_out)
+        return output
 
 
-# ── Preprocessing function ──────────────────────────────────────────────────
+# ── Preprocessing — with outlier clipping + StandardScaler ───────────────────
 
 def preprocess_province(csv_path, output_dir):
     """
-    Load CSV, clean NaN, scale, create sliding windows.
-    Returns: train_loader, test_loader, scaler (or None if insufficient data).
+    KEY FIXES vs previous versions:
+    1. Clip outliers at 1st-99th percentile
+       → CO spikes (10000+ µg/m³) no longer crush all other values near 0
+    2. StandardScaler instead of MinMaxScaler
+       → Centers data at 0, std=1. Much more robust.
     """
     df = pd.read_csv(csv_path, parse_dates=["timestamp"])
+
+    # Time features help the model learn daily/weekly PM2.5 seasonality.
+    ts = pd.to_datetime(df["timestamp"], utc=True)
+    hour = ts.dt.hour.values
+    dow = ts.dt.dayofweek.values
+    df["hour_sin"] = np.sin(2 * np.pi * hour / 24.0)
+    df["hour_cos"] = np.cos(2 * np.pi * hour / 24.0)
+    df["dow_sin"] = np.sin(2 * np.pi * dow / 7.0)
+    df["dow_cos"] = np.cos(2 * np.pi * dow / 7.0)
+
     df_features = df[FEATURE_COLUMNS].copy()
 
     # Handle NaN
     df_features = df_features.ffill().bfill()
     df_features = df_features.interpolate(method="linear", limit_direction="both")
-
     if df_features.isnull().sum().sum() > 0:
-        df_features = df_features.fillna(0)
+        df_features = df_features.fillna(df_features.median())
 
-    # Scale
-    scaler = MinMaxScaler(feature_range=(0, 1))
+    # ── CRITICAL: Clip outliers ──────────────────────────────────────────
+    clip_info = {}
+    for col in FEATURE_COLUMNS:
+        p01, p99 = df_features[col].quantile([0.01, 0.99])
+        clip_info[col] = {"p01": float(p01), "p99": float(p99)}
+        df_features[col] = df_features[col].clip(p01, p99)
+
+    # ── CRITICAL: StandardScaler ─────────────────────────────────────────
+    scaler = StandardScaler()
     data_scaled = scaler.fit_transform(df_features.values)
 
-    # Save scaler
+    # Save
     joblib.dump(scaler, os.path.join(output_dir, "scaler.pkl"))
 
-    # Save feature config (for C# backend)
     config = {
         "feature_columns": FEATURE_COLUMNS,
         "target_columns": TARGET_COLUMNS,
@@ -465,15 +477,15 @@ def preprocess_province(csv_path, output_dir):
         "num_targets": NUM_TARGETS,
         "lookback_hours": LOOKBACK_HOURS,
         "forecast_hours": FORECAST_HOURS,
-        "scaler_min": scaler.data_min_.tolist(),
-        "scaler_max": scaler.data_max_.tolist(),
-        "scaler_scale": scaler.scale_.tolist(),
-        "scaler_data_range": scaler.data_range_.tolist(),
+        "scaler_type": "StandardScaler",
+        "scaler_mean": scaler.mean_.tolist(),
+        "scaler_std": scaler.scale_.tolist(),
+        "clip_bounds": clip_info,
     }
     with open(os.path.join(output_dir, "feature_config.json"), "w") as f:
         json.dump(config, f, indent=2)
 
-    # Check minimum data requirement
+    # Check minimum size
     min_required = LOOKBACK_HOURS + FORECAST_HOURS + BATCH_SIZE
     if len(data_scaled) < min_required:
         return None, None, None
@@ -492,20 +504,21 @@ def preprocess_province(csv_path, output_dir):
     return train_loader, test_loader, scaler
 
 
-# ── Training function ────────────────────────────────────────────────────────
+# ── Training ─────────────────────────────────────────────────────────────────
 
 def train_model(model, train_loader, test_loader, output_dir):
-    """Train the model. Returns best_val_loss and the trained model."""
+    """Train Seq2Seq Bi-LSTM with MSE loss + ReduceLROnPlateau."""
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=5)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode='min', factor=0.5, patience=5, min_lr=1e-6
+    )
 
     best_val_loss = float("inf")
     patience_counter = 0
     best_model_path = os.path.join(output_dir, "best_model.pt")
 
     for epoch in range(NUM_EPOCHS):
-        # Train
         model.train()
         train_loss, n = 0.0, 0
         for X, y in train_loader:
@@ -518,7 +531,6 @@ def train_model(model, train_loader, test_loader, output_dir):
             train_loss += loss.item(); n += 1
         avg_train = train_loss / max(n, 1)
 
-        # Validate
         model.eval()
         val_loss, vn = 0.0, 0
         with torch.no_grad():
@@ -536,36 +548,36 @@ def train_model(model, train_loader, test_loader, output_dir):
         else:
             patience_counter += 1
 
-        # Print every 10 epochs
         if (epoch + 1) % 10 == 0 or patience_counter == 0:
+            lr_now = optimizer.param_groups[0]['lr']
             print(f"      Epoch {epoch+1:3d} │ Train: {avg_train:.6f} │ Val: {avg_val:.6f}"
-                  f" │ {'⭐' if patience_counter == 0 else f'⏳{patience_counter}'}")
+                  f" │ LR: {lr_now:.2e} │ {'⭐' if patience_counter == 0 else f'⏳{patience_counter}'}")
 
         if patience_counter >= PATIENCE:
             print(f"      ⛔ Early stop at epoch {epoch+1}")
             break
 
-    # Load best
     model.load_state_dict(torch.load(best_model_path, map_location=device))
     return best_val_loss
 
 
-# ── Evaluation function ──────────────────────────────────────────────────────
+# ── Evaluation ───────────────────────────────────────────────────────────────
 
 def evaluate_model(model, test_loader, scaler, output_dir):
-    """Evaluate and save metrics. Returns evaluation dict."""
     model.eval()
-    all_preds, all_labels = [], []
+    all_preds, all_labels, all_inputs = [], [], []
     with torch.no_grad():
         for X, y in test_loader:
             preds = model(X.to(device))
             all_preds.append(preds.cpu().numpy())
             all_labels.append(y.numpy())
+            all_inputs.append(X.numpy())
 
     all_preds  = np.concatenate(all_preds,  axis=0)
     all_labels = np.concatenate(all_labels, axis=0)
+    all_inputs = np.concatenate(all_inputs, axis=0)
 
-    # Inverse scale
+    # Inverse scale (StandardScaler: X_orig = X_scaled * std + mean)
     def inv_scale(arr):
         N, H, T = arr.shape
         flat = arr.reshape(-1, T)
@@ -578,29 +590,106 @@ def evaluate_model(model, test_loader, scaler, output_dir):
     preds_orig  = inv_scale(all_preds)
     labels_orig = inv_scale(all_labels)
 
+    pm25_idx = FEATURE_COLUMNS.index("pm25")
+    pm25_std = float(scaler.scale_[pm25_idx])
+    pm25_mean = float(scaler.mean_[pm25_idx])
+    inputs_pm25_orig = all_inputs[:, :, pm25_idx] * pm25_std + pm25_mean
+
     def calc_mape(yt, yp):
-        mask = np.abs(yt) > 1e-8
-        return np.mean(np.abs((yt[mask] - yp[mask]) / yt[mask])) * 100 if mask.any() else 0.0
+        mask = np.abs(yt) > 1.0
+        if not mask.any():
+            return 0.0
+        return float(np.mean(np.abs((yt[mask] - yp[mask]) / yt[mask])) * 100)
 
-    yt = labels_orig.flatten()
-    yp = preds_orig.flatten()
+    per_target = {}
+    horizon_metrics = {}
+    rmse_list, mae_list, r2_list, mape_list = [], [], [], []
 
-    result = {
-        "rmse": float(np.sqrt(mean_squared_error(yt, yp))),
-        "mae":  float(mean_absolute_error(yt, yp)),
-        "r2_score": float(r2_score(yt, yp)),
-        "mape": float(calc_mape(yt, yp)),
-        "per_target": {}
-    }
     for i, col in enumerate(TARGET_COLUMNS):
         y_t = labels_orig[:, :, i].flatten()
         y_p = preds_orig[:, :, i].flatten()
-        result["per_target"][col] = {
-            "rmse": float(np.sqrt(mean_squared_error(y_t, y_p))),
-            "mae":  float(mean_absolute_error(y_t, y_p)),
-            "r2_score": float(r2_score(y_t, y_p)),
-            "mape": float(calc_mape(y_t, y_p)),
-        }
+
+        t_rmse = float(np.sqrt(mean_squared_error(y_t, y_p)))
+        t_mae  = float(mean_absolute_error(y_t, y_p))
+        t_r2   = float(r2_score(y_t, y_p))
+        t_mape = float(calc_mape(y_t, y_p))
+
+        per_target[col] = {"rmse": t_rmse, "mae": t_mae, "r2_score": t_r2, "mape": t_mape}
+        rmse_list.append(t_rmse)
+        mae_list.append(t_mae)
+        r2_list.append(t_r2)
+        mape_list.append(t_mape)
+
+        print(f"        {col:<6}: RMSE={t_rmse:8.4f}  MAE={t_mae:8.4f}  R²={t_r2:7.4f}  MAPE={t_mape:6.2f}%")
+
+    # PM2.5-only horizon report for thesis / production checks
+    pm25_truth = labels_orig[:, :, 0]
+    pm25_pred = preds_orig[:, :, 0]
+    horizons = [1, 6, 12, 24, 48]
+    for h in horizons:
+        if preds_orig.shape[1] >= h:
+            h_idx = h - 1
+            y_t_h = pm25_truth[:, h_idx]
+            y_p_h = pm25_pred[:, h_idx]
+            horizon_metrics[f"h{h}"] = {
+                "rmse": float(np.sqrt(mean_squared_error(y_t_h, y_p_h))),
+                "mae": float(mean_absolute_error(y_t_h, y_p_h)),
+                "r2_score": float(r2_score(y_t_h, y_p_h)),
+                "mape": float(calc_mape(y_t_h, y_p_h)),
+            }
+            print(f"        @+{h:2d}h: RMSE={horizon_metrics[f'h{h}']['rmse']:8.4f}  "
+                  f"MAE={horizon_metrics[f'h{h}']['mae']:8.4f}  "
+                  f"R²={horizon_metrics[f'h{h}']['r2_score']:7.4f}  "
+                  f"MAPE={horizon_metrics[f'h{h}']['mape']:6.2f}%")
+
+    # Baselines for fair comparison
+    naive_last_pred = np.repeat(inputs_pm25_orig[:, -1][:, None], FORECAST_HOURS, axis=1)
+    if LOOKBACK_HOURS >= 24:
+        last_day = inputs_pm25_orig[:, -24:]
+        repeat_times = int(np.ceil(FORECAST_HOURS / 24.0))
+        seasonal_daily_pred = np.tile(last_day, (1, repeat_times))[:, :FORECAST_HOURS]
+    else:
+        seasonal_daily_pred = naive_last_pred.copy()
+
+    baseline_metrics = {}
+    for baseline_name, baseline_pred in [
+        ("naive_last", naive_last_pred),
+        ("seasonal_24h", seasonal_daily_pred),
+    ]:
+        b_horizon = {}
+        for h in horizons:
+            if pm25_truth.shape[1] >= h:
+                h_idx = h - 1
+                y_t_h = pm25_truth[:, h_idx]
+                y_p_h = baseline_pred[:, h_idx]
+                b_horizon[f"h{h}"] = {
+                    "rmse": float(np.sqrt(mean_squared_error(y_t_h, y_p_h))),
+                    "mae": float(mean_absolute_error(y_t_h, y_p_h)),
+                    "r2_score": float(r2_score(y_t_h, y_p_h)),
+                    "mape": float(calc_mape(y_t_h, y_p_h)),
+                }
+        baseline_metrics[baseline_name] = b_horizon
+
+    print("        Baseline checkpoints (PM2.5):")
+    for baseline_name, b_vals in baseline_metrics.items():
+        line = f"          {baseline_name:<12}: "
+        parts = []
+        for h in [24, 48]:
+            k = f"h{h}"
+            if k in b_vals:
+                parts.append(f"+{h}h RMSE={b_vals[k]['rmse']:.4f}, R²={b_vals[k]['r2_score']:.4f}")
+        print(line + " | ".join(parts))
+
+    result = {
+        "rmse": float(np.mean(rmse_list)),
+        "mae":  float(np.mean(mae_list)),
+        "r2_score": float(np.mean(r2_list)),
+        "mape": float(np.mean(mape_list)),
+        "per_target": per_target,
+        "horizon_metrics": horizon_metrics,
+        "baseline_metrics": baseline_metrics,
+        "task": "pm25_only_forecast_48h",
+    }
 
     with open(os.path.join(output_dir, "evaluation_results.json"), "w") as f:
         json.dump(result, f, indent=2)
@@ -608,10 +697,9 @@ def evaluate_model(model, test_loader, scaler, output_dir):
     return result
 
 
-# ── ONNX export function ────────────────────────────────────────────────────
+# ── ONNX export ──────────────────────────────────────────────────────────────
 
 def export_onnx(model, output_dir):
-    """Export model to ONNX and validate."""
     import onnx
     import onnxruntime as ort
 
@@ -619,7 +707,7 @@ def export_onnx(model, output_dir):
     model.to("cpu")
 
     dummy = torch.randn(1, LOOKBACK_HOURS, NUM_FEATURES)
-    onnx_path = os.path.join(output_dir, "ecoair_tcn.onnx")
+    onnx_path = os.path.join(output_dir, "ecoair_pm25_lstm.onnx")
 
     torch.onnx.export(
         model, dummy, onnx_path,
@@ -629,34 +717,23 @@ def export_onnx(model, output_dir):
         dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
     )
 
-    # Validate
     onnx_model = onnx.load(onnx_path)
     onnx.checker.check_model(onnx_model)
 
-    # Cross-check
     with torch.no_grad():
         pt_out = model(dummy).numpy()
     ort_out = ort.InferenceSession(onnx_path).run(["output"], {"input": dummy.numpy()})[0]
     max_diff = np.max(np.abs(pt_out - ort_out))
 
-    model.to(device)  # Move back to GPU for next province
+    model.to(device)
     return onnx_path, max_diff
 
 
-print("✅ All helper functions defined.")
+print("✅ All helper functions defined (Seq2Seq Bi-LSTM + StandardScaler).")
 
 # %%
 # =============================================================================
 # CELL 5: Main Loop — Train & Export for ALL 63 provinces
-# =============================================================================
-# For each province:
-#   1. Load CSV (from Cell 3)
-#   2. Preprocess (scale, window)
-#   3. Train TCN (Temporal Convolutional Network) — 3-5x faster than LSTM
-#   4. Evaluate (RMSE, MAE, R², MAPE)
-#   5. Export ONNX
-#
-# ⏭️ Already-exported provinces are SKIPPED automatically.
 # =============================================================================
 
 print("=" * 70)
@@ -669,13 +746,12 @@ for idx, (province, (lat, lon)) in enumerate(VIETNAM_PROVINCES.items(), 1):
     safe_name = province.replace(" ", "_").replace("-", "_")
     prov_dir  = os.path.join(ROOT_OUTPUT, safe_name)
     csv_path  = os.path.join(prov_dir, "raw_merged_data.csv")
-    onnx_path = os.path.join(prov_dir, "ecoair_tcn.onnx")
+    onnx_path = os.path.join(prov_dir, "ecoair_pm25_lstm.onnx")
 
     print(f"\n{'─' * 70}")
     print(f"  [{idx:2d}/63] 🏙️  {province}")
     print(f"{'─' * 70}")
 
-    # ── Skip if ONNX already exists ──────────────────────────────────────
     if os.path.exists(onnx_path):
         print(f"    ⏭️  Already exported — skipping")
         eval_path = os.path.join(prov_dir, "evaluation_results.json")
@@ -683,51 +759,49 @@ for idx, (province, (lat, lon)) in enumerate(VIETNAM_PROVINCES.items(), 1):
             with open(eval_path) as f:
                 summary[province] = json.load(f)
         else:
-            summary[province] = {"status": "exported (metrics unknown)"}
+            summary[province] = {"status": "exported"}
         continue
 
-    # ── Check data exists ────────────────────────────────────────────────
     if not os.path.exists(csv_path):
         print(f"    ⚠️  No data file — skipping")
         summary[province] = {"status": "no data"}
         continue
 
-    # ── Preprocess ───────────────────────────────────────────────────────
-    print(f"    📊 Preprocessing...")
+    print(f"    📊 Preprocessing (clip outliers + StandardScaler)...")
     train_loader, test_loader, scaler = preprocess_province(csv_path, prov_dir)
 
     if train_loader is None:
-        print(f"    ⚠️  Insufficient data for training — skipping")
+        print(f"    ⚠️  Insufficient data — skipping")
         summary[province] = {"status": "insufficient data"}
         continue
 
     print(f"    ✅ Train: {len(train_loader)} batches | Test: {len(test_loader)} batches")
 
-    # ── Build & Train ────────────────────────────────────────────────────
-    print(f"    🧠 Training TCN...")
-    model = TCNForecaster(
-        num_features=NUM_FEATURES, num_channels=128, kernel_size=7,
-        num_layers=4, forecast_horizon=FORECAST_HOURS,
-        num_targets=NUM_TARGETS, dropout=0.2,
+    print(f"    🧠 Training Seq2Seq Bi-LSTM...")
+    model = Seq2SeqBiLSTM(
+        num_features=NUM_FEATURES, hidden_size=256, num_layers=2,
+        forecast_horizon=FORECAST_HOURS, num_targets=NUM_TARGETS, dropout=0.2,
     ).to(device)
 
     best_loss = train_model(model, train_loader, test_loader, prov_dir)
     print(f"    ✅ Best val loss: {best_loss:.6f}")
 
-    # ── Evaluate ─────────────────────────────────────────────────────────
     print(f"    📏 Evaluating...")
     eval_result = evaluate_model(model, test_loader, scaler, prov_dir)
     print(f"    ✅ RMSE={eval_result['rmse']:.4f} | MAE={eval_result['mae']:.4f} "
           f"| R²={eval_result['r2_score']:.4f} | MAPE={eval_result['mape']:.2f}%")
+    if "h24" in eval_result.get("horizon_metrics", {}) and "h48" in eval_result.get("horizon_metrics", {}):
+        h24 = eval_result["horizon_metrics"]["h24"]
+        h48 = eval_result["horizon_metrics"]["h48"]
+        print(f"    ✅ PM2.5 @+24h: RMSE={h24['rmse']:.4f}, R²={h24['r2_score']:.4f}"
+              f" | @+48h: RMSE={h48['rmse']:.4f}, R²={h48['r2_score']:.4f}")
 
-    # ── Export ONNX ──────────────────────────────────────────────────────
     print(f"    📦 Exporting ONNX...")
     onnx_file, diff = export_onnx(model, prov_dir)
-    print(f"    ✅ ONNX saved → max diff vs PyTorch: {diff:.8f}")
+    print(f"    ✅ ONNX saved → max diff: {diff:.8f}")
 
     summary[province] = eval_result
 
-    # Free GPU memory
     del model
     torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
@@ -747,7 +821,6 @@ for province in VIETNAM_PROVINCES:
         status = r.get("status", "unknown") if isinstance(r, dict) else str(r)
         print(f"{province:<25} {'—':>10} {'—':>10} {'—':>10} {'—':>10} {status:>12}")
 
-# Save summary
 summary_path = os.path.join(ROOT_OUTPUT, "all_provinces_summary.json")
 with open(summary_path, "w") as f:
     json.dump(summary, f, indent=2, ensure_ascii=False)
@@ -757,139 +830,54 @@ print(f"\n💾 Summary saved to: {summary_path}")
 # =============================================================================
 # CELL 6: C# .NET Integration Guide
 # =============================================================================
-# Reference code for loading per-province ONNX models in C#.
-# =============================================================================
 
 csharp_guide = r"""
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  C# .NET Integration Guide — EcoAir ONNX Inference (Per-Province)          ║
+║  C# .NET Integration — EcoAir Seq2Seq Bi-LSTM (StandardScaler)             ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ Step 1: Install NuGet Package                                               │
-└─────────────────────────────────────────────────────────────────────────────┘
 
    dotnet add package Microsoft.ML.OnnxRuntime --version 1.17.0
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ Step 2: File Structure (per province)                                       │
+┌── File Structure ───────────────────────────────────────────────────────────┐
+│  Models/{Province}/ecoair_pm25_lstm.onnx                                    │
+│  Models/{Province}/feature_config.json   ← scaler_mean + scaler_std         │
+│  Models/{Province}/evaluation_results.json                                  │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-   Models/
-   ├── Hà_Nội/
-   │   ├── ecoair_tcn.onnx
-   │   ├── feature_config.json
-   │   └── evaluation_results.json
-   ├── Hồ_Chí_Minh/
-   │   ├── ecoair_tcn.onnx
-   │   ├── feature_config.json
-   │   └── evaluation_results.json
-   └── ... (63 provinces)
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ Step 3: Load feature_config.json (scaler params for each province)          │
+┌── feature_config.json (StandardScaler) ─────────────────────────────────────┐
+│                                                                             │
+│  {                                                                          │
+│    "scaler_type": "StandardScaler",                                         │
+│    "scaler_mean": [12.5, 20.3, 340.1, ...],  // 15 values                  │
+│    "scaler_std":  [8.2, 15.1, 200.5, ...],   // 15 values                  │
+│    "clip_bounds": { "pm25": {"p01": 1.2, "p99": 85.0}, ... }               │
+│  }                                                                          │
+│                                                                             │
+│  // C# Scale:   scaled = (raw - mean) / std                                │
+│  // C# Inverse: orig   = scaled * std + mean                               │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-   public class FeatureConfig
-   {
-       public List<string> feature_columns { get; set; }
-       public List<string> target_columns { get; set; }
-       public List<int> target_indices_in_features { get; set; }
-       public int num_features { get; set; }    // 11
-       public int num_targets { get; set; }     // 6
-       public int lookback_hours { get; set; }  // 336
-       public int forecast_hours { get; set; }  // 168
-       public List<double> scaler_min { get; set; }
-       public List<double> scaler_max { get; set; }
-       public List<double> scaler_scale { get; set; }
-       public List<double> scaler_data_range { get; set; }
-   }
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ Step 4: MinMaxScaler in C#                                                  │
+┌── C# Usage ─────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  // 1. Clip raw values                                                      │
+│  foreach feature: clipped = Math.Clamp(raw, clip_p01, clip_p99)             │
+│                                                                             │
+│  // 2. Scale with StandardScaler                                            │
+│  scaled[i] = (clipped[i] - scaler_mean[i]) / scaler_std[i]                 │
+│                                                                             │
+│  // 3. Run ONNX inference                                                   │
+│  var tensor = new DenseTensor<float>(new[] { 1, 336, 15 });                 │
+│  // ... fill tensor with 336 hours of scaled data ...                       │
+│  var results = session.Run(new[] { NamedOnnxValue.CreateFromTensor(          │
+│      "input", tensor) });                                                   │
+│  // output shape: [1, 48, 1]                                                │
+│                                                                             │
+│  // 4. Inverse scale predictions                                            │
+│  orig[i] = output[i] * scaler_std[target_idx] + scaler_mean[target_idx]     │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-   // Scale:   X_scaled = (X - min) / range
-   // Inverse: X_orig   = X_scaled * range + min
-
-   float[] Scale(double[] raw, FeatureConfig c) {
-       var s = new float[raw.Length];
-       for (int i = 0; i < raw.Length; i++) {
-           double range = c.scaler_data_range[i];
-           s[i] = (float)((raw[i] - c.scaler_min[i]) / (range == 0 ? 1 : range));
-       }
-       return s;
-   }
-
-   double InverseScaleTarget(float scaled, int targetIdx, FeatureConfig c) {
-       int fi = c.target_indices_in_features[targetIdx];
-       return scaled * c.scaler_data_range[fi] + c.scaler_min[fi];
-   }
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ Step 5: Run inference per province                                          │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-   using Microsoft.ML.OnnxRuntime;
-   using Microsoft.ML.OnnxRuntime.Tensors;
-
-   public class ProvincePredictor : IDisposable
-   {
-       private readonly InferenceSession _session;
-       private readonly FeatureConfig _config;
-
-       public ProvincePredictor(string provinceFolderPath)
-       {
-           var onnxPath = Path.Combine(provinceFolderPath, "ecoair_tcn.onnx");
-           var configJson = File.ReadAllText(
-               Path.Combine(provinceFolderPath, "feature_config.json"));
-           _session = new InferenceSession(onnxPath);
-           _config = JsonSerializer.Deserialize<FeatureConfig>(configJson);
-       }
-
-       public float[,] Predict(float[,] scaledInput)  // [336, 11]
-       {
-           var tensor = new DenseTensor<float>(new[] { 1, 336, 11 });
-           for (int t = 0; t < 336; t++)
-               for (int f = 0; f < 11; f++)
-                   tensor[0, t, f] = scaledInput[t, f];
-
-           var inputs = new[] { NamedOnnxValue.CreateFromTensor("input", tensor) };
-           using var results = _session.Run(inputs);
-           var output = results.First().AsTensor<float>();
-
-           var forecast = new float[168, 6];
-           for (int t = 0; t < 168; t++)
-               for (int f = 0; f < 6; f++)
-                   forecast[t, f] = output[0, t, f];
-           return forecast;     // [168, 6] — still scaled, call InverseScaleTarget
-       }
-
-       public void Dispose() => _session?.Dispose();
-   }
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ Step 6: Load correct model by station/province                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-   // In your ForecastService:
-   var provinceName = GetProvinceNameFromStation(stationId); // e.g. "Hà_Nội"
-   var modelPath = Path.Combine("Models", provinceName);
-   using var predictor = new ProvincePredictor(modelPath);
-   var forecast = predictor.Predict(scaledInput);
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ ONNX Shape Reference (same for all provinces)                               │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-   INPUT  "input"  → float32[batch_size, 336, 11]
-   OUTPUT "output" → float32[batch_size, 168, 6]
-
-   11 features: pm25, pm10, co, no2, so2, o3,
-                temperature_2m, relative_humidity_2m,
-                wind_speed_10m, wind_direction_10m, surface_pressure
-
-   6 targets:   pm25, pm10, co, no2, so2, o3
+   ONNX SHAPE:  INPUT  "input"  → float32[batch, 336, 15]
+                OUTPUT "output" → float32[batch, 48, 1]
 """
 
 print(csharp_guide)
@@ -900,6 +888,6 @@ with open(guide_path, "w") as f:
 
 print(f"💾 C# guide saved to: {guide_path}")
 print(f"\n🎉 Pipeline complete! Each province folder contains:")
-print(f"   📄 ecoair_tcn.onnx       — Trained ONNX model")
-print(f"   📄 feature_config.json       — Scaler params + columns")
+print(f"   📄 ecoair_pm25_lstm.onnx     — Trained PM2.5 ONNX model")
+print(f"   📄 feature_config.json       — StandardScaler params + clip bounds")
 print(f"   📄 evaluation_results.json   — RMSE / MAE / R² / MAPE")

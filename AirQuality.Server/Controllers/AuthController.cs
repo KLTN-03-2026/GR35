@@ -7,6 +7,9 @@ using AirQuality.Server.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using AirQuality.Server.Models.Configurations;
+using Google.Apis.Auth;
+using Microsoft.Extensions.Options;
 
 namespace AirQuality.Server.Controllers;
 
@@ -14,7 +17,10 @@ namespace AirQuality.Server.Controllers;
 [Route("api/[controller]")]
 public class AuthController(
     ApplicationDbContext dbContext,
-    ITokenService tokenService) : ControllerBase
+    ITokenService tokenService,
+    IEmailService emailService,
+    IOtpService otpService,
+    IOptions<GoogleAuthOptions> googleOptions) : ControllerBase
 {
     private static readonly EmailAddressAttribute EmailValidator = new();
     private static readonly Regex PasswordRegex = new(@"^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$", RegexOptions.Compiled);
@@ -62,6 +68,59 @@ public class AuthController(
             return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Không tìm thấy vai trò mặc định cho người dùng." });
         }
 
+        var otp = otpService.GenerateOtp(email);
+        
+        var emailBody = $@"
+            <html>
+            <body style='font-family: Arial, sans-serif;'>
+                <h2>Xác thực tài khoản EcoAir</h2>
+                <p>Mã OTP của bạn là: <strong style='font-size: 24px; color: #2ecc71;'>{otp}</strong></p>
+                <p>Mã này có hiệu lực trong 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>
+                <p>Cảm ơn bạn đã tham gia cùng EcoAir VN!</p>
+            </body>
+            </html>
+        ";
+
+        await emailService.SendEmailAsync(email, "Xác thực tài khoản EcoAir - OTP", emailBody);
+
+        return Ok(new { message = "Vui lòng kiểm tra email để nhận mã OTP.", requiresOtp = true });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("verify-otp")]
+    public async Task<IActionResult> VerifyRegistrationOtp([FromBody] VerifyOtpRequest request)
+    {
+        var email = request.Email.Trim().ToLowerInvariant();
+        var otp = request.Otp?.Trim();
+
+        if (string.IsNullOrWhiteSpace(otp))
+        {
+            return BadRequest(new { message = "Mã OTP không được để trống." });
+        }
+
+        if (!otpService.VerifyOtp(email, otp))
+        {
+            return BadRequest(new { message = "Mã OTP không hợp lệ hoặc đã hết hạn." });
+        }
+
+        // Re-validate fields since it's a new request
+        var userName = request.UserName.Trim();
+        if (string.IsNullOrWhiteSpace(userName) || !PasswordRegex.IsMatch(request.Password) || request.Password != request.ConfirmPassword)
+        {
+            return BadRequest(new { message = "Dữ liệu đăng ký không hợp lệ." });
+        }
+
+        var existingUser = await dbContext.Users.AnyAsync(x => x.Email.ToLower() == email);
+        if (existingUser)
+        {
+            return Conflict(new { message = "Email đã được sử dụng." });
+        }
+
+        var userRoleId = await dbContext.Roles
+            .Where(x => x.RoleName.ToLower() == "user")
+            .Select(x => x.RoleId)
+            .FirstOrDefaultAsync();
+
         dbContext.Users.Add(new User
         {
             FullName = userName,
@@ -77,6 +136,7 @@ public class AuthController(
 
         return Ok(new { message = "Đăng ký tài khoản thành công." });
     }
+
 
     [AllowAnonymous]
     [HttpPost("login")]
@@ -110,6 +170,81 @@ public class AuthController(
 
         user.LastLogin = DateTime.UtcNow;
         await dbContext.SaveChangesAsync();
+
+        var roleName = user.Role.RoleName.ToLowerInvariant();
+        var redirectUrl = roleName is "admin" or "super admin" ? "/dashboard" : "/";
+        var accessToken = tokenService.GenerateAccessToken(user, roleName);
+
+        return Ok(new
+        {
+            message = "Đăng nhập thành công.",
+            role = roleName,
+            redirectUrl,
+            accessToken,
+            fullName = user.FullName,
+            subscriptionTier = user.SubscriptionTier,
+            subscriptionExpiresAt = user.SubscriptionExpiresAt
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("google-login")]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Credential))
+        {
+            return BadRequest(new { message = "Google credential không hợp lệ." });
+        }
+
+        GoogleJsonWebSignature.Payload payload;
+        try
+        {
+            payload = await GoogleJsonWebSignature.ValidateAsync(request.Credential, new GoogleJsonWebSignature.ValidationSettings
+            {
+                Audience = new[] { googleOptions.Value.ClientId }
+            });
+        }
+        catch (InvalidJwtException)
+        {
+            return Unauthorized(new { message = "Xác thực Google thất bại." });
+        }
+
+        var email = payload.Email.ToLowerInvariant();
+        var user = await dbContext.Users
+            .Include(x => x.Role)
+            .FirstOrDefaultAsync(x => x.Email.ToLower() == email);
+
+        if (user == null)
+        {
+            var userRoleId = await dbContext.Roles
+                .Where(x => x.RoleName.ToLower() == "user")
+                .Select(x => x.RoleId)
+                .FirstOrDefaultAsync();
+
+            user = new User
+            {
+                FullName = payload.Name ?? payload.Email.Split('@')[0],
+                Email = email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString() + "A1!"), // auto generate secure password
+                Status = 1,
+                CreatedAt = DateTime.UtcNow,
+                LastLogin = DateTime.UtcNow,
+                RoleId = userRoleId,
+                SubscriptionTier = "Free"
+            };
+
+            dbContext.Users.Add(user);
+            await dbContext.SaveChangesAsync();
+
+            // Load the associated role explicitly to avoid null reference during token generation
+            await dbContext.Entry(user).Reference(x => x.Role).LoadAsync();
+        }
+        else
+        {
+            if (user.Status != 1) return Forbid();
+            user.LastLogin = DateTime.UtcNow;
+            await dbContext.SaveChangesAsync();
+        }
 
         var roleName = user.Role.RoleName.ToLowerInvariant();
         var redirectUrl = roleName is "admin" or "super admin" ? "/dashboard" : "/";
@@ -334,6 +469,7 @@ public class AuthController(
         var normalizedConditions = (request.HealthConditions ?? [])
             .Select(x => x?.Trim())
             .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(10)
             .ToList();
@@ -456,6 +592,10 @@ public class AuthController(
     public sealed record RegisterRequest(string UserName, string Email, string Password, string ConfirmPassword);
 
     public sealed record LoginRequest(string Email, string Password);
+
+    public sealed record VerifyOtpRequest(string UserName, string Email, string Password, string ConfirmPassword, string Otp);
+    
+    public sealed record GoogleLoginRequest(string Credential);
 
     public sealed record CreateApiKeyRequest(string ProjectName, int ExpireDays = 90);
 

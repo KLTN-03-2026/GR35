@@ -23,6 +23,7 @@ import DuyetBaoCaoDiemNongCongDong from './pages/auth/DuyetBaoCaoDiemNongCongDon
 import PricingPage from './pages/auth/PricingPage';
 import ContactPage from './pages/auth/ContactPage';
 import ApiDocumentationPage from './pages/auth/ApiDocumentationPage';
+import ChatbotWidget from './components/common/ChatbotWidget';
 
 function getPageTitle(pathname) {
     if (pathname === '/') return 'Trang chủ | EcoAir VN';
@@ -113,6 +114,7 @@ export default function App() {
                 {/* Fallback */}
                 <Route path="*" element={<Navigate to="/404" replace />} />
             </Routes>
+            <ChatbotWidget />
         </>
     );
 }

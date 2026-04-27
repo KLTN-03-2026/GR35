@@ -42,7 +42,8 @@ const STEPS = [
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function AlertConfigTab() {
-    const { accessToken } = useAuth();
+    const { accessToken, subscriptionTier } = useAuth();
+    const isPro = subscriptionTier?.toLowerCase() === 'pro';
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [testing, setTesting] = useState(false);
@@ -172,6 +173,21 @@ export default function AlertConfigTab() {
 
     if (loading) {
         return <div style={{ color: C.textMuted, fontSize: 14, padding: 40, textAlign: "center" }}>Đang tải cấu hình cảnh báo...</div>;
+    }
+
+    if (!isPro) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 60, textAlign: 'center', background: C.white, borderRadius: 14, border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
+                <h2 style={{ margin: "0 0 10px", fontSize: 20, color: C.text }}>Tính năng yêu cầu tài khoản nâng cấp PRO</h2>
+                <p style={{ margin: "0 0 20px", color: C.textMuted, fontSize: 14, maxWidth: 400 }}>
+                    Bạn cần có tài khoản PRO để có thể cấu hình cảnh báo chất lượng không khí cá nhân hóa qua Telegram.
+                </p>
+                <a href="/goi" onClick={(e) => { e.preventDefault(); navigate('/goi'); }} style={{ padding: "10px 20px", background: C.green, color: "white", borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
+                    Nâng cấp ngay
+                </a>
+            </div>
+        );
     }
 
     return (

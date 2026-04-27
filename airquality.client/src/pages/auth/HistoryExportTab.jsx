@@ -3,6 +3,7 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar
 } from 'recharts';
 import { Download, Search, AlertCircle, Filter, Calendar, MapPin, Database } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 
 const C = {
     green: "#0d6e4e",
@@ -18,11 +19,14 @@ const C = {
 };
 
 export default function HistoryExportTab() {
+    const { subscriptionTier } = useAuth();
+    const isPro = subscriptionTier?.toLowerCase() === 'pro';
     const [entityType, setEntityType] = useState('city');
     const [selectedEntity, setSelectedEntity] = useState('');
     const [dateRange, setDateRange] = useState('7d');
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
+    const [minPm25, setMinPm25] = useState('');
 
     const [cities, setCities] = useState([]);
     const [stations, setStations] = useState([]);
@@ -74,13 +78,24 @@ export default function HistoryExportTab() {
             let params = new URLSearchParams();
 
             if (dateRange === 'custom') {
+                if (!isPro) throw new Error("Tính năng yêu cầu tài khoản nâng cấp PRO");
                 if (customStartDate) params.append('startDate', new Date(customStartDate).toISOString());
                 if (customEndDate) params.append('endDate', new Date(customEndDate).toISOString());
             } else {
                 let hours = 24;
-                if (dateRange === '7d') hours = 168; // 7 * 24
-                if (dateRange === '30d') hours = 720; // 30 * 24
+                if (dateRange === '7d') {
+                    if (!isPro) throw new Error("Tính năng yêu cầu tài khoản nâng cấp PRO");
+                    hours = 168; // 7 * 24
+                }
+                if (dateRange === '30d') {
+                    if (!isPro) throw new Error("Tính năng yêu cầu tài khoản nâng cấp PRO");
+                    hours = 720; // 30 * 24
+                }
                 params.append('hours', hours);
+            }
+
+            if (minPm25 && !isNaN(minPm25)) {
+                params.append('minPm25', minPm25);
             }
 
             if (entityType === 'city') {
@@ -100,7 +115,8 @@ export default function HistoryExportTab() {
 
             // map dates for chart
             parsedData = parsedData.map(d => {
-                const date = new Date(d.timestamp);
+                const tsStr = typeof d.timestamp === 'string' && !d.timestamp.endsWith('Z') ? d.timestamp + 'Z' : d.timestamp;
+                const date = new Date(tsStr);
                 return {
                     ...d,
                     formattedTime: date.toLocaleString('vi-VN', {
@@ -128,20 +144,53 @@ export default function HistoryExportTab() {
     const exportData = () => {
         if (!data || data.length === 0) return;
 
-        // Extract headers
-        const headers = ["Thời gian", "AQI", "PM2.5", "PM10", "Nhiệt độ", "Độ ẩm", "Mức độ"];
-        const csvRows = [headers.join(',')];
+        // Extract headers from the first object, excluding internal/formatting properties
+        const excludedKeys = ['rawDate', 'colorHex', 'formattedTime'];
+        const allKeys = Object.keys(data[0]).filter(k => !excludedKeys.includes(k));
+
+        // Put formattedTime as the first column, followed by everything else
+        // We ensure raw date parsing fits Vietnamese format
+        const exportKeys = ['formattedTime', ...allKeys];
+
+        const defaultHeaders = {
+            formattedTime: "Thời gian",
+            timestamp: "Mốc thời gian",
+            calculatedAqi: "AQI",
+            level: "Mức độ",
+            pm25: "PM2.5 (µg/m³)",
+            pm10: "PM10 (µg/m³)",
+            o3: "O3",
+            co: "CO",
+            no2: "NO2",
+            so2: "SO2",
+            nh3: "NH3",
+            temperature: "Nhiệt độ (°C)",
+            feelsLike: "Cảm giác (°C)",
+            humidity: "Độ ẩm (%)",
+            pressure: "Áp suất (hPa)",
+            windSpeed: "Tốc độ gió (m/s)",
+            windDeg: "Hướng gió",
+            cloudCover: "Mây che phủ (%)",
+            visibility: "Tầm nhìn (m)",
+            weatherMain: "Thời tiết chung",
+            weatherDescription: "Mô tả thời tiết",
+            aqiPm25: "PM2.5 AQI",
+            aqiPm10: "PM10 AQI",
+            aqiCo: "CO AQI",
+            aqiNo2: "NO2 AQI",
+            aqiSo2: "SO2 AQI",
+            aqiO3: "O3 AQI"
+        };
+
+        const headers = exportKeys.map(k => defaultHeaders[k] || k.charAt(0).toUpperCase() + k.slice(1));
+        const csvRows = [headers.map(h => `"${h}"`).join(',')];
 
         data.forEach(row => {
-            const rowData = [
-                row.formattedTime.replace(/,/g, ''), // remove internal commas
-                row.calculatedAqi ?? '',
-                row.pm25 ?? '',
-                row.pm10 ?? '',
-                row.temperature ?? '',
-                row.humidity ?? '', // Might be null for stations based on endpoints
-                row.level ?? ''
-            ];
+            const rowData = exportKeys.map(k => {
+                const val = row[k] ?? '';
+                // Serialize carefully with quotes and handle inner quotes
+                return `"${String(val).replace(/"/g, '""')}"`;
+            });
             csvRows.push(rowData.join(','));
         });
 
@@ -212,7 +261,7 @@ export default function HistoryExportTab() {
                     </div>
 
                     {/* Date Range Filter */}
-                    <div style={{ flex: 1, minWidth: 200 }}>
+                    <div style={{ flex: 1, minWidth: 140 }}>
                         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>Thời gian</label>
                         <select
                             style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${C.border}`, outline: 'none', background: C.bg }}
@@ -226,7 +275,19 @@ export default function HistoryExportTab() {
                         </select>
                     </div>
 
-                    <div style={{ flex: 1, minWidth: 150, alignSelf: 'flex-end' }}>
+                    {/* PM2.5 Filter */}
+                    <div style={{ flex: 1, minWidth: 140 }}>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>Lọc PM2.5 (≥)</label>
+                        <input
+                            type="number"
+                            placeholder="Ngưỡng (µg/m³)"
+                            value={minPm25}
+                            onChange={(e) => setMinPm25(e.target.value)}
+                            style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${C.border}`, outline: 'none', background: C.bg }}
+                        />
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 120, alignSelf: 'flex-end' }}>
                         <button
                             onClick={fetchHistory}
                             style={{

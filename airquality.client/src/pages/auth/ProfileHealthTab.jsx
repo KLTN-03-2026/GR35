@@ -183,13 +183,24 @@ export default function ProfileHealthTab({ onProfileUpdated }) {
 
     const passwordStrength = useMemo(() => getPasswordStrength(passwordForm.newPassword), [passwordForm.newPassword]);
 
+    function handleProCheck() {
+        if (!subscription.isPro) {
+            setError("Tính năng yêu cầu tài khoản nâng cấp PRO");
+            setMessage("");
+            return false;
+        }
+        return true;
+    }
+
     function toggleCondition(condition) {
+        if (!handleProCheck()) return;
         setHealthConditions((prev) =>
             prev.includes(condition) ? prev.filter((x) => x !== condition) : [...prev, condition],
         );
     }
 
     function addCustomCondition() {
+        if (!handleProCheck()) return;
         const value = customCondition.trim();
         if (!value) return;
         if (healthConditions.some((x) => x.toLowerCase() === value.toLowerCase())) {
@@ -202,6 +213,7 @@ export default function ProfileHealthTab({ onProfileUpdated }) {
     }
 
     function removeCondition(condition) {
+        if (!handleProCheck()) return;
         setHealthConditions((prev) => prev.filter((x) => x !== condition));
     }
 

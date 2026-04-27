@@ -5,9 +5,11 @@ import {
     LogoSmall,
     InputField,
     GreenButton,
+    Divider,
     Icons,
     theme,
 } from "./authShared";
+import { GoogleLogin } from "@react-oauth/google";
 
 // ─── Left panel ───────────────────────────────────────────────────────────────
 function LeftContent() {
@@ -119,6 +121,10 @@ export default function RegisterPage() {
     const [error, setError] = useState("");
     const [fieldErrors, setFieldErrors] = useState({});
 
+    // OTP State
+    const [requiresOtp, setRequiresOtp] = useState(false);
+    const [otpCode, setOtpCode] = useState("");
+
     function set(field, value) {
         setForm((p) => ({ ...p, [field]: value }));
         setFieldErrors((p) => ({ ...p, [field]: "" }));
@@ -168,7 +174,12 @@ export default function RegisterPage() {
             const result = await response.json();
 
             if (!response.ok) {
-                setError(result.message || "Đăng ký thất bại. Vui lòng thử lại.");
+                setError(result.message || "Đăng nhập thất bại. Vui lòng thử lại.");
+                return;
+            }
+
+            if (result.requiresOtp) {
+                setRequiresOtp(true);
                 return;
             }
 
@@ -181,8 +192,125 @@ export default function RegisterPage() {
         }
     }
 
+    async function handleVerifyOtp() {
+        setError("");
+        if (!otpCode.trim()) {
+            setError("Vui lòng nhập mã OTP.");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await fetch("/api/auth/verify-otp", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userName: form.userName.trim(),
+                    email: form.email.trim(),
+                    password: form.password,
+                    confirmPassword: form.confirmPassword,
+                    otp: otpCode.trim()
+                }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                setError(result.message || "Xác thực OTP thất bại. Vui lòng thử lại.");
+                return;
+            }
+
+            navigate("/login", { state: { registered: true } });
+        } catch {
+            setError("Không kết nối được tới máy chủ. Vui lòng thử lại sau.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function handleGoogleSuccess(credentialResponse) {
+        setLoading(true);
+        try {
+            const response = await fetch("/api/auth/google-login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ credential: credentialResponse.credential }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                setError(result.message || "Đăng nhập Google thất bại.");
+                return;
+            }
+
+            const normalizedRole = (result.role ?? "").toString().trim().toLowerCase().replace(/[_-]/g, " ").replace(/\s+/g, " ");
+            const roleToStore = normalizedRole === "superadmin" ? "super admin" : normalizedRole;
+
+            if (result.accessToken) {
+                localStorage.setItem("accessToken", result.accessToken);
+                localStorage.setItem("role", roleToStore);
+                localStorage.setItem("userName", result.fullName ?? result.userName ?? result.FullName ?? "Người dùng Google");
+                localStorage.setItem("subscriptionTier", result.subscriptionTier ?? "Free");
+            }
+
+            if (roleToStore === "admin" || roleToStore === "super admin") {
+                navigate("/admin");
+            } else {
+                navigate("/dashboard");
+            }
+        } catch {
+            setError("Không kết nối được tới máy chủ. Vui lòng thử lại sau.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
     function handleKeyDown(e) {
         if (e.key === "Enter") handleRegister();
+    }
+
+    if (requiresOtp) {
+        return (
+            <AuthLayout leftContent={<LeftContent />} rightContent={
+                <>
+                    <LogoSmall />
+                    <h2 style={{ fontSize: 24, fontWeight: 700, color: theme.gray700, margin: "0 0 6px" }}>Xác thực Email</h2>
+                    <p style={{ fontSize: 14, color: theme.gray400, margin: "0 0 28px", lineHeight: 1.6 }}>Mã OTP đã được gửi đến <strong>{form.email}</strong>. Vui lòng kiểm tra hộp thư của bạn.</p>
+
+                    {error && (
+                        <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 10, padding: "10px 14px", marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.red} strokeWidth="2" strokeLinecap="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            <span style={{ fontSize: 13, color: theme.red }}>{error}</span>
+                        </div>
+                    )}
+
+                    <InputField
+                        label="Mã OTP"
+                        type="text"
+                        placeholder="Nhập 6 số..."
+                        value={otpCode}
+                        onChange={(e) => {
+                            setOtpCode(e.target.value);
+                            setError("");
+                        }}
+                        onKeyDown={(e) => e.key === "Enter" && handleVerifyOtp()}
+                    />
+
+                    <GreenButton onClick={handleVerifyOtp} loading={loading} style={{ marginTop: 16 }}>Xác thực</GreenButton>
+
+                    <p style={{ textAlign: "center", fontSize: 14, color: theme.gray400, marginTop: 22, marginBottom: 0 }}>
+                        <button onClick={() => setRequiresOtp(false)} style={{ background: "none", border: "none", color: theme.green1, fontWeight: 600, cursor: "pointer" }}>
+                            Quay lại đăng ký
+                        </button>
+                    </p>
+                </>
+            } />
+        );
     }
 
     const rightContent = (
@@ -364,6 +492,19 @@ export default function RegisterPage() {
             >
                 Đăng ký →
             </GreenButton>
+
+            {/* Divider */}
+            <Divider text="Hoặc đăng ký với" />
+
+            {/* Social buttons */}
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+                <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => setError("Đăng nhập Google thất bại.")}
+                    text="signup_with"
+                    shape="rectangular"
+                />
+            </div>
 
             {/* Login link */}
             <p

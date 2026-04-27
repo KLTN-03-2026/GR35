@@ -1,5 +1,6 @@
 ﻿using AirQuality.Server.Data;
 using AirQuality.Server.Models.Configurations;
+using AirQuality.Server.Services;
 using AirQuality.Server.Services.Auth;
 using AirQuality.Server.Services.Background;
 using AirQuality.Server.Services.Interfaces;
@@ -18,11 +19,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         sqlOptions => sqlOptions.CommandTimeout(120)));
 
 builder.Services.AddHttpClient();
-builder.Services.AddHostedService<TedpDataFetchService>();
-builder.Services.AddHostedService<WeatherDataFetchService>();
-builder.Services.AddHostedService<TelegramDailyAlertService>();
-builder.Services.AddHostedService<TelegramThresholdAlertService>();
-builder.Services.AddHostedService<OwmCityDataFetchService>();
+builder.Services.AddMemoryCache();
+//builder.Services.AddHostedService<TedpDataFetchService>();
+//builder.Services.AddHostedService<WeatherDataFetchService>();
+//builder.Services.AddHostedService<TelegramDailyAlertService>();
+//builder.Services.AddHostedService<TelegramThresholdAlertService>();
+//builder.Services.AddHostedService<OwmCityDataFetchService>();
 //builder.Services.AddHostedService<HistoricalDataSyncService>();
 
 builder.Services
@@ -37,7 +39,28 @@ builder.Services
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
+builder.Services
+    .AddOptions<GroqOptions>()
+    .Bind(builder.Configuration.GetSection(GroqOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<SmtpOptions>()
+    .Bind(builder.Configuration.GetSection(SmtpOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<GoogleAuthOptions>()
+    .Bind(builder.Configuration.GetSection(GoogleAuthOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
+builder.Services.AddScoped<ChatbotService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IOtpService, OtpService>();
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("Thiếu cấu hình Jwt.");

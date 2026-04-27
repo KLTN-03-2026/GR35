@@ -290,7 +290,7 @@ public class AirQualityController(ApplicationDbContext dbContext) : ControllerBa
     }
 
     [HttpGet("station/{id:int}/history")]
-    public async Task<IActionResult> GetStationHistory(int id, [FromQuery] int hours = 24, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null)
+    public async Task<IActionResult> GetStationHistory(int id, [FromQuery] int hours = 24, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null, [FromQuery] double? minPm25 = null, [FromQuery] double? maxPm25 = null)
     {
         var stationState = await dbContext.Stations
             .AsNoTracking()
@@ -319,11 +319,18 @@ public class AirQualityController(ApplicationDbContext dbContext) : ControllerBa
         
         int maxRecords = startDate.HasValue ? 5000 : Math.Max(hours * 4, 100);
 
-        var rawHistory = await dbContext.Stations
+        var query = dbContext.Stations
             .AsNoTracking()
             .Where(s => s.StationId == id)
             .SelectMany(s => s.AirQualityObservations)
-            .Where(o => o.IsValid == 1 && o.CalculatedAqi.HasValue && o.Timestamp >= since && o.Timestamp <= end)
+            .Where(o => o.IsValid == 1 && o.CalculatedAqi.HasValue && o.Timestamp >= since && o.Timestamp <= end);
+
+        if (minPm25.HasValue)
+            query = query.Where(o => o.Pm25 >= minPm25.Value);
+        if (maxPm25.HasValue)
+            query = query.Where(o => o.Pm25 <= maxPm25.Value);
+
+        var rawHistory = await query
             .OrderByDescending(o => o.Timestamp)
             .Take(maxRecords)
             .Select(o => new
@@ -332,7 +339,14 @@ public class AirQualityController(ApplicationDbContext dbContext) : ControllerBa
                 o.CalculatedAqi,
                 o.Pm25,
                 o.Pm10,
-                o.Temperature
+                o.O3,
+                o.No2,
+                o.So2,
+                o.Co,
+                o.Temperature,
+                o.Humidity,
+                o.WindSpeed,
+                o.Pressure
             })
             .ToListAsync();
 
@@ -343,12 +357,19 @@ public class AirQualityController(ApplicationDbContext dbContext) : ControllerBa
             return new
             {
                 o.Timestamp,
-                CalculatedAqi = classification.Aqi,
-                Level = classification.Level,
-                ColorHex = classification.ColorHex,
                 o.Pm25,
                 o.Pm10,
-                o.Temperature
+                o.O3,
+                o.No2,
+                o.So2,
+                o.Co,
+                o.Temperature,
+                o.Humidity,
+                o.WindSpeed,
+                o.Pressure,
+                CalculatedAqi = classification.Aqi,
+                Level = classification.Level,
+                ColorHex = classification.ColorHex
             };
         });
 

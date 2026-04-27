@@ -15,7 +15,8 @@ function getWarningStyle(severity) {
 
 function formatDateTime(dateValue) {
     if (!dateValue) return '--';
-    const date = new Date(dateValue);
+    const tsStr = typeof dateValue === 'string' && !dateValue.endsWith('Z') ? dateValue + 'Z' : dateValue;
+    const date = new Date(tsStr);
     if (Number.isNaN(date.getTime())) return '--';
     return date.toLocaleString('vi-VN', {
         day: '2-digit',
@@ -282,14 +283,14 @@ export default function EcoAirStationMonitor() {
                                                     Bảo trì
                                                 </span>
                                             ) : (
-                                            <span style={{
-                                                display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 999,
-                                                background: s.status === 'online' ? '#ecfdf3' : '#fef3f2',
-                                                color: s.status === 'online' ? '#027a48' : '#b42318', padding: '4px 10px', fontSize: 12, fontWeight: 700,
-                                            }}>
-                                                <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.status === 'online' ? '#12b76a' : '#f04438' }} />
-                                                {s.status === 'online' ? 'Online' : 'Offline'}
-                                            </span>
+                                                <span style={{
+                                                    display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 999,
+                                                    background: s.status === 'online' ? '#ecfdf3' : '#fef3f2',
+                                                    color: s.status === 'online' ? '#027a48' : '#b42318', padding: '4px 10px', fontSize: 12, fontWeight: 700,
+                                                }}>
+                                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.status === 'online' ? '#12b76a' : '#f04438' }} />
+                                                    {s.status === 'online' ? 'Online' : 'Offline'}
+                                                </span>
                                             )}
                                         </td>
                                         <td style={{ padding: '12px' }}>
