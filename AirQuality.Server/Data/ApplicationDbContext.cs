@@ -1,4 +1,5 @@
 ﻿using AirQuality.Server.Models.Entites;
+using AirQuality.Server.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AirQuality.Server.Data;
@@ -27,6 +28,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<CityAirQualitySnapshot> CityAirQualitySnapshots => Set<CityAirQualitySnapshot>();
     public DbSet<UserFavoriteCity> UserFavoriteCities => Set<UserFavoriteCity>();
     public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
+    public DbSet<Contact> Contacts => Set<Contact>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

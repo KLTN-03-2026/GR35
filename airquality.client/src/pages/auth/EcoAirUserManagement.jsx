@@ -41,6 +41,15 @@ export default function EcoAirUserManagement() {
   });
   const [users, setUsers] = useState([]);
 
+  // Thêm người dùng states
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newFullName, setNewFullName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newRole, setNewRole] = useState('user');
+  const [addError, setAddError] = useState('');
+  const [adding, setAdding] = useState(false);
+
   useEffect(() => {
     let ignore = false;
 
@@ -205,6 +214,65 @@ export default function EcoAirUserManagement() {
     }
   }
 
+  async function handleAddUser(e) {
+    e.preventDefault();
+    setAddError('');
+
+    if (!newFullName.trim()) {
+      setAddError('Tên người dùng không được để trống.');
+      return;
+    }
+    if (!newEmail.trim()) {
+      setAddError('Email không được để trống.');
+      return;
+    }
+    if (!newPassword.trim()) {
+      setAddError('Mật khẩu không được để trống.');
+      return;
+    }
+
+    setAdding(true);
+    try {
+      const response = await fetch('/api/admin/user-management', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({
+          fullName: newFullName,
+          email: newEmail,
+          password: newPassword,
+          roleKey: newRole,
+        }),
+      });
+
+      const raw = await response.text();
+      let data = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.message || 'Không thể thêm người dùng.');
+      }
+
+      // Success
+      setIsAddModalOpen(false);
+      setNewFullName('');
+      setNewEmail('');
+      setNewPassword('');
+      setNewRole('user');
+      setReloadKey(v => v + 1);
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : 'Đã xảy ra lỗi.');
+    } finally {
+      setAdding(false);
+    }
+  }
+
   const statCards = [
     { key: 'total', label: 'Tổng người dùng', value: summary.totalUsers, tone: { bg: '#eff6ff', color: '#1d4ed8' } },
     { key: 'active', label: 'Đang hoạt động', value: summary.activeUsers, tone: { bg: '#ecfdf5', color: '#047857' } },
@@ -246,6 +314,7 @@ export default function EcoAirUserManagement() {
 
           <button
             type="button"
+            onClick={() => setIsAddModalOpen(true)}
             style={{
               border: 'none', background: '#16a34a', color: '#fff', borderRadius: 10,
               padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit'
@@ -395,6 +464,80 @@ export default function EcoAirUserManagement() {
           </div>
         )}
       </div>
+
+      {isAddModalOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', zIndex: 50,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{
+            background: '#fff', width: 400, borderRadius: 12, padding: 20, boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+          }}>
+            <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 700 }}>Thêm người dùng mới</h2>
+            {addError && (
+              <div style={{ background: '#fef3f2', border: '1px solid #fecdca', color: '#b42318', borderRadius: 8, padding: '10px', fontSize: 13, marginBottom: 16 }}>
+                {addError}
+              </div>
+            )}
+            <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#344054', marginBottom: 4 }}>Họ và tên</label>
+                <input
+                  value={newFullName} onChange={(e) => setNewFullName(e.target.value)} required
+                  style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #d0d5dd', padding: '8px 12px', borderRadius: 8, fontSize: 13 }}
+                  placeholder="Nhập họ và tên..."
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#344054', marginBottom: 4 }}>Email</label>
+                <input
+                  type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required
+                  style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #d0d5dd', padding: '8px 12px', borderRadius: 8, fontSize: 13 }}
+                  placeholder="Nhập email..."
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#344054', marginBottom: 4 }}>Mật khẩu</label>
+                <input
+                  type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required
+                  style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #d0d5dd', padding: '8px 12px', borderRadius: 8, fontSize: 13 }}
+                  placeholder="Nhập mật khẩu..." minLength={8}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#344054', marginBottom: 4 }}>Vai trò</label>
+                <select
+                  value={newRole} onChange={(e) => setNewRole(e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #d0d5dd', padding: '8px 12px', borderRadius: 8, fontSize: 13 }}
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                  <option value="super-admin">Super Admin</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  disabled={adding}
+                  style={{ border: '1px solid #d0d5dd', background: '#fff', color: '#344054', padding: '8px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={adding}
+                  style={{ border: 'none', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: adding ? 'not-allowed' : 'pointer' }}
+                >
+                  {adding ? 'Đang lưu...' : 'Thêm mới'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
