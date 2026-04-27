@@ -1,30 +1,45 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { AuthLayout, LogoSmall, InputField, GreenButton, theme } from "./authShared";
 
 export default function ForgotPasswordPage() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [message, setMessage] = useState("");
 
   function validate() {
-    if (!email) return "Vui long nhap email";
-    if (!/\S+@\S+\.\S+/.test(email)) return "Email khong hop le";
+    if (!email) return "Vui lòng nhập email.";
+    if (!/\S+@\S+\.\S+/.test(email)) return "Email không hợp lệ.";
     return "";
   }
 
   async function handleSubmit() {
     const e = validate();
     if (e) { setError(e); return; }
+    setError("");
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setLoading(false);
-    setSent(true);
-    // TODO: replace with real API call
-    // await fetch("/api/auth/forgot-password", { method:"POST", body: JSON.stringify({ email }) });
-    setTimeout(() => navigate("/reset-password", { state: { email } }), 2200);
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.message || "Không thể gửi yêu cầu. Vui lòng thử lại.");
+        return;
+      }
+
+      setMessage(result.message || "Nếu email tồn tại trong hệ thống, chúng tôi đã gửi liên kết đặt lại mật khẩu.");
+      setSent(true);
+    } catch {
+      setError("Không kết nối được tới máy chủ. Vui lòng thử lại sau.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const left = (
@@ -90,7 +105,10 @@ export default function ForgotPasswordPage() {
             Email da duoc gui!
           </p>
           <p style={{ fontSize:13, color:theme.gray600, margin:0 }}>
-            Kiem tra hop thu <strong>{email}</strong> va lam theo huong dan. Dang chuyen huong...
+            {message}
+          </p>
+          <p style={{ fontSize:13, color:theme.gray600, margin:"8px 0 0" }}>
+            Kiem tra hop thu <strong>{email}</strong> va mo lien ket de dat lai mat khau.
           </p>
         </div>
       ) : (

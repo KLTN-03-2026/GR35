@@ -21,6 +21,7 @@ export default function ReportTab() {
     const [imagePreview, setImagePreview] = useState("");
     const [location, setLocation] = useState({ lat: null, lng: null, address: "Đang chờ lấy vị trí..." });
     const [description, setDescription] = useState("");
+    const [reportType, setReportType] = useState("Cháy nổ / Khói bụi");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [recentReports, setRecentReports] = useState([]);
 
@@ -93,6 +94,7 @@ export default function ReportTab() {
         formData.append("latitude", location.lat);
         formData.append("longitude", location.lng);
         formData.append("description", description);
+        formData.append("reportType", reportType);
 
         try {
             const res = await fetch("/api/community-reports", {
@@ -106,6 +108,7 @@ export default function ReportTab() {
                 setDescription("");
                 setImage(null);
                 setImagePreview("");
+                setReportType("Cháy nổ / Khói bụi");
                 setLocation({ lat: null, lng: null, address: "Đang chờ lấy vị trí..." });
                 fetchRecentReports();
             } else {
@@ -217,6 +220,29 @@ export default function ReportTab() {
                         </div>
                     </div>
 
+                    {/* Report Type */}
+                    <div style={{ marginBottom: 24 }}>
+                        <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>
+                            Phân loại
+                        </label>
+                        <select
+                            value={reportType}
+                            onChange={(e) => setReportType(e.target.value)}
+                            style={{
+                                width: "100%", background: C.cardBg, border: `1px solid ${C.border}`,
+                                borderRadius: 12, padding: "12px 16px", fontSize: 14, color: C.text,
+                                outline: "none", fontFamily: "inherit", appearance: "none"
+                            }}
+                            onFocus={e => e.currentTarget.style.borderColor = C.greenLight}
+                            onBlur={e => e.currentTarget.style.borderColor = C.border}
+                        >
+                            <option value="Cháy nổ / Khói bụi">Cháy nổ / Khói bụi (Ẩn sau 2 giờ)</option>
+                            <option value="Mùi hôi / Đốt rác">Mùi hôi / Đốt rác (Ẩn sau 6 giờ)</option>
+                            <option value="Xả thải công nghiệp">Xả thải công nghiệp (Ẩn sau 24 giờ)</option>
+                            <option value="Khác">Khác (Ẩn sau 12 giờ)</option>
+                        </select>
+                    </div>
+
                     {/* Description */}
                     <div style={{ marginBottom: 30 }}>
                         <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>
@@ -303,12 +329,20 @@ export default function ReportTab() {
                                         )}
                                     </div>
                                     <div style={{ flex: 1, overflow: "hidden" }}>
+                                        <div style={{ fontSize: 11, fontWeight: 800, color: C.greenDeep, marginBottom: 2 }}>
+                                            {r.reportType || "Khác"}
+                                        </div>
                                         <div style={{ fontSize: 13, fontWeight: 700, color: C.text, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
                                             {r.description}
                                         </div>
                                         <div style={{ fontSize: 11, color: C.textLight, marginTop: 4 }}>
                                             {new Date(r.reportTime).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
                                         </div>
+                                        {r.status === "Rejected" && r.rejectReason ? (
+                                            <div style={{ fontSize: 11, color: "#b91c1c", marginTop: 4, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                                                Lý do: {r.rejectReason}
+                                            </div>
+                                        ) : null}
                                     </div>
                                     {r.status === "Approved" ? (
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">

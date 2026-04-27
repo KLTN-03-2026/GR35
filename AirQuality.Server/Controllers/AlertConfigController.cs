@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using AirQuality.Server.Data;
@@ -23,6 +23,9 @@ public class AlertConfigController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+
+        if (!await IsUserProAsync(userId.Value))
+            return StatusCode(403, new { message = "Tính năng này yêu cầu tài khoản Pro." });
 
         var user = await dbContext.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId);
         if (user is null) return NotFound(new { message = "Không tìm thấy người dùng." });
@@ -94,6 +97,9 @@ public class AlertConfigController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
+        if (!await IsUserProAsync(userId.Value))
+            return StatusCode(403, new { message = "Tính năng này yêu cầu tài khoản Pro." });
+
         if (request.AqiThreshold < 0 || request.AqiThreshold > 500)
             return BadRequest(new { message = "Ngưỡng AQI phải từ 0 đến 500." });
 
@@ -146,6 +152,9 @@ public class AlertConfigController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
+        if (!await IsUserProAsync(userId.Value))
+            return StatusCode(403, new { message = "Tính năng này yêu cầu tài khoản Pro." });
+
         var config = await dbContext.AlertConfigs.FirstOrDefaultAsync(x => x.ConfigId == id && x.UserId == userId);
         if (config is null) return NotFound(new { message = "Không tìm thấy cấu hình cảnh báo." });
 
@@ -161,6 +170,9 @@ public class AlertConfigController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+
+        if (!await IsUserProAsync(userId.Value))
+            return StatusCode(403, new { message = "Tính năng này yêu cầu tài khoản Pro." });
 
         var chatId = request.ChatId?.Trim();
         if (string.IsNullOrEmpty(chatId))
@@ -197,6 +209,9 @@ public class AlertConfigController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+
+        if (!await IsUserProAsync(userId.Value))
+            return StatusCode(403, new { message = "Tính năng này yêu cầu tài khoản Pro." });
 
         var user = await dbContext.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId);
         if (user is null) return NotFound();
@@ -249,6 +264,9 @@ public class AlertConfigController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+
+        if (!await IsUserProAsync(userId.Value))
+            return StatusCode(403, new { message = "Tính năng này yêu cầu tài khoản Pro." });
 
         var history = await dbContext.Set<NotificationHistory>()
             .Where(x => x.UserId == userId)
@@ -304,6 +322,12 @@ public class AlertConfigController(
     {
         var raw = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return int.TryParse(raw, out var id) ? id : null;
+    }
+
+    private async Task<bool> IsUserProAsync(int userId)
+    {
+        var user = await dbContext.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId);
+        return user != null && "pro".Equals(user.SubscriptionTier, StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<NotificationPlatform> EnsureTelegramPlatform()

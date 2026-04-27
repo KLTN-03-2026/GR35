@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { AuthLayout, LogoSmall, InputField, GreenButton, Icons, theme } from "./authShared";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const email = location.state?.email || "";
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token") || "";
   const [form, setForm] = useState({ password: "", confirm: "" });
   const [errors, setErrors] = useState({});
+  const [error, setError] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -37,27 +38,49 @@ export default function ResetPasswordPage() {
   function set(field, val) {
     setForm(f => ({ ...f, [field]: val }));
     setErrors(e => ({ ...e, [field]: "" }));
+    setError("");
   }
 
   function validate() {
     const e = {};
+    if (!token) e.token = "Lien ket dat lai mat khau khong hop le hoac da het han.";
     if (!form.password) e.password = "Vui long nhap mat khau moi";
-    else if (form.password.length < 6) e.password = "Mat khau toi thieu 6 ky tu";
+    else if (!/^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(form.password)) e.password = "Toi thieu 8 ky tu, gom chu, so va ky tu dac biet";
     if (!form.confirm) e.confirm = "Vui long xac nhan mat khau";
     else if (form.confirm !== form.password) e.confirm = "Mat khau khong khop";
     return e;
   }
 
   async function handleReset() {
+    setError("");
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
+
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setLoading(false);
-    setSuccess(true);
-    // TODO: replace with real API call
-    // await fetch("/api/auth/reset-password", { method:"POST", body: JSON.stringify({ email, password: form.password }) });
-    setTimeout(() => navigate("/login"), 2500);
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          newPassword: form.password,
+          confirmPassword: form.confirm,
+        }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.message || "Dat lai mat khau that bai. Vui long thu lai.");
+        return;
+      }
+
+      setSuccess(true);
+      setTimeout(() => navigate("/login"), 2500);
+    } catch {
+      setError("Khong ket noi duoc toi may chu. Vui long thu lai sau.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const left = (
@@ -122,6 +145,24 @@ export default function ResetPasswordPage() {
       <p style={{ fontSize:14, color:theme.gray400, marginBottom:28, marginTop:0 }}>
         Nhap mat khau moi cho tai khoan cua ban
       </p>
+
+      {errors.token && (
+        <div style={{
+          background:"#fef2f2", border:"1.5px solid #fecaca",
+          borderRadius:10, padding:"10px 14px", marginBottom:18, color:"#dc2626", fontSize:13,
+        }}>
+          {errors.token}
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          background:"#fef2f2", border:"1.5px solid #fecaca",
+          borderRadius:10, padding:"10px 14px", marginBottom:18, color:"#dc2626", fontSize:13,
+        }}>
+          {error}
+        </div>
+      )}
 
       {success ? (
         <div style={{

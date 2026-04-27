@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using AirQuality.Server.Data;
 using Microsoft.EntityFrameworkCore;

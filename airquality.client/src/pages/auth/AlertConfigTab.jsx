@@ -18,7 +18,7 @@ const STEPS = [
         title: "Bước 1: Kích hoạt Bot cảnh báo",
         content: [
             "Mở ứng dụng Telegram trên điện thoại hoặc máy tính.",
-            "Tìm kiếm bot @EcoAirVN_AlertBot (hoặc bot quản trị viên đã cung cấp).",
+            "Tìm kiếm bot @EcoAirVN_AlertBot.",
             "Nhấn nút Start hoặc gửi lệnh /start để bắt đầu."
         ]
     },
@@ -27,7 +27,7 @@ const STEPS = [
         content: [
             "Tìm và nhắn tin cho bot @userinfobot trên Telegram.",
             "Bot sẽ trả về thông tin gồm Id – đây chính là Chat ID của bạn.",
-            "Sao chép dải số Chat ID này (ví dụ: 123456789)."
+            "Sao chép dải số Chat ID này."
         ]
     },
     {
@@ -43,8 +43,8 @@ const STEPS = [
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function AlertConfigTab() {
     const { accessToken, subscriptionTier } = useAuth();
-    const isPro = subscriptionTier?.toLowerCase() === 'pro';
-    const [loading, setLoading] = useState(true);
+    const isPro = subscriptionTier?.toLowerCase() === "pro";
+    const [loading, setLoading] = useState(isPro);
     const [saving, setSaving] = useState(false);
     const [testing, setTesting] = useState(false);
     const [msg, setMsg] = useState("");
@@ -71,6 +71,7 @@ export default function AlertConfigTab() {
     }), [accessToken]);
 
     const load = useCallback(async () => {
+        if (!isPro) return;
         setLoading(true);
         setErr("");
         try {
@@ -78,6 +79,14 @@ export default function AlertConfigTab() {
                 fetch("/api/alert-config", { headers }),
                 fetch("/api/alert-config/history", { headers }),
             ]);
+
+            // If backend blocked us due to non-pro status
+            if (configRes.status === 403) {
+                setErr("Tính năng này yêu cầu tài khoản Pro.");
+                setLoading(false);
+                return;
+            }
+
             const configData = await configRes.json();
             const historyData = await historyRes.json();
 
@@ -101,11 +110,11 @@ export default function AlertConfigTab() {
         } finally {
             setLoading(false);
         }
-    }, [headers]);
+    }, [headers, isPro]);
 
     useEffect(() => { load(); }, [load]);
 
-    // ── Telegram Link & Test ──────────────────────────────────────────────────
+    // ── Telegram Link ─────────────────────────────────────────────────────────
     async function handleLinkTelegram() {
         if (!chatIdInput.trim()) { setErr("Chat ID không được để trống."); return; }
         setSaving(true); setErr(""); setMsg("");
@@ -114,20 +123,23 @@ export default function AlertConfigTab() {
                 method: "POST", headers, body: JSON.stringify({ chatId: chatIdInput.trim() }),
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.message || "Lỗi kết nối.");
-
+            if (!res.ok) throw new Error(data.message || "Lỗi");
             setTelegramChatId(chatIdInput.trim());
             setTelegramConnected(true);
             setMsg(data.message);
-
-            // Automatically send test message after linking
-            const testRes = await fetch("/api/alert-config/telegram/test", { method: "POST", headers });
-            const testData = await testRes.json();
-            if (testRes.ok) {
-                setMsg(data.message + " - " + testData.message);
-            }
-            load();
         } catch (e) { setErr(e.message); } finally { setSaving(false); }
+    }
+
+    // ── Telegram Test ─────────────────────────────────────────────────────────
+    async function handleTestTelegram() {
+        setTesting(true); setErr(""); setMsg("");
+        try {
+            const res = await fetch("/api/alert-config/telegram/test", { method: "POST", headers });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Lỗi");
+            setMsg(data.message);
+            load();
+        } catch (e) { setErr(e.message); } finally { setTesting(false); }
     }
 
     // ── Create Alert Config ───────────────────────────────────────────────────
@@ -171,23 +183,51 @@ export default function AlertConfigTab() {
         } catch { /* silent */ }
     }
 
-    if (loading) {
-        return <div style={{ color: C.textMuted, fontSize: 14, padding: 40, textAlign: "center" }}>Đang tải cấu hình cảnh báo...</div>;
-    }
-
     if (!isPro) {
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 60, textAlign: 'center', background: C.white, borderRadius: 14, border: `1px solid ${C.border}` }}>
-                <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
-                <h2 style={{ margin: "0 0 10px", fontSize: 20, color: C.text }}>Tính năng yêu cầu tài khoản nâng cấp PRO</h2>
-                <p style={{ margin: "0 0 20px", color: C.textMuted, fontSize: 14, maxWidth: 400 }}>
-                    Bạn cần có tài khoản PRO để có thể cấu hình cảnh báo chất lượng không khí cá nhân hóa qua Telegram.
+            <div style={{
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                padding: "80px 20px", background: C.white, borderRadius: 16, border: `1px solid ${C.border}`,
+                textAlign: "center", minHeight: 400
+            }}>
+                <div style={{
+                    width: 72, height: 72, background: "linear-gradient(135deg, #0d6e4e 0%, #10b981 100%)",
+                    borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 32, marginBottom: 24, boxShadow: "0 10px 25px -5px rgba(16, 185, 129, 0.4)"
+                }}>
+                    ⭐
+                </div>
+                <h2 style={{ margin: "0 0 12px", fontSize: 24, fontWeight: 700, color: C.text }}>
+                    Tính năng Cảnh báo dành riêng cho gói Pro
+                </h2>
+                <p style={{ margin: "0 0 32px", fontSize: 15, color: C.textMuted, maxWidth: 480, lineHeight: 1.6 }}>
+                    Cấu hình cảnh báo không khí qua Telegram giúp bạn theo dõi các chỉ số ô nhiễm vượt ngưỡng một cách chủ động theo thời gian thực mà không cần mở Website.
                 </p>
-                <a href="/goi" onClick={(e) => { e.preventDefault(); navigate('/goi'); }} style={{ padding: "10px 20px", background: C.green, color: "white", borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
-                    Nâng cấp ngay
-                </a>
+                <div style={{ display: "flex", gap: 16, marginBottom: 32 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.textMuted, background: C.bg, padding: "8px 16px", borderRadius: 99 }}>
+                        <span style={{ color: C.green }}>✓</span> Cảnh báo theo trạm
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.textMuted, background: C.bg, padding: "8px 16px", borderRadius: 99 }}>
+                        <span style={{ color: C.green }}>✓</span> Thông báo tự động mỗi ngày
+                    </div>
+                </div>
+                <button
+                    onClick={() => window.location.href = "/goi"}
+                    style={{
+                        background: "linear-gradient(135deg, #0d6e4e 0%, #10b981 100%)",
+                        color: "white", padding: "12px 28px", borderRadius: 999, border: "none",
+                        fontSize: 15, fontWeight: 600, cursor: "pointer",
+                        boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)"
+                    }}
+                >
+                    Nâng cấp Pro ngay
+                </button>
             </div>
         );
+    }
+
+    if (loading) {
+        return <div style={{ color: C.textMuted, fontSize: 14, padding: 40, textAlign: "center" }}>Đang tải cấu hình cảnh báo...</div>;
     }
 
     return (
@@ -291,8 +331,11 @@ export default function AlertConfigTab() {
                                     background: C.greenBg, border: `1px solid ${C.greenBorder}`,
                                     fontSize: 12, color: C.green,
                                 }}>
-                                    ✅ Đã kết nối Chat ID: <b>{telegramChatId}</b> (Tin nhắn đã được gửi)
+                                    ✅ Đã kết nối Chat ID: <b>{telegramChatId}</b>
                                 </div>
+                                <button onClick={handleTestTelegram} disabled={testing} style={btnStyle(C.emerald, testing)}>
+                                    {testing ? "Đang gửi..." : "📨 Gửi test"}
+                                </button>
                             </div>
                         )}
                     </Card>
