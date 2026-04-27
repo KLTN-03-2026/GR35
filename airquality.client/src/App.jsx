@@ -23,6 +23,7 @@ import DuyetBaoCaoDiemNongCongDong from './pages/auth/DuyetBaoCaoDiemNongCongDon
 import PricingPage from './pages/auth/PricingPage';
 import ContactPage from './pages/auth/ContactPage';
 import ApiDocumentationPage from './pages/auth/ApiDocumentationPage';
+import AdminContactManagement from './pages/auth/AdminContactManagement';
 import ChatbotWidget from './components/common/ChatbotWidget';
 
 function getPageTitle(pathname) {
@@ -109,6 +110,7 @@ export default function App() {
                     <Route path="station-monitor" element={<EcoAirStationMonitor />} />
                     <Route path="data" element={<GiamSatDuLieuAQI />} />
                     <Route path="reports" element={<DuyetBaoCaoDiemNongCongDong />} />
+                    <Route path="contacts" element={<AdminContactManagement />} />
                 </Route>
 
                 {/* Fallback */}

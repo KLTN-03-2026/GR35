@@ -27,7 +27,7 @@ export default function ContactPage() {
     const [formData, setFormData] = useState({
         fullName: "",
         email: "",
-        phone: "",
+        subject: "",
         message: "",
     });
     const [submitting, setSubmitting] = useState(false);
@@ -44,12 +44,30 @@ export default function ContactPage() {
     async function handleSubmit(event) {
         event.preventDefault();
         setSubmitting(true);
+        setSuccessMessage("");
 
-        await new Promise((resolve) => setTimeout(resolve, 700));
+        try {
+            const response = await fetch('/api/contact', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
 
-        setSubmitting(false);
-        setSuccessMessage("Cảm ơn bạn đã liên hệ. EcoAir sẽ phản hồi sớm nhất có thể.");
-        setFormData({ fullName: "", email: "", phone: "", message: "" });
+            if (response.ok) {
+                setSuccessMessage("Cảm ơn bạn đã liên hệ. EcoAir sẽ phản hồi sớm nhất có thể qua email của bạn.");
+                setFormData({ fullName: "", email: "", subject: "", message: "" });
+            } else {
+                const errData = await response.json();
+                alert(errData.message || "Gửi liên hệ thất bại. Vui lòng thử lại.");
+            }
+        } catch (error) {
+            console.error("Error submitting contact:", error);
+            alert("Lỗi kết nối đến máy chủ. Vui lòng thử lại.");
+        } finally {
+            setSubmitting(false);
+        }
     }
 
     return (
@@ -173,11 +191,12 @@ export default function ContactPage() {
 
                             <div style={{ marginBottom: 12 }}>
                                 <InputField
-                                    label="Số điện thoại"
-                                    name="phone"
-                                    value={formData.phone}
+                                    label="Tiêu đề"
+                                    name="subject"
+                                    value={formData.subject}
                                     onChange={handleChange}
-                                    placeholder="09xxxxxxxx"
+                                    placeholder="Vấn đề bạn cần hỗ trợ..."
+                                    required
                                 />
                             </div>
 
