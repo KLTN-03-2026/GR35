@@ -1,11 +1,10 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { getLevel } from "../../utils/aqiHelper";
 
 function fmtTime(ts) {
     if (!ts) return "—";
-    const tsStr = typeof ts === 'string' && !ts.endsWith('Z') ? ts + 'Z' : ts;
-    return new Date(tsStr).toLocaleString("vi-VN", {
+    return new Date(ts).toLocaleString("vi-VN", {
         hour: "2-digit", minute: "2-digit",
         day: "2-digit", month: "long"
     }) + " Giờ địa phương";
@@ -36,11 +35,17 @@ export default function HistoryChart({ history, title, locationName }) {
     // If the first element is the newest, we reverse it. We'll simply ensure time is increasing.
     let chartData = [...history];
     if (chartData.length > 1) {
-        const t0 = typeof chartData[0].timestamp === 'string' && !chartData[0].timestamp.endsWith('Z') ? chartData[0].timestamp + 'Z' : chartData[0].timestamp;
-        const t1 = typeof chartData[1].timestamp === 'string' && !chartData[1].timestamp.endsWith('Z') ? chartData[1].timestamp + 'Z' : chartData[1].timestamp;
-        if (new Date(t0) > new Date(t1)) {
+        const t0 = new Date(chartData[0].timestamp);
+        const t1 = new Date(chartData[1].timestamp);
+        if (t0 > t1) {
             chartData.reverse();
         }
+    }
+
+    if (chartData.length > 0) {
+        const latestTime = new Date(chartData[chartData.length - 1].timestamp).getTime();
+        const twentyFourHoursAgo = latestTime - 24 * 60 * 60 * 1000;
+        chartData = chartData.filter(d => new Date(d.timestamp).getTime() > twentyFourHoursAgo);
     }
 
     const maxVal = chartData.length ? Math.max(...chartData.map(h => layer === "aqi" ? (h.calculatedAqi ?? 0) : (h.pm25 ?? 0))) : 100;
@@ -90,8 +95,7 @@ export default function HistoryChart({ history, title, locationName }) {
 
     const timeLabel = displayData ? fmtTime(displayData.timestamp) : "";
     const formatXAxis = (tickItem) => {
-        const tsStr = typeof tickItem === 'string' && !tickItem.endsWith('Z') ? tickItem + 'Z' : tickItem;
-        const d = new Date(tsStr);
+        const d = new Date(tickItem);
         return d.getHours().toString().padStart(2, "0") + ":00";
     };
 

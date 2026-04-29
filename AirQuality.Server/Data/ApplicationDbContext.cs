@@ -29,7 +29,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserFavoriteCity> UserFavoriteCities => Set<UserFavoriteCity>();
     public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
     public DbSet<Contact> Contacts => Set<Contact>();
-
+    public DbSet<AppNotification> AppNotifications => Set<AppNotification>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -216,5 +216,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<SubscriptionPayment>().Property(x => x.AmountVnd).HasPrecision(18, 2);
         modelBuilder.Entity<SubscriptionPayment>().Property(x => x.Provider).HasDefaultValue("VNPAY");
         modelBuilder.Entity<SubscriptionPayment>().Property(x => x.Status).HasDefaultValue("Pending");
+
+        modelBuilder.Entity<AppNotification>()
+            .HasOne(x => x.User)
+            .WithMany(x => x.AppNotifications)
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AppNotification>().Property(x => x.IsRead).HasDefaultValue(false);
+        modelBuilder.Entity<AppNotification>().Property(x => x.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
     }
 }

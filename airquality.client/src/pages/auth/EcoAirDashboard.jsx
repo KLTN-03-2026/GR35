@@ -1,6 +1,15 @@
-﻿import { useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import {
+    Area,
+    AreaChart,
+    CartesianGrid,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
 import PlacesTab from "./PlacesTab";
 import ReportTab from "./ReportTab";
 import ProfileHealthTab from "./ProfileHealthTab";
@@ -8,6 +17,7 @@ import DeveloperApiTab from "./DeveloperApiTab";
 import AlertConfigTab from "./AlertConfigTab";
 import HistoryExportTab from "./HistoryExportTab";
 import MapRoutingTab from "./MapRoutingTab";
+import NotificationBell from "../../components/common/NotificationBell";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -16,6 +26,12 @@ const C = {
     greenBg: "#f0fdf4",
     greenBorder: "#bbf7d0",
     darkGreen: "#0a4a32",
+    emerald: "#10b981",
+    blue: "#3b82f6",
+    blueBg: "#eff6ff",
+    blueBorder: "#bfdbfe",
+    purple: "#8b5cf6",
+    purpleBg: "#f5f3ff",
     text: "#1a2e1a",
     textMuted: "#5a6e5a",
     textLight: "#9ca3af",
@@ -27,6 +43,66 @@ const C = {
     red: "#ef4444",
     sidebarW: 220,
 };
+
+function getAqiMeta(value) {
+    const aqi = Number(value ?? 0);
+    if (aqi <= 50) return { label: "Tốt", color: C.green, bg: "#dcfce7", advice: "Không khí an toàn cho hầu hết hoạt động ngoài trời." };
+    if (aqi <= 100) return { label: "Trung bình", color: C.yellow, bg: "#fef3c7", advice: "Nhóm nhạy cảm nên theo dõi thêm trước khi vận động mạnh." };
+    if (aqi <= 150) return { label: "Kém", color: C.orange, bg: "#ffedd5", advice: "Nên hạn chế ở ngoài lâu, đặc biệt nếu có bệnh hô hấp." };
+    if (aqi <= 200) return { label: "Xấu", color: C.red, bg: "#fee2e2", advice: "Hạn chế ra ngoài và cân nhắc đeo khẩu trang lọc bụi." };
+    return { label: "Nguy hại", color: "#7c3aed", bg: "#f3e8ff", advice: "Nên ở trong nhà và tránh vận động ngoài trời." };
+}
+
+function formatHour(value) {
+    if (!value) return "--:--";
+    const date = new Date(typeof value === "string" && !value.endsWith("Z") ? `${value}Z` : value);
+    return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDateTime(value) {
+    if (!value) return "Chưa có dữ liệu";
+    const date = new Date(typeof value === "string" && !value.endsWith("Z") ? `${value}Z` : value);
+    return date.toLocaleString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "2-digit",
+    });
+}
+
+function normalizeHistory(items) {
+    return [...(Array.isArray(items) ? items : [])]
+        .map((item) => ({
+            ...item,
+            aqi: item.calculatedAqi ?? item.aqi ?? 0,
+            pm25: item.pm25 ?? 0,
+            timestamp: item.timestamp,
+            shortTime: formatHour(item.timestamp),
+        }))
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+}
+
+function getHealthTips(conditions, latestAqi) {
+    const list = Array.isArray(conditions) ? conditions : [];
+    const meta = getAqiMeta(latestAqi);
+    if (!list.length) return [
+        "Hoàn thiện hồ sơ sức khỏe để nhận khuyến nghị cá nhân hóa chính xác hơn.",
+        meta.advice,
+    ];
+
+    const tips = [];
+    if (list.some((x) => x.toLowerCase().includes("hen") || x.toLowerCase().includes("copd"))) {
+        tips.push(`Với nhóm hô hấp nhạy cảm, AQI ${latestAqi ?? "--"} hiện tại nên được theo dõi sát trước khi ra ngoài.`);
+    }
+    if (list.some((x) => x.toLowerCase().includes("tim mạch"))) {
+        tips.push("Ưu tiên ra ngoài vào các khung giờ AQI thấp hơn và tránh tuyến đường đông xe.");
+    }
+    if (list.some((x) => x.toLowerCase().includes("trẻ") || x.toLowerCase().includes("mang thai") || x.toLowerCase().includes("cao tuổi"))) {
+        tips.push("Nhóm nhạy cảm nên giới hạn thời gian ngoài trời khi chất lượng không khí suy giảm.");
+    }
+    tips.push(meta.advice);
+    return tips.slice(0, 3);
+}
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 function Icon({ d, size = 18, stroke = C.textMuted, fill = "none", strokeWidth = 1.8 }) {
@@ -196,6 +272,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userName, isPro }) {
 
 // ─── Dashboard Header ─────────────────────────────────────────────────────────
 function DashboardHeader({ userName }) {
+    const navigate = useNavigate();
     const greetings = ["Chào mừng trở lại,", "Xin chào,"];
     return (
         <header style={{
@@ -241,13 +318,8 @@ function DashboardHeader({ userName }) {
             </button>
 
             {/* Bell */}
-            <div style={{
-                width: 36, height: 36, borderRadius: "50%",
-                background: "#f9fafb", border: `1px solid ${C.border}`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer",
-            }}>
-                <Icon d={["M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9", "M13.73 21a2 2 0 01-3.46 0"]} size={16} />
+            <div style={{ marginLeft: 8 }}>
+                <NotificationBell />
             </div>
         </header>
     );
@@ -277,311 +349,637 @@ function DashboardFooter() {
     );
 }
 
-// ─── AQI Badge ────────────────────────────────────────────────────────────────
-function AqiBadge({ value, label, color }) {
-    return (
-        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-            <span style={{ fontSize: 32, fontWeight: 800, color, lineHeight: 1 }}>{value}</span>
-            <span style={{ fontSize: 11, color, fontWeight: 600 }}>{label}</span>
-        </div>
-    );
-}
-
-// ─── Favorite Stations Card ───────────────────────────────────────────────────
-function FavoriteStation({ name, district, aqi, aqiColor, aqiLabel, pm25, temp, warning, warningType }) {
+function Card({ children, style = {} }) {
     return (
         <div style={{
-            flex: 1, background: C.white, border: `1px solid ${C.border}`,
-            borderRadius: 14, padding: "18px 20px",
+            background: C.white,
+            border: `1px solid ${C.border}`,
+            borderRadius: 16,
+            padding: 20,
+            ...style,
         }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                <div>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: C.text }}>{name}</div>
-                    <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{district}</div>
-                </div>
-                <span style={{ color: C.yellow, fontSize: 18 }}>★</span>
-            </div>
-            <AqiBadge value={aqi} label={aqiLabel} color={aqiColor} />
-            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 3 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.textMuted }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: C.greenLight, display: "inline-block" }} />
-                    PM2.5: {pm25}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.textMuted }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#60a5fa", display: "inline-block" }} />
-                    Nhiệt độ: {temp}
-                </div>
-            </div>
-            {warning && (
-                <div style={{
-                    marginTop: 12, padding: "8px 10px", borderRadius: 8,
-                    background: warningType === "good" ? "#f0fdf4" : "#fffbeb",
-                    border: `1px solid ${warningType === "good" ? "#bbf7d0" : "#fde68a"}`,
-                    fontSize: 11.5, color: warningType === "good" ? "#15803d" : "#92400e",
-                    lineHeight: 1.5,
-                    display: "flex", alignItems: "flex-start", gap: 6,
-                }}>
-                    <span>{warningType === "good" ? "✓" : "⚠"}</span>
-                    {warning}
-                </div>
-            )}
+            {children}
         </div>
     );
 }
 
-// ─── Simple Line Chart (SVG) ──────────────────────────────────────────────────
-function SimpleLineChart() {
-    const pm25 = [30, 60, 45, 80, 95, 75, 110, 90, 60, 40, 55, 70, 85, 95, 100, 110, 90, 80, 60, 50];
-    const pm10 = [20, 40, 30, 55, 70, 55, 80, 65, 45, 30, 40, 50, 60, 70, 75, 80, 65, 55, 40, 35];
-    const o3 = [15, 20, 18, 25, 30, 22, 28, 25, 20, 18, 22, 26, 30, 28, 25, 22, 20, 18, 15, 12];
-
-    const W = 580, H = 150;
-    const maxV = 150;
-    const pts = (data) =>
-        data.map((v, i) => `${(i / (data.length - 1)) * W},${H - (v / maxV) * H}`).join(" ");
-
+function SectionTitle({ title, subtitle, action }) {
     return (
-        <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block" }}>
-            <polyline points={pts(pm25)} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinejoin="round" />
-            <polyline points={pts(pm10)} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinejoin="round" />
-            <polyline points={pts(o3)} fill="none" stroke="#8b5cf6" strokeWidth="1.5" strokeLinejoin="round" />
-        </svg>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
+            <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{title}</div>
+                {subtitle ? <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>{subtitle}</div> : null}
+            </div>
+            {action}
+        </div>
     );
 }
 
-// ─── Overview Tab ─────────────────────────────────────────────────────────────
-function OverviewTab() {
+function KpiCard({ label, value, subtext, accent, icon }) {
+    return (
+        <div style={{
+            background: C.white,
+            border: `1px solid ${C.border}`,
+            borderRadius: 16,
+            padding: "18px 20px",
+            minWidth: 180,
+            flex: 1,
+        }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                <div>
+                    <div style={{ fontSize: 12, color: C.textMuted }}>{label}</div>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: accent, marginTop: 8, lineHeight: 1.1 }}>{value}</div>
+                    <div style={{ fontSize: 12, color: C.textMuted, marginTop: 8, lineHeight: 1.5 }}>{subtext}</div>
+                </div>
+                <div style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 12,
+                    background: `${accent}14`,
+                    color: accent,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 18,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                }}>
+                    {icon}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function FavoritePlaceCard({ place, highlighted }) {
+    const meta = getAqiMeta(place.aqi);
+    return (
+        <div style={{
+            border: `1px solid ${highlighted ? meta.color : C.border}`,
+            borderRadius: 14,
+            padding: 16,
+            background: highlighted ? meta.bg : C.white,
+            flex: 1,
+            minWidth: 220,
+        }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>
+                        {place.stationName || place.cityName || "Địa điểm yêu thích"}
+                    </div>
+                    <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>
+                        {[place.cityName, place.stateProvince].filter(Boolean).join(", ") || "Đang theo dõi"}
+                    </div>
+                </div>
+                <div style={{ fontSize: 18, color: C.yellow }}>★</div>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 14 }}>
+                <span style={{ fontSize: 30, fontWeight: 800, color: meta.color, lineHeight: 1 }}>{place.aqi ?? "--"}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: meta.color }}>AQI {meta.label.toUpperCase()}</span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, marginTop: 14 }}>
+                <div style={{ background: "rgba(255,255,255,0.55)", borderRadius: 10, padding: "8px 10px" }}>
+                    <div style={{ fontSize: 11, color: C.textLight }}>PM2.5</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{place.pm25 != null ? `${Math.round(place.pm25)} μg/m3` : "--"}</div>
+                </div>
+                <div style={{ background: "rgba(255,255,255,0.55)", borderRadius: 10, padding: "8px 10px" }}>
+                    <div style={{ fontSize: 11, color: C.textLight }}>Cập nhật</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{formatHour(place.updateTime)}</div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function QuickAction({ title, desc, accent, onClick }) {
+    return (
+        <button
+            onClick={onClick}
+            style={{
+                border: `1px solid ${accent}33`,
+                background: C.white,
+                borderRadius: 14,
+                padding: "16px 18px",
+                cursor: "pointer",
+                textAlign: "left",
+                minWidth: 180,
+                flex: 1,
+            }}
+        >
+            <div style={{ fontSize: 13, fontWeight: 700, color: accent }}>{title}</div>
+            <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5, marginTop: 8 }}>{desc}</div>
+        </button>
+    );
+}
+
+function OverviewTab({ accessToken, subscriptionTier, userName, setActiveTab }) {
+    const isPro = (subscriptionTier ?? "").toLowerCase() === "pro";
+    const [overview, setOverview] = useState({
+        loading: true,
+        error: "",
+        places: [],
+        cities: [],
+        history: [],
+        source: null,
+        sourceType: "city",
+        alertSummary: null,
+        profile: null,
+        reports: [],
+        apiKeys: [],
+    });
+    const [historySourceType, setHistorySourceType] = useState("city");
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadOverview() {
+            setOverview((prev) => ({ ...prev, loading: true, error: "" }));
+
+            try {
+                const authHeaders = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+                const requests = await Promise.allSettled([
+                    fetch("/api/favorite-places", { headers: authHeaders }),
+                    fetch("/api/City"),
+                    fetch("/api/auth/profile-health", { headers: authHeaders }),
+                    fetch("/api/community-reports/my-reports", { headers: authHeaders }),
+                    fetch("/api/auth/api-keys", { headers: authHeaders }),
+                    isPro ? fetch("/api/alert-config", { headers: authHeaders }) : Promise.resolve(null),
+                ]);
+
+                const [placesRes, citiesRes, profileRes, reportsRes, apiKeysRes, alertRes] = requests;
+
+                const places = placesRes.status === "fulfilled" && placesRes.value?.ok ? await placesRes.value.json() : [];
+                const cities = citiesRes.status === "fulfilled" && citiesRes.value?.ok ? await citiesRes.value.json() : [];
+                const profile = profileRes.status === "fulfilled" && profileRes.value?.ok ? await profileRes.value.json() : null;
+                const reports = reportsRes.status === "fulfilled" && reportsRes.value?.ok ? await reportsRes.value.json() : [];
+                const apiKeys = apiKeysRes.status === "fulfilled" && apiKeysRes.value?.ok ? await apiKeysRes.value.json() : [];
+                const alertSummary = alertRes && alertRes.status === "fulfilled" && alertRes.value?.ok ? await alertRes.value.json() : null;
+
+                const favoriteStation = (Array.isArray(places) ? places : []).find((item) => item.type === "station");
+                const firstCity = Array.isArray(cities) && cities.length > 0 ? cities[0] : null;
+                const preferredType = favoriteStation ? "station" : "city";
+                const chosenSource = preferredType === "station"
+                    ? { type: "station", id: favoriteStation.id, label: favoriteStation.stationName || favoriteStation.cityName || "Trạm yêu thích" }
+                    : firstCity
+                        ? { type: "city", slug: firstCity.slug, label: firstCity.provinceName || "Thành phố" }
+                        : null;
+
+                let history = [];
+                if (chosenSource) {
+                    const historyUrl = chosenSource.type === "station"
+                        ? `/api/AirQuality/station/${chosenSource.id}/history?hours=24`
+                        : `/api/City/${chosenSource.slug}/history?hours=24`;
+
+                    const historyRes = await fetch(historyUrl, { headers: authHeaders });
+                    if (historyRes.ok) {
+                        history = normalizeHistory(await historyRes.json());
+                    }
+                }
+
+                if (!ignore) {
+                    setHistorySourceType(preferredType);
+                    setOverview({
+                        loading: false,
+                        error: "",
+                        places: Array.isArray(places) ? places : [],
+                        cities: Array.isArray(cities) ? cities : [],
+                        history,
+                        source: chosenSource,
+                        sourceType: preferredType,
+                        alertSummary,
+                        profile,
+                        reports: Array.isArray(reports) ? reports : [],
+                        apiKeys: Array.isArray(apiKeys) ? apiKeys : [],
+                    });
+                }
+            } catch {
+                if (!ignore) {
+                    setOverview((prev) => ({
+                        ...prev,
+                        loading: false,
+                        error: "Không thể tải dữ liệu tổng quan lúc này.",
+                    }));
+                }
+            }
+        }
+
+        loadOverview();
+        return () => {
+            ignore = true;
+        };
+    }, [accessToken, isPro]);
+
+    useEffect(() => {
+        async function switchSource() {
+            const targetSource = historySourceType === "station"
+                ? overview.places.find((item) => item.type === "station")
+                : overview.cities[0];
+
+            if (!targetSource) return;
+
+            const nextSource = historySourceType === "station"
+                ? { type: "station", id: targetSource.id, label: targetSource.stationName || targetSource.cityName || "Trạm yêu thích" }
+                : { type: "city", slug: targetSource.slug, label: targetSource.provinceName || "Thành phố" };
+
+            const historyUrl = nextSource.type === "station"
+                ? `/api/AirQuality/station/${nextSource.id}/history?hours=24`
+                : `/api/City/${nextSource.slug}/history?hours=24`;
+
+            try {
+                const res = await fetch(historyUrl, {
+                    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                });
+                const history = res.ok ? normalizeHistory(await res.json()) : [];
+                setOverview((prev) => ({ ...prev, history, source: nextSource, sourceType: historySourceType }));
+            } catch {
+                setOverview((prev) => ({ ...prev, history: [], source: nextSource, sourceType: historySourceType }));
+            }
+        }
+
+        if (!overview.loading && overview.cities.length) {
+            switchSource();
+        }
+    }, [accessToken, historySourceType, overview.cities, overview.loading, overview.places]);
+
+    const latest = useMemo(() => overview.history[overview.history.length - 1] || null, [overview.history]);
+    const aqiMeta = getAqiMeta(latest?.aqi ?? 0);
+    const avgPm25 = useMemo(() => {
+        if (!overview.history.length) return 0;
+        return overview.history.reduce((sum, item) => sum + (item.pm25 ?? 0), 0) / overview.history.length;
+    }, [overview.history]);
+    const riskWindows = useMemo(() => {
+        return [...overview.history]
+            .sort((a, b) => (b.pm25 ?? 0) - (a.pm25 ?? 0))
+            .slice(0, 3)
+            .map((item) => ({
+                time: formatHour(item.timestamp),
+                value: Math.round(item.pm25 ?? 0),
+                aqi: Math.round(item.aqi ?? 0),
+            }));
+    }, [overview.history]);
+    const worstFavorite = useMemo(() => {
+        return [...overview.places]
+            .filter((item) => item.aqi != null)
+            .sort((a, b) => (b.aqi ?? 0) - (a.aqi ?? 0))[0];
+    }, [overview.places]);
+    const activeAlerts = overview.alertSummary?.alertConfigs?.filter((item) => item.isActive).length ?? 0;
+    const healthConditions = overview.profile?.healthConditions || [];
+    const healthTips = getHealthTips(healthConditions, latest?.aqi ?? 0);
+
+    if (overview.loading) {
+        return <div style={{ padding: 40, textAlign: "center", color: C.textMuted }}>Đang tải dashboard tổng quan...</div>;
+    }
+
+    if (overview.error) {
+        return <Card style={{ color: C.red }}>{overview.error}</Card>;
+    }
+
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-            {/* Row 1: Trạm yêu thích + Báo cáo cộng đồng */}
-            <div style={{ display: "flex", gap: 16 }}>
-                {/* Trạm yêu thích */}
-                <div style={{ flex: 2 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.text }}>Trạm Yêu Thích</h3>
-                        <a href="#" style={{ fontSize: 13, color: C.green, textDecoration: "none", fontWeight: 500 }}>Xem tất cả</a>
-                    </div>
-                    <div style={{ display: "flex", gap: 14 }}>
-                        <FavoriteStation
-                            name="Vinhomes Central Park" district="Quận Bình Thạnh, TP.HCM"
-                            aqi="18" aqiLabel="AQI TÔT" aqiColor={C.green}
-                            pm25="4.2 μg/m³" temp="28°C"
-                            warning="Không khí rất tốt, an toàn tuyệt đối cho người bị hen suyễn và bệnh hô hấp."
-                            warningType="good"
-                        />
-                        <FavoriteStation
-                            name="Hồ Gươm Plaza" district="Quận Hà Đông, Hà Nội"
-                            aqi="62" aqiLabel="AQI TB" aqiColor={C.orange}
-                            pm25="18.5 μg/m³" temp="24°C"
-                            warning="Người có bệnh hô hấp nhạy cảm nên hạn chế vận động mạnh ngoài trời lâu."
-                            warningType="warn"
-                        />
-                    </div>
-                </div>
-
-                {/* Báo cáo cộng đồng */}
-                <div style={{
-                    flex: 1, borderRadius: 16, overflow: "hidden",
-                    background: "linear-gradient(145deg, #0a2e1e 0%, #0d4a2e 45%, #0f6e45 100%)",
-                    padding: "22px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between",
-                    minHeight: 200,
-                }}>
-                    <div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: "white", marginBottom: 10 }}>Báo cáo cộng đồng</div>
-                        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.6, margin: 0 }}>
-                            Phát hiện nguồn ô nhiễm? Chụp và gửi báo cáo ngay để bảo vệ mọi người xung quanh.
-                        </p>
-                    </div>
-                    <button style={{
-                        marginTop: 18, display: "flex", alignItems: "center", gap: 8, justifyContent: "center",
-                        padding: "10px 0", background: "rgba(255,255,255,0.9)", color: C.text,
-                        border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%",
-                    }}>
-                        <Icon d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke={C.text} size={15} />
-                        Tải lên ảnh ô nhiễm
-                    </button>
-                </div>
-            </div>
-
-            {/* Row 2: Dự báo 7 ngày AI + Eco-Routing */}
-            <div style={{ display: "flex", gap: 16 }}>
-                {/* Dự báo 7 ngày */}
-                <div style={{
-                    flex: 2, background: C.white, border: `1px solid ${C.border}`,
-                    borderRadius: 14, padding: "20px 22px",
-                }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-                        <div>
-                            <div style={{ fontWeight: 700, fontSize: 15, color: C.text }}>Dự báo 7 ngày (AI)</div>
-                            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>
-                                Dựa trên mô hình LSTM độc quyền của EcoAir
-                            </div>
+            <div style={{
+                borderRadius: 20,
+                padding: "24px 24px",
+                background: "linear-gradient(135deg, #0b3f2d 0%, #0d6e4e 45%, #22c55e 100%)",
+                color: "white",
+            }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+                    <div style={{ flex: 2, minWidth: 280 }}>
+                        <div style={{ fontSize: 13, opacity: 0.82 }}>Bức tranh tổng thể hôm nay</div>
+                        <div style={{ fontSize: 28, fontWeight: 800, marginTop: 8 }}>
+                            {userName}, {aqiMeta.label === "Tốt" ? "hôm nay không khí khá ổn." : "hãy chú ý chất lượng không khí khu vực của bạn."}
                         </div>
-                        <div style={{ display: "flex", gap: 8 }}>
-                            <span style={{
-                                padding: "4px 10px", background: "#f0fdf4", color: C.green,
-                                border: `1px solid ${C.greenBorder}`, borderRadius: 6, fontSize: 12, fontWeight: 500,
-                            }}>Lọc PM2.5/PM10</span>
-                            <span style={{
-                                padding: "4px 10px", background: "#f0fdf4", color: C.green,
-                                border: `1px solid ${C.greenBorder}`, borderRadius: 6, fontSize: 12, fontWeight: 500,
-                            }}>⬇ PDF/CSV</span>
+                        <div style={{ fontSize: 13, lineHeight: 1.7, opacity: 0.92, marginTop: 12, maxWidth: 760 }}>
+                            Theo dõi nhanh AQI hiện tại, xu hướng 24 giờ, cảnh báo cá nhân và những hành động nên thực hiện ngay trong một màn hình.
                         </div>
                     </div>
-
-                    {/* PRO lock */}
                     <div style={{
-                        height: 120, display: "flex", alignItems: "center", justifyContent: "center",
-                        background: "repeating-linear-gradient(45deg, #f9fafb, #f9fafb 10px, #f3f4f6 10px, #f3f4f6 20px)",
-                        borderRadius: 10,
+                        minWidth: 260,
+                        background: "rgba(255,255,255,0.14)",
+                        border: "1px solid rgba(255,255,255,0.18)",
+                        borderRadius: 18,
+                        padding: "18px 18px",
+                        backdropFilter: "blur(8px)",
                     }}>
-                        <button style={{
-                            display: "flex", alignItems: "center", gap: 8,
-                            padding: "10px 22px", background: C.yellow, color: "white",
-                            border: "none", borderRadius: 10, fontSize: 13.5, fontWeight: 600, cursor: "pointer",
-                            boxShadow: "0 3px 10px rgba(245,158,11,0.35)",
-                        }}>
-                            🔒 Mở khoá với gói PRO
-                        </button>
-                    </div>
-                </div>
-
-                {/* Eco-Routing Mini */}
-                <div style={{
-                    flex: 1, background: C.white, border: `1px solid ${C.border}`,
-                    borderRadius: 14, padding: "20px 22px",
-                }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
-                        <span style={{ fontSize: 18 }}>🚗</span>
-                        <div style={{ fontWeight: 700, fontSize: 15, color: C.text }}>Eco-Routing Mini</div>
-                    </div>
-
-                    {[
-                        { dot: "#3b82f6", label: "Điểm bắt đầu A" },
-                        { dot: C.green, label: "Điểm đến B" },
-                    ].map((item, i) => (
-                        <div key={i} style={{
-                            display: "flex", alignItems: "center", gap: 10, marginBottom: 12,
-                            padding: "9px 12px", background: "#f9fafb", borderRadius: 8, border: `1px solid ${C.border}`,
-                        }}>
-                            <span style={{ width: 10, height: 10, borderRadius: "50%", background: item.dot, display: "inline-block", flexShrink: 0 }} />
-                            <span style={{ fontSize: 13, color: C.textMuted }}>{item.label}</span>
+                        <div style={{ fontSize: 12, opacity: 0.8 }}>Nguồn dữ liệu hiện tại</div>
+                        <div style={{ fontSize: 18, fontWeight: 700, marginTop: 8 }}>{overview.source?.label || "Chưa xác định"}</div>
+                        <div style={{ fontSize: 12, opacity: 0.82, marginTop: 6 }}>
+                            Cập nhật lúc {formatDateTime(latest?.timestamp)}
                         </div>
-                    ))}
-
-                    <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.textMuted, marginBottom: 16, cursor: "pointer" }}>
-                        <input type="checkbox" style={{ accentColor: C.green }} />
-                        Áp dụng hồ sơ y tế né bụi mịn
-                    </label>
-
-                    <button style={{
-                        width: "100%", padding: "11px 0",
-                        background: "linear-gradient(135deg, #0d6e4e, #22c55e)",
-                        color: "white", border: "none", borderRadius: 10,
-                        fontSize: 13.5, fontWeight: 700, cursor: "pointer",
-                        boxShadow: "0 3px 10px rgba(13,110,78,0.3)",
-                    }}>
-                        Tính toán lộ trình sạch
-                    </button>
+                        <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+                            <button
+                                onClick={() => setHistorySourceType("city")}
+                                style={{
+                                    border: "none",
+                                    background: historySourceType === "city" ? "white" : "rgba(255,255,255,0.15)",
+                                    color: historySourceType === "city" ? C.green : "white",
+                                    borderRadius: 999,
+                                    padding: "7px 12px",
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                }}
+                            >
+                                Thành phố
+                            </button>
+                            <button
+                                onClick={() => setHistorySourceType("station")}
+                                disabled={!overview.places.some((item) => item.type === "station")}
+                                style={{
+                                    border: "none",
+                                    background: historySourceType === "station" ? "white" : "rgba(255,255,255,0.15)",
+                                    color: historySourceType === "station" ? C.green : "white",
+                                    opacity: overview.places.some((item) => item.type === "station") ? 1 : 0.5,
+                                    borderRadius: 999,
+                                    padding: "7px 12px",
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    cursor: overview.places.some((item) => item.type === "station") ? "pointer" : "not-allowed",
+                                }}
+                            >
+                                Trạm yêu thích
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Row 3: Chart + Stats */}
-            <div style={{ display: "flex", gap: 16 }}>
-                {/* Chart */}
-                <div style={{
-                    flex: 2, background: C.white, border: `1px solid ${C.border}`,
-                    borderRadius: 14, padding: "20px 22px",
-                }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-                        <div>
-                            <div style={{ fontWeight: 700, fontSize: 15, color: C.text }}>Phân tích Chi tiết & Xu hướng</div>
-                            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>
-                                Dữ liệu quan trắc thời gian thực trong 24 giờ qua
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                <KpiCard
+                    label="AQI hiện tại"
+                    value={latest ? Math.round(latest.aqi) : "--"}
+                    subtext={aqiMeta.label}
+                    accent={aqiMeta.color}
+                    icon="AQ"
+                />
+                <KpiCard
+                    label="PM2.5 hiện tại"
+                    value={latest?.pm25 != null ? Math.round(latest.pm25) : "--"}
+                    subtext="ug/m3"
+                    accent={C.blue}
+                    icon="PM"
+                />
+                <KpiCard
+                    label="Địa điểm yêu thích"
+                    value={overview.places.length}
+                    subtext={worstFavorite ? `Điểm cần lưu ý: ${worstFavorite.stationName || worstFavorite.cityName}` : "Chưa có địa điểm được ghim"}
+                    accent={C.yellow}
+                    icon="★"
+                />
+                <KpiCard
+                    label="Cảnh báo đang bật"
+                    value={activeAlerts}
+                    subtext={overview.alertSummary?.telegramConnected ? "Telegram đã kết nối" : "Chưa kết nối Telegram"}
+                    accent={C.purple}
+                    icon="!"
+                />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(280px, 1fr)", gap: 16 }}>
+                <Card>
+                    <SectionTitle
+                        title="Xu hướng chất lượng không khí"
+                        subtitle="Dữ liệu 24 giờ gần nhất cho AQI và PM2.5"
+                        action={
+                            <button
+                                onClick={() => setActiveTab("history")}
+                                style={{ border: "none", background: C.greenBg, color: C.green, borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                            >
+                                Xem lịch sử đầy đủ
+                            </button>
+                        }
+                    />
+                    {overview.history.length ? (
+                        <>
+                            <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.textMuted }}>
+                                    <span style={{ width: 10, height: 10, borderRadius: 999, background: C.green, display: "inline-block" }} />
+                                    AQI
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.textMuted }}>
+                                    <span style={{ width: 10, height: 10, borderRadius: 999, background: C.blue, display: "inline-block" }} />
+                                    PM2.5
+                                </div>
                             </div>
+                            <div style={{ width: "100%", height: 280 }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={overview.history}>
+                                        <defs>
+                                            <linearGradient id="aqiFill" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor={C.green} stopOpacity={0.24} />
+                                                <stop offset="95%" stopColor={C.green} stopOpacity={0} />
+                                            </linearGradient>
+                                            <linearGradient id="pmFill" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor={C.blue} stopOpacity={0.18} />
+                                                <stop offset="95%" stopColor={C.blue} stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#edf2f7" />
+                                        <XAxis dataKey="shortTime" tick={{ fontSize: 11, fill: C.textLight }} tickLine={false} axisLine={false} />
+                                        <YAxis tick={{ fontSize: 11, fill: C.textLight }} tickLine={false} axisLine={false} width={32} />
+                                        <Tooltip
+                                            contentStyle={{ borderRadius: 12, border: `1px solid ${C.border}` }}
+                                            formatter={(value, name) => [Math.round(value), name === "aqi" ? "AQI" : "PM2.5"]}
+                                            labelFormatter={(value) => `Thời gian: ${value}`}
+                                        />
+                                        <Area type="monotone" dataKey="aqi" stroke={C.green} fill="url(#aqiFill)" strokeWidth={2.5} />
+                                        <Area type="monotone" dataKey="pm25" stroke={C.blue} fill="url(#pmFill)" strokeWidth={2.5} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginTop: 16 }}>
+                                <div style={{ background: C.bg, borderRadius: 12, padding: "12px 14px" }}>
+                                    <div style={{ fontSize: 11, color: C.textLight }}>AQI trung bình 24h</div>
+                                    <div style={{ fontSize: 20, fontWeight: 800, color: C.text, marginTop: 6 }}>
+                                        {Math.round(overview.history.reduce((sum, item) => sum + (item.aqi ?? 0), 0) / overview.history.length)}
+                                    </div>
+                                </div>
+                                <div style={{ background: C.bg, borderRadius: 12, padding: "12px 14px" }}>
+                                    <div style={{ fontSize: 11, color: C.textLight }}>PM2.5 trung bình</div>
+                                    <div style={{ fontSize: 20, fontWeight: 800, color: C.text, marginTop: 6 }}>
+                                        {avgPm25 ? avgPm25.toFixed(1) : "0.0"}
+                                    </div>
+                                </div>
+                                <div style={{ background: C.bg, borderRadius: 12, padding: "12px 14px" }}>
+                                    <div style={{ fontSize: 11, color: C.textLight }}>Mức cảnh báo</div>
+                                    <div style={{ fontSize: 20, fontWeight: 800, color: aqiMeta.color, marginTop: 6 }}>
+                                        {aqiMeta.label}
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{ padding: 30, textAlign: "center", color: C.textMuted }}>Chưa có dữ liệu lịch sử để hiển thị biểu đồ.</div>
+                    )}
+                </Card>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <Card>
+                        <SectionTitle title="Cảnh báo cá nhân" subtitle="Trạng thái thông báo và ngưỡng theo dõi" />
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                            <div>
+                                <div style={{ fontSize: 13, color: C.textMuted }}>Kênh nhận cảnh báo</div>
+                                <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginTop: 6 }}>
+                                    {overview.alertSummary?.telegramConnected ? "Telegram đã sẵn sàng" : "Chưa kết nối"}
+                                </div>
+                            </div>
+                            <span style={{
+                                padding: "6px 10px",
+                                borderRadius: 999,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                background: overview.alertSummary?.telegramConnected ? C.greenBg : "#fff7ed",
+                                color: overview.alertSummary?.telegramConnected ? C.green : C.orange,
+                            }}>
+                                {activeAlerts} cấu hình bật
+                            </span>
                         </div>
-                        <div style={{ display: "flex", gap: 14 }}>
-                            {[["#10b981", "PM2.5"], ["#3b82f6", "PM10"], ["#8b5cf6", "O3"]].map(([color, label]) => (
-                                <div key={label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: C.textMuted }}>
-                                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, display: "inline-block" }} />
-                                    {label}
+                        <div style={{ fontSize: 12, color: C.textMuted, marginTop: 12, lineHeight: 1.6 }}>
+                            {overview.alertSummary?.suggestedThresholds?.aqiThreshold
+                                ? `Ngưỡng đề xuất hiện tại: AQI ${overview.alertSummary.suggestedThresholds.aqiThreshold}.`
+                                : "Bạn có thể cấu hình ngưỡng AQI phù hợp với hồ sơ sức khỏe của mình."}
+                        </div>
+                        <button
+                            onClick={() => setActiveTab("alert")}
+                            style={{ marginTop: 16, width: "100%", border: "none", background: C.green, color: "white", borderRadius: 10, padding: "10px 12px", fontWeight: 700, cursor: "pointer" }}
+                        >
+                            Mở cấu hình cảnh báo
+                        </button>
+                    </Card>
+
+                    <Card>
+                        <SectionTitle title="Mẹo hôm nay" subtitle="Gợi ý dựa trên hồ sơ sức khỏe và AQI hiện tại" />
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                            {healthTips.map((tip, index) => (
+                                <div key={index} style={{
+                                    display: "flex",
+                                    gap: 10,
+                                    padding: "10px 12px",
+                                    background: index === 0 ? aqiMeta.bg : C.bg,
+                                    borderRadius: 12,
+                                }}>
+                                    <span style={{ color: aqiMeta.color, fontWeight: 700 }}>{index + 1}</span>
+                                    <span style={{ fontSize: 12.5, color: C.text, lineHeight: 1.6 }}>{tip}</span>
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </Card>
 
-                    {/* Y-axis labels + chart */}
-                    <div style={{ display: "flex", gap: 8 }}>
-                        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", fontSize: 10, color: C.textLight, paddingBottom: 18, minWidth: 24, textAlign: "right" }}>
-                            {[150, 100, 50, 0].map((v) => <span key={v}>{v}</span>)}
+                    <Card>
+                        <SectionTitle title="Tài khoản của bạn" subtitle="Trạng thái gói và hệ sinh thái chức năng" />
+                        <div style={{ fontSize: 26, fontWeight: 800, color: isPro ? C.yellow : C.text }}>
+                            {overview.profile?.subscriptionTier || subscriptionTier || "Free"}
                         </div>
-                        <div style={{ flex: 1 }}>
-                            <SimpleLineChart />
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.textLight, marginTop: 4 }}>
-                                {["00:00", "06:00", "12:00", "18:00", "23:59"].map((t) => <span key={t}>{t}</span>)}
-                            </div>
+                        <div style={{ fontSize: 12, color: C.textMuted, marginTop: 8, lineHeight: 1.6 }}>
+                            {isPro
+                                ? "Bạn đang có quyền truy cập vào cảnh báo Telegram, lịch sử nâng cao và cá nhân hóa sâu hơn."
+                                : "Nâng cấp Pro để mở khóa cảnh báo Telegram, truy xuất lịch sử dài ngày và nhiều tiện ích nâng cao."}
                         </div>
-                    </div>
+                        {!isPro ? (
+                            <button
+                                onClick={() => window.location.href = "/goi"}
+                                style={{ marginTop: 16, width: "100%", border: "none", background: C.yellow, color: "white", borderRadius: 10, padding: "10px 12px", fontWeight: 700, cursor: "pointer" }}
+                            >
+                                Nâng cấp Pro
+                            </button>
+                        ) : null}
+                    </Card>
                 </div>
+            </div>
 
-                {/* Side stats */}
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
-                    {/* Chỉ số trung bình ngày */}
-                    <div style={{
-                        background: C.white, border: `1px solid ${C.border}`,
-                        borderRadius: 14, padding: "18px 20px",
-                    }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                            <span style={{ fontSize: 14 }}>📊</span>
-                            <div style={{ fontWeight: 700, fontSize: 13.5, color: C.text }}>Chỉ số trung bình ngày</div>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 1fr)", gap: 16 }}>
+                <Card>
+                    <SectionTitle
+                        title="Địa điểm yêu thích"
+                        subtitle="Những nơi bạn đang theo dõi thường xuyên"
+                        action={
+                            <button
+                                onClick={() => setActiveTab("places")}
+                                style={{ border: "none", background: C.greenBg, color: C.green, borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                            >
+                                Quản lý địa điểm
+                            </button>
+                        }
+                    />
+                    {overview.places.length ? (
+                        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                            {overview.places.slice(0, 3).map((place, index) => (
+                                <FavoritePlaceCard key={`${place.type}-${place.id}`} place={place} highlighted={index === 0} />
+                            ))}
                         </div>
-                        {[
-                            { label: "PM2.5 trung bình", value: "12.4 μg/m³", pct: 30, color: C.green },
-                            { label: "PM10 trung bình", value: "28.1 μg/m³", pct: 55, color: C.orange },
-                        ].map((item) => (
-                            <div key={item.label} style={{ marginBottom: 12 }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textMuted, marginBottom: 5 }}>
-                                    <span>{item.label}</span>
-                                    <span style={{ fontWeight: 600, color: item.color }}>{item.value}</span>
-                                </div>
-                                <div style={{ height: 5, background: "#f3f4f6", borderRadius: 99, overflow: "hidden" }}>
-                                    <div style={{ width: `${item.pct}%`, height: "100%", background: item.color, borderRadius: 99, transition: "width 1s ease" }} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    ) : (
+                        <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.7 }}>
+                            Bạn chưa có địa điểm yêu thích nào. Hãy thêm trạm hoặc thành phố để dashboard cá nhân hóa tốt hơn.
+                        </div>
+                    )}
+                </Card>
 
-                    {/* Dự báo đỉnh điểm */}
-                    <div style={{
-                        background: C.white, border: `1px solid ${C.border}`,
-                        borderRadius: 14, padding: "18px 20px",
-                    }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                            <span style={{ fontSize: 14 }}>⏰</span>
-                            <div style={{ fontWeight: 700, fontSize: 13.5, color: C.text }}>Dự báo đỉnh điểm</div>
-                        </div>
-                        {[
-                            { label: "Khung giờ cao điểm", sub: "Dự kiến PM2.5 tăng mạnh do mật độ giao thông.", pct: "17%", color: C.orange },
-                            { label: "Độ tin cậy mô hình", sub: "Dữ liệu được đối soát từ 12 trạm vệ tinh.", pct: "92%", color: C.green },
-                        ].map((item) => (
-                            <div key={item.label} style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-                                <span style={{ fontSize: 18, fontWeight: 800, color: item.color, minWidth: 40, textAlign: "right" }}>{item.pct}</span>
-                                <div>
-                                    <div style={{ fontSize: 12.5, fontWeight: 600, color: C.text }}>{item.label}</div>
-                                    <div style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 1.5 }}>{item.sub}</div>
-                                </div>
+                <Card>
+                    <SectionTitle title="Điểm cần chú ý" subtitle="Các tín hiệu nổi bật hôm nay" />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        <div style={{ background: worstFavorite ? getAqiMeta(worstFavorite.aqi).bg : C.bg, borderRadius: 12, padding: "12px 14px" }}>
+                            <div style={{ fontSize: 11, color: C.textLight }}>Địa điểm xấu nhất trong danh sách</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginTop: 6 }}>
+                                {worstFavorite ? `${worstFavorite.stationName || worstFavorite.cityName} • AQI ${worstFavorite.aqi}` : "Chưa đủ dữ liệu"}
                             </div>
-                        ))}
-                        <button style={{
-                            width: "100%", padding: "9px 0",
-                            background: C.yellow, color: "white",
-                            border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                        }}>
-                            Tạo báo cáo chi tiết
-                        </button>
+                        </div>
+                        <div style={{ background: C.bg, borderRadius: 12, padding: "12px 14px" }}>
+                            <div style={{ fontSize: 11, color: C.textLight }}>Báo cáo cộng đồng của bạn</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginTop: 6 }}>
+                                {overview.reports.length} báo cáo đã gửi
+                            </div>
+                        </div>
+                        <div style={{ background: C.bg, borderRadius: 12, padding: "12px 14px" }}>
+                            <div style={{ fontSize: 11, color: C.textLight }}>API key đang hoạt động</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginTop: 6 }}>
+                                {overview.apiKeys.length} khóa
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </Card>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 16 }}>
+                <Card>
+                    <SectionTitle title="Hành động nhanh" subtitle="Đi tới các tính năng bạn hay dùng nhất" />
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                        <QuickAction title="Địa điểm" desc="Xem và quản lý danh sách yêu thích." accent={C.green} onClick={() => setActiveTab("places")} />
+                        <QuickAction title="Cảnh báo" desc="Thiết lập Telegram và ngưỡng AQI." accent={C.purple} onClick={() => setActiveTab("alert")} />
+                        <QuickAction title="Lịch sử" desc="Phân tích và tải dữ liệu quá khứ." accent={C.blue} onClick={() => setActiveTab("history")} />
+                        <QuickAction title="Báo cáo" desc="Gửi phản ánh điểm nóng ô nhiễm." accent={C.orange} onClick={() => setActiveTab("report")} />
+                        <QuickAction title="API Key" desc="Tạo khóa cho tích hợp kỹ thuật." accent={C.yellow} onClick={() => setActiveTab("developer")} />
+                        <QuickAction title="Tuyến đường sạch" desc="So sánh lộ trình ít phơi nhiễm hơn." accent={C.emerald} onClick={() => setActiveTab("map")} />
+                    </div>
+                </Card>
+
+                <Card>
+                    <SectionTitle title="Khung giờ rủi ro cao" subtitle="3 thời điểm PM2.5 cao nhất trong 24 giờ qua" />
+                    {riskWindows.length ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                            {riskWindows.map((item, index) => (
+                                <div key={`${item.time}-${index}`} style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    padding: "12px 14px",
+                                    borderRadius: 12,
+                                    background: index === 0 ? "#fff7ed" : C.bg,
+                                }}>
+                                    <div>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.time}</div>
+                                        <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>AQI {item.aqi}</div>
+                                    </div>
+                                    <div style={{ fontSize: 18, fontWeight: 800, color: index === 0 ? C.orange : C.text }}>
+                                        {item.value} μg/m3
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div style={{ fontSize: 13, color: C.textMuted }}>Chưa đủ dữ liệu để tính các khung giờ rủi ro cao.</div>
+                    )}
+                </Card>
             </div>
         </div>
     );
@@ -603,7 +1001,7 @@ function PlaceholderTab({ title }) {
 
 // ─── Main Dashboard Page ──────────────────────────────────────────────────────
 export default function EcoAirDashboard() {
-    const { userName, logout, subscriptionTier } = useAuth();
+    const { userName, logout, subscriptionTier, accessToken } = useAuth();
     const [activeTab, setActiveTab] = useState("overview");
     const [displayName, setDisplayName] = useState(userName || "");
     const isPro = (subscriptionTier ?? "").toLowerCase() === "pro";
@@ -632,7 +1030,14 @@ export default function EcoAirDashboard() {
                         Dashboard &rsaquo; <span style={{ color: C.green, fontWeight: 600 }}>{tabTitles[activeTab]}</span>
                     </div>
 
-                    {activeTab === "overview" && <OverviewTab />}
+                    {activeTab === "overview" && (
+                        <OverviewTab
+                            accessToken={accessToken}
+                            subscriptionTier={subscriptionTier}
+                            userName={displayName}
+                            setActiveTab={setActiveTab}
+                        />
+                    )}
                     {activeTab === "places" && <PlacesTab />}
                     {activeTab === "report" && <ReportTab />}
                     {activeTab === "developer" && <DeveloperApiTab />}

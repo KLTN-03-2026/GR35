@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import MainLayout from "../../components/layout/MainLayout";
 import { useAuth } from "../../hooks/useAuth";
 import HistoryChart from "../../components/common/HistoryChart";
+import { formatDbDateTime } from "../../utils/datetime";
 
 /* ─── Design tokens ──────────────────────────────────────────── */
 const T = {
@@ -252,9 +253,12 @@ export default function StationDetailPage() {
     const province = cityParts[cityParts.length - 1] ?? station.city ?? "";
     const district = cityParts[0] ?? "";
 
-    const updatedAt = station.timestamp
-        ? new Date(typeof station.timestamp === 'string' && !station.timestamp.endsWith('Z') ? station.timestamp + 'Z' : station.timestamp).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
-        : "--";
+    const updatedAt = formatDbDateTime(station.timestamp, {
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "2-digit",
+    });
 
 
 

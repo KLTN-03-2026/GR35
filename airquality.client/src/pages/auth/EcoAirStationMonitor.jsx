@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, RefreshCcw, Search, Server, Wifi, WifiOff } from 'lucide-react';
 import Pagination from '../../components/common/Pagination';
+import { formatDbDateTime } from '../../utils/datetime';
 
 function getAuthHeaders() {
     const token = localStorage.getItem('accessToken');
@@ -14,11 +15,7 @@ function getWarningStyle(severity) {
 }
 
 function formatDateTime(dateValue) {
-    if (!dateValue) return '--';
-    const tsStr = typeof dateValue === 'string' && !dateValue.endsWith('Z') ? dateValue + 'Z' : dateValue;
-    const date = new Date(tsStr);
-    if (Number.isNaN(date.getTime())) return '--';
-    return date.toLocaleString('vi-VN', {
+    return formatDbDateTime(dateValue, {
         day: '2-digit',
         month: '2-digit',
         hour: '2-digit',

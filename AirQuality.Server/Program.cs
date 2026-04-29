@@ -4,6 +4,7 @@ using AirQuality.Server.Services;
 using AirQuality.Server.Services.Auth;
 using AirQuality.Server.Services.Background;
 using AirQuality.Server.Services.Interfaces;
+using AirQuality.Server.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -57,6 +58,8 @@ builder.Services
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
+builder.Services.AddSignalR();
+
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 builder.Services.AddScoped<ChatbotService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -80,6 +83,20 @@ builder.Services
             ValidAudience = jwtOptions.Audience,
             IssuerSigningKey = signingKey,
             ClockSkew = TimeSpan.Zero
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hub/notifications"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -139,6 +156,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>("/hub/notifications");
 
 app.MapFallbackToFile("/index.html");
 

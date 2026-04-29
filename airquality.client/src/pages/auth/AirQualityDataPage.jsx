@@ -6,6 +6,7 @@ import MainLayout from "../../components/layout/MainLayout";
 import theme from "../../components/layout/theme";
 
 import { AQI_LEVELS, getLevel } from "../../utils/aqiHelper";
+import { formatDbTime } from "../../utils/datetime";
 
 function StatCard({ title, value, sub, tone = "default" }) {
     const tones = {
@@ -106,13 +107,20 @@ export default function AirQualityDataPage() {
             const stationsData = await stationsResponse.json();
             const rankingsData = await rankingsResponse.json();
 
-            setStations(Array.isArray(stationsData) ? stationsData : []);
+            const stationsList = Array.isArray(stationsData) ? stationsData : [];
+            setStations(stationsList);
             setRankings({
                 polluted: rankingsData?.polluted ?? [],
                 cleanest: rankingsData?.cleanest ?? [],
                 totalCities: rankingsData?.totalCities ?? 0,
             });
-            setLastUpdated(new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }));
+
+            const latestTimestamp =
+                stationsList
+                    .map((s) => s?.timestamp ?? s?.Timestamp ?? null)
+                    .find((x) => x != null) ?? null;
+
+            setLastUpdated(latestTimestamp ? formatDbTime(latestTimestamp) : "");
         } catch (err) {
             setStations([]);
             setRankings({ polluted: [], cleanest: [], totalCities: 0 });

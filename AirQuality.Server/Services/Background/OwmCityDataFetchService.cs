@@ -190,7 +190,7 @@ public class OwmCityDataFetchService(
         return new CityAirQualitySnapshot
         {
             CityId = cityId,
-            Timestamp = DateTime.UtcNow,
+            Timestamp = VietnamTime.Now(),
             // Weather
             Temperature = weather?.Temperature,
             FeelsLike = weather?.FeelsLike,
