@@ -304,7 +304,20 @@ public class AirQualityController(ApplicationDbContext dbContext) : ControllerBa
         if (stationState.IsActive != 1)
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Trạm đang bảo trì, vui lòng quay lại sau." });
 
-        DateTime end = endDate ?? DateTime.UtcNow;
+        DateTime end;
+        if (endDate.HasValue)
+        {
+            end = endDate.Value;
+        }
+        else
+        {
+            var latestObsTime = await dbContext.AirQualityObservations
+                .AsNoTracking()
+                .Where(o => o.StationId == id && o.IsValid == 1 && o.CalculatedAqi.HasValue)
+                .MaxAsync(o => (DateTime?)o.Timestamp);
+            end = latestObsTime ?? DateTime.UtcNow;
+        }
+
         DateTime since;
 
         if (startDate.HasValue)

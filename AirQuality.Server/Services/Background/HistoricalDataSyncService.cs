@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AirQuality.Server.Common;
 using AirQuality.Server.Data;
 using AirQuality.Server.Models.Entites;
 using AirQuality.Server.Services.AirQuality;
@@ -19,7 +20,7 @@ public class HistoricalDataSyncService(
     ILogger<HistoricalDataSyncService> logger) : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromHours(24);
-    private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(0);
     private const int DelayBetweenCitiesMs = 1200; // Để an toàn rate limit OpenWeatherMap (60 calls/minute)
     private const int BatchSize = 10;
     private const int HttpTimeoutSeconds = 30;
@@ -78,15 +79,22 @@ public class HistoricalDataSyncService(
         var processedCount = 0;
         var totalRecordsSaved = 0;
 
-        // Tính ngày start / end (14 ngày gần nhất)
-        DateTime endDate = DateTime.UtcNow;
-        DateTime startDate = endDate.AddDays(-14);
-        
-        string startDateStr = startDate.ToString("yyyy-MM-dd");
-        string endDateStr = endDate.ToString("yyyy-MM-dd");
+        // Lấy đúng 24h gần nhất tính đến thời điểm sync.
+        // API Open-Meteo archive trả theo "ngày UTC", nên cần filter lại theo [startUtc, endUtc]
+        // để tránh lấy cả các giờ tương lai (sẽ thành 01:00-06:00 ngày hôm sau khi quy đổi VN).
+        var endUtc = DateTime.UtcNow;
+        endUtc = new DateTime(endUtc.Year, endUtc.Month, endUtc.Day, endUtc.Hour, 0, 0, DateTimeKind.Utc); // align theo giờ
+        var startUtc = endUtc.AddHours(-24);
 
-        long startUnix = new DateTimeOffset(startDate).ToUnixTimeSeconds();
-        long endUnix = new DateTimeOffset(endDate).ToUnixTimeSeconds();
+        string startDateStr = startUtc.ToString("yyyy-MM-dd");
+        string endDateStr = endUtc.ToString("yyyy-MM-dd");
+
+        long startUnix = new DateTimeOffset(startUtc).ToUnixTimeSeconds();
+        long endUnix = new DateTimeOffset(endUtc).ToUnixTimeSeconds();
+
+        // Window query theo giờ VN vì bảng CityAirQualitySnapshots được lưu timestamp VN
+        var startVn = VietnamTime.FromUtc(startUtc);
+        var endVn = VietnamTime.FromUtc(endUtc);
 
         foreach (var city in cities)
         {
@@ -95,13 +103,13 @@ public class HistoricalDataSyncService(
                 var snapshots = await FetchCityHistoricalDataAsync(
                     client, owmBaseUrl, apiKey,
                     city.CityId, (double)city.Latitude, (double)city.Longitude, 
-                    startDateStr, endDateStr, startUnix, endUnix, ct);
+                    startDateStr, endDateStr, startUnix, endUnix, startUtc, endUtc, ct);
 
                 if (snapshots != null && snapshots.Any())
                 {
                     // Kiểm tra và tránh duplicate bằng cách lấy những bản ghi đã có của city trong khung thời gian
                     var existingTimestamps = await dbContext.CityAirQualitySnapshots
-                        .Where(s => s.CityId == city.CityId && s.Timestamp >= startDate && s.Timestamp <= endDate)
+                        .Where(s => s.CityId == city.CityId && s.Timestamp >= startVn && s.Timestamp <= endVn)
                         .Select(s => s.Timestamp)
                         .ToListAsync(ct);
 
@@ -151,7 +159,9 @@ public class HistoricalDataSyncService(
         HttpClient client, string owmBaseUrl, string owmApiKey,
         int cityId, double lat, double lon, 
         string startDateStr, string endDateStr, 
-        long startUnix, long endUnix, CancellationToken ct)
+        long startUnix, long endUnix,
+        DateTime startUtc, DateTime endUtc,
+        CancellationToken ct)
     {
         // 1. Lấy dữ liệu thời tiết (Open-Meteo)
         var weatherDict = await FetchHistoricalWeatherAsync(client, lat, lon, startDateStr, endDateStr, ct);
@@ -166,6 +176,8 @@ public class HistoricalDataSyncService(
         var allTimestamps = (apDict?.Keys ?? Enumerable.Empty<DateTime>())
             .Union(weatherDict?.Keys ?? Enumerable.Empty<DateTime>())
             .Distinct()
+            // Filter lại đúng 24h gần nhất, tránh các giờ tương lai do Open-Meteo trả cả ngày UTC
+            .Where(t => t >= startUtc && t <= endUtc)
             .OrderBy(t => t)
             .ToList();
 
@@ -185,7 +197,7 @@ public class HistoricalDataSyncService(
             var snapshot = new CityAirQualitySnapshot
             {
                 CityId = cityId,
-                Timestamp = t,
+                Timestamp = VietnamTime.FromUtc(t),
                 // Weather từ Open-Meteo
                 Temperature = weather?.Temperature,
                 FeelsLike = weather?.FeelsLike,

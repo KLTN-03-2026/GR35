@@ -68,4 +68,5 @@ public class User
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
     public ICollection<CommunityReport> CommunityReports { get; set; } = new List<CommunityReport>();
     public ICollection<SubscriptionPayment> SubscriptionPayments { get; set; } = new List<SubscriptionPayment>();
+    public ICollection<AirQuality.Server.Models.Entities.AppNotification> AppNotifications { get; set; } = new List<AirQuality.Server.Models.Entities.AppNotification>();
 }

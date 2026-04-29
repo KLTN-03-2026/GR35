@@ -15,6 +15,7 @@ function MapUpdater({ center }) {
 }
 import MainLayout from "../../components/layout/MainLayout";
 import theme from "../../components/layout/theme";
+import { formatDbDateTime } from "../../utils/datetime";
 
 /* ─── Scroll Reveal Hook ────────────────────────────────────────── */
 function useScrollReveal(options = {}) {
@@ -93,11 +94,7 @@ function getCharacterByAqi(aqiValue) {
 }
 
 function formatLocalTime(timestamp) {
-  if (!timestamp) return "--";
-  const tsStr = typeof timestamp === 'string' && !timestamp.endsWith('Z') ? timestamp + 'Z' : timestamp;
-  const date = new Date(tsStr);
-  if (Number.isNaN(date.getTime())) return "--";
-  return date.toLocaleString("vi-VN");
+  return formatDbDateTime(timestamp);
 }
 
 function hexToRgba(hex, alpha = 1) {

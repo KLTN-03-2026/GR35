@@ -8,6 +8,7 @@ import MainLayout from "../../components/layout/MainLayout";
 import { getLevel, getHealthTiles } from "../../utils/aqiHelper";
 import { useAuth } from "../../hooks/useAuth";
 import HistoryChart from "../../components/common/HistoryChart";
+import { formatDbDateTime } from "../../utils/datetime";
 
 /* ─── Design tokens ─────────────────────────────────────────────── */
 const C = {
@@ -40,11 +41,12 @@ function fmt(val, decimals = 1) {
 }
 
 function fmtTime(ts) {
-    if (!ts) return "—";
-    const tsStr = typeof ts === 'string' && !ts.endsWith('Z') ? ts + 'Z' : ts;
-    return new Date(tsStr).toLocaleString("vi-VN", {
-        hour: "2-digit", minute: "2-digit",
-        day: "2-digit", month: "2-digit", year: "numeric"
+    return formatDbDateTime(ts, {
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
     });
 }
 

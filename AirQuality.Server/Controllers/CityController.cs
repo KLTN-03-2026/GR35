@@ -223,7 +223,20 @@ public class CityController(ApplicationDbContext dbContext) : ControllerBase
         if (cityId == null)
             return NotFound(new { message = "Thành phố không tồn tại." });
 
-        DateTime end = endDate ?? DateTime.UtcNow;
+        DateTime end;
+        if (endDate.HasValue)
+        {
+            end = endDate.Value;
+        }
+        else
+        {
+            var latestSnapshotTime = await dbContext.CityAirQualitySnapshots
+                .AsNoTracking()
+                .Where(s => s.CityId == cityId.Value)
+                .MaxAsync(s => (DateTime?)s.Timestamp);
+            end = latestSnapshotTime ?? DateTime.UtcNow;
+        }
+
         DateTime since;
 
         if (startDate.HasValue)
