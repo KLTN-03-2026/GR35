@@ -1,4 +1,5 @@
-﻿import { useState } from "react";
+import { useState } from "react";
+import { Box, Grid, Stack, Typography } from "@mui/material";
 import MainLayout from "../../components/layout/MainLayout";
 import theme from "../../components/layout/theme";
 
@@ -72,73 +73,68 @@ export default function ContactPage() {
 
     return (
         <MainLayout activePage="Liên hệ">
-            <section
-                style={{
-                    paddingTop: 110,
-                    paddingBottom: 88,
-                    paddingLeft: 24,
-                    paddingRight: 24,
+            <Box
+                component="section"
+                sx={{
+                    pt: "110px",
+                    pb: { xs: 6, md: 11 },
+                    px: { xs: 1.5, md: 3 },
                     minHeight: "100vh",
                     background: "linear-gradient(180deg, #f0fdf4 0%, #f8fafc 40%, #ffffff 100%)",
                     fontFamily: "'Be Vietnam Pro', 'Segoe UI', sans-serif",
                 }}
             >
-                <div style={{ maxWidth: 1120, margin: "0 auto" }}>
-                    <div style={{ textAlign: "center", marginBottom: 34 }}>
-                        <p style={{ margin: 0, color: "#047857", fontSize: 13, fontWeight: 700, letterSpacing: ".5px" }}>
+                <Box sx={{ maxWidth: 1120, mx: "auto" }}>
+                    <Box sx={{ textAlign: "center", mb: 4 }}>
+                        <Typography sx={{ m: 0, color: "#047857", fontSize: 13, fontWeight: 700, letterSpacing: ".5px" }}>
                             ECOAIR SUPPORT
-                        </p>
-                        <h1 style={{ marginTop: 10, marginBottom: 12, fontSize: 46, lineHeight: 1.12, color: "#0f172a", letterSpacing: "-1px" }}>
+                        </Typography>
+                        <Typography component="h1" sx={{ mt: 1.2, mb: 1.4, fontSize: { xs: 34, md: 46 }, lineHeight: 1.12, color: "#0f172a", letterSpacing: "-1px", fontWeight: 800 }}>
                             Liên hệ với đội ngũ EcoAir
-                        </h1>
-                        <p style={{ margin: 0, color: "#475569", fontSize: 18, lineHeight: 1.6 }}>
+                        </Typography>
+                        <Typography sx={{ m: 0, color: "#475569", fontSize: { xs: 15, md: 18 }, lineHeight: 1.6 }}>
                             Chúng tôi luôn sẵn sàng lắng nghe ý kiến, hỗ trợ kỹ thuật và tư vấn giải pháp không khí sạch.
-                        </p>
-                    </div>
+                        </Typography>
+                    </Box>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 22 }}>
+                    <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 1.75, mb: 2.5 }}>
                         {infoCards.map((card) => (
-                            <div
+                            <Box
                                 key={card.title}
-                                style={{
+                                sx={{
                                     background: "#ffffff",
                                     border: "1px solid #dbe7de",
-                                    borderRadius: 14,
-                                    padding: "16px 18px",
+                                    borderRadius: "14px",
+                                    p: "16px 18px",
                                     boxShadow: "0 8px 22px rgba(2, 132, 199, 0.05)",
                                 }}
                             >
-                                <div style={{ fontSize: 18, marginBottom: 8 }}>{card.icon}</div>
-                                <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{card.title}</div>
-                                <div style={{ color: "#047857", fontWeight: 600, marginBottom: 4 }}>{card.value}</div>
-                                <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.55 }}>{card.description}</div>
-                            </div>
+                                <Typography sx={{ fontSize: 18, mb: 1 }}>{card.icon}</Typography>
+                                <Typography sx={{ fontWeight: 700, color: "#0f172a", mb: 0.5 }}>{card.title}</Typography>
+                                <Typography sx={{ color: "#047857", fontWeight: 600, mb: 0.5 }}>{card.value}</Typography>
+                                <Typography sx={{ fontSize: 13, color: "#64748b", lineHeight: 1.55 }}>{card.description}</Typography>
+                            </Box>
                         ))}
-                    </div>
+                    </Box>
 
-                    <div
-                        style={{
-                            display: "grid",
-                            gridTemplateColumns: "1.1fr 1.4fr",
-                            gap: 18,
-                        }}
-                    >
-                        <div
-                            style={{
+                    <Grid container spacing={2.2}>
+                        <Grid size={{ xs: 12, md: 5 }}>
+                            <Box
+                                sx={{
                                 borderRadius: 16,
                                 background: "linear-gradient(145deg, #065f46, #16a34a)",
-                                padding: "24px 22px",
+                                    p: "24px 22px",
                                 color: "white",
                                 minHeight: 420,
                                 boxShadow: "0 12px 30px rgba(16, 185, 129, 0.2)",
                             }}
                         >
-                            <h2 style={{ marginTop: 0, marginBottom: 10, fontSize: 28 }}>Tư vấn nhanh</h2>
-                            <p style={{ marginTop: 0, marginBottom: 22, lineHeight: 1.65, color: "rgba(255,255,255,0.9)" }}>
+                            <Typography component="h2" sx={{ mt: 0, mb: 1.2, fontSize: 28, fontWeight: 700 }}>Tư vấn nhanh</Typography>
+                            <Typography sx={{ mt: 0, mb: 2.75, lineHeight: 1.65, color: "rgba(255,255,255,0.9)" }}>
                                 Để lại thông tin để nhận tư vấn giải pháp phù hợp cho gia đình, doanh nghiệp hoặc tích hợp API.
-                            </p>
+                            </Typography>
 
-                            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                            <Stack spacing={1.5}>
                                 <div style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, padding: "12px 14px" }}>
                                     <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 3 }}>Thời gian phản hồi</div>
                                     <div style={{ fontWeight: 700 }}>Dưới 24 giờ làm việc</div>
@@ -151,16 +147,19 @@ export default function ContactPage() {
                                     <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 3 }}>Khung giờ hỗ trợ</div>
                                     <div style={{ fontWeight: 700 }}>08:00 - 22:00, Thứ 2 - Chủ nhật</div>
                                 </div>
-                            </div>
-                        </div>
+                            </Stack>
+                            </Box>
+                        </Grid>
 
-                        <form
+                        <Grid size={{ xs: 12, md: 7 }}>
+                            <Box
+                            component="form"
                             onSubmit={handleSubmit}
-                            style={{
+                            sx={{
                                 borderRadius: 16,
                                 border: "1px solid #dbe3ef",
                                 background: "#ffffff",
-                                padding: "22px",
+                                p: "22px",
                                 boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)",
                             }}
                         >
@@ -169,7 +168,7 @@ export default function ContactPage() {
                                 Điền thông tin của bạn, chúng tôi sẽ liên hệ lại sớm.
                             </p>
 
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5, mb: 1.5 }}>
                                 <InputField
                                     label="Họ và tên"
                                     name="fullName"
@@ -187,7 +186,7 @@ export default function ContactPage() {
                                     placeholder="ban@ecoair.vn"
                                     required
                                 />
-                            </div>
+                            </Box>
 
                             <div style={{ marginBottom: 12 }}>
                                 <InputField
@@ -248,10 +247,11 @@ export default function ContactPage() {
                             >
                                 {submitting ? "Đang gửi..." : "Gửi liên hệ"}
                             </button>
-                        </form>
-                    </div>
-                </div>
-            </section>
+                            </Box>
+                        </Grid>
+                    </Grid>
+                </Box>
+            </Box>
         </MainLayout>
     );
 }

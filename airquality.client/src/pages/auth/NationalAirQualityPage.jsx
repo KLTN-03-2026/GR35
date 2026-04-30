@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Box, SwipeableDrawer, useMediaQuery } from "@mui/material";
 import DeckGL from "@deck.gl/react";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import { ScatterplotLayer, IconLayer } from "@deck.gl/layers";
@@ -72,6 +73,7 @@ function getMetricColor(metricCfg, value, alpha = 220) {
 }
 
 export default function NationalAirQualityPage() {
+    const isMobile = useMediaQuery("(max-width:640px)");
     const [stations, setStations] = useState([]);
     const [provinces, setProvinces] = useState([]);
     const [reports, setReports] = useState([]);
@@ -81,6 +83,7 @@ export default function NationalAirQualityPage() {
     const [viewMode, setViewMode] = useState("provinces");
     const [search, setSearch] = useState("");
     const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
+    const [sheetOpen, setSheetOpen] = useState(false);
 
     const metricConfig = METRICS[metric];
 
@@ -299,6 +302,80 @@ export default function NationalAirQualityPage() {
     }, [provinces, stations, reportPoints, metricConfig, viewState]);
 
     const tableRows = viewMode === "stations" ? filteredAndSortedStationRows : filteredAndSortedProvinceRows;
+    const tablePanel = (
+        <>
+            <div className="table-head">
+                <h2>{viewMode === "stations" ? "Xếp hạng trạm" : "Xếp hạng tỉnh/thành"}</h2>
+                <p>
+                    Sắp xếp giảm dần theo {metricConfig.label}
+                    {viewMode === "provinces" ? " trung bình" : ""}
+                </p>
+            </div>
+
+            <input
+                type="text"
+                className="table-search"
+                placeholder="Tìm theo trạm hoặc tỉnh/thành..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+            />
+
+            <div className="national-air-table-body">
+                <table>
+                    <thead>
+                        <tr>
+                            {viewMode === "stations" ? (
+                                <>
+                                    <th>Trạm</th>
+                                    <th>Tỉnh/Thành</th>
+                                    <th>{metricConfig.label}</th>
+                                </>
+                            ) : (
+                                <>
+                                    <th>Tỉnh/Thành</th>
+                                    <th>{metricConfig.label} TB</th>
+                                    <th>Số trạm</th>
+                                </>
+                            )}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {tableRows.map((row, idx) => (
+                            <tr key={viewMode === "stations" ? row.stationId : `${row.provinceId}-${row.provinceName}`}>
+                                {viewMode === "stations" ? (
+                                    <>
+                                        <td>
+                                            <div className="ranked-name">
+                                                <span className="rank-index">#{idx + 1}</span>
+                                                <span>{row.stationName}</span>
+                                            </div>
+                                        </td>
+                                        <td>{row.provinceName}</td>
+                                        <td>{Number(row[metricConfig.stationKey] ?? 0).toFixed(1)}</td>
+                                    </>
+                                ) : (
+                                    <>
+                                        <td>
+                                            <div className="ranked-name">
+                                                <span className="rank-index">#{idx + 1}</span>
+                                                <span>{row.provinceName}</span>
+                                            </div>
+                                        </td>
+                                        <td>{Number(row[metricConfig.provinceKey] ?? 0).toFixed(1)}</td>
+                                        <td>{row.totalStations}</td>
+                                    </>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+
+                {!loading && tableRows.length === 0 && (
+                    <div className="table-empty">Không có dữ liệu phù hợp.</div>
+                )}
+            </div>
+        </>
+    );
 
     return (
         <MainLayout activePage="Bản đồ">
@@ -416,79 +493,40 @@ export default function NationalAirQualityPage() {
                         </div>
                     </div>
 
-                    <aside className="national-air-table-card">
-                        <div className="table-head">
-                            <h2>{viewMode === "stations" ? "Xếp hạng trạm" : "Xếp hạng tỉnh/thành"}</h2>
-                            <p>
-                                Sắp xếp giảm dần theo {metricConfig.label}
-                                {viewMode === "provinces" ? " trung bình" : ""}
-                            </p>
-                        </div>
-
-                        <input
-                            type="text"
-                            className="table-search"
-                            placeholder="Tìm theo trạm hoặc tỉnh/thành..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-
-                        <div className="national-air-table-body">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        {viewMode === "stations" ? (
-                                            <>
-                                                <th>Trạm</th>
-                                                <th>Tỉnh/Thành</th>
-                                                <th>{metricConfig.label}</th>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <th>Tỉnh/Thành</th>
-                                                <th>{metricConfig.label} TB</th>
-                                                <th>Số trạm</th>
-                                            </>
-                                        )}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {tableRows.map((row, idx) => (
-                                        <tr key={viewMode === "stations" ? row.stationId : `${row.provinceId}-${row.provinceName}`}>
-                                            {viewMode === "stations" ? (
-                                                <>
-                                                    <td>
-                                                        <div className="ranked-name">
-                                                            <span className="rank-index">#{idx + 1}</span>
-                                                            <span>{row.stationName}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td>{row.provinceName}</td>
-                                                    <td>{Number(row[metricConfig.stationKey] ?? 0).toFixed(1)}</td>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <td>
-                                                        <div className="ranked-name">
-                                                            <span className="rank-index">#{idx + 1}</span>
-                                                            <span>{row.provinceName}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td>{Number(row[metricConfig.provinceKey] ?? 0).toFixed(1)}</td>
-                                                    <td>{row.totalStations}</td>
-                                                </>
-                                            )}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-
-                            {!loading && tableRows.length === 0 && (
-                                <div className="table-empty">Không có dữ liệu phù hợp.</div>
-                            )}
-                        </div>
-                    </aside>
+                    {!isMobile && <aside className="national-air-table-card">{tablePanel}</aside>}
                 </div>
+
+                {isMobile && (
+                    <>
+                        <button
+                            type="button"
+                            className="mobile-sheet-trigger"
+                            onClick={() => setSheetOpen(true)}
+                        >
+                            Xếp hạng {metricConfig.label}
+                        </button>
+                        <SwipeableDrawer
+                            anchor="bottom"
+                            open={sheetOpen}
+                            onOpen={() => setSheetOpen(true)}
+                            onClose={() => setSheetOpen(false)}
+                            disableDiscovery={false}
+                            PaperProps={{
+                                sx: {
+                                    borderTopLeftRadius: 16,
+                                    borderTopRightRadius: 16,
+                                    maxHeight: "78vh",
+                                    overflow: "hidden",
+                                },
+                            }}
+                        >
+                            <Box className="mobile-sheet-handle-wrap">
+                                <span className="mobile-sheet-handle" />
+                            </Box>
+                            <Box className="national-air-table-card mobile-sheet-card">{tablePanel}</Box>
+                        </SwipeableDrawer>
+                    </>
+                )}
             </section>
         </MainLayout>
     );

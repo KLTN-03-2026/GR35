@@ -1,3 +1,5 @@
+import { useMediaQuery } from "@mui/material";
+
 export const theme = {
   green1: "#1a7a4a",
   green2: "#22c55e",
@@ -86,42 +88,46 @@ export const Icons = {
 };
 
 export function AuthLayout({ leftContent, rightContent }) {
+  const isMobile = useMediaQuery("(max-width:900px)");
+
   return (
     <div style={{
       minHeight: "100vh",
       display: "flex",
       fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
+      flexDirection: isMobile ? "column" : "row",
     }}>
       {/* LEFT */}
       <div style={{
-        flex: "0 0 42%",
+        flex: isMobile ? "0 0 auto" : "0 0 42%",
         background: "linear-gradient(145deg, #052e16 0%, #064e2e 20%, #0f6b3e 50%, #16a34a 78%, #4ade80 100%)",
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
         alignItems: "flex-start",
-        padding: "60px 52px",
+        padding: isMobile ? "20px 16px" : "60px 52px",
         position: "relative",
         overflow: "hidden",
+        minHeight: isMobile ? 120 : "auto",
       }}>
         <div style={{ position: "absolute", top: -80, right: -80, width: 320, height: 320, borderRadius: "50%", background: "rgba(255,255,255,0.05)", pointerEvents: "none" }} />
         <div style={{ position: "absolute", bottom: -70, left: -70, width: 260, height: 260, borderRadius: "50%", background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: "40%", right: -50, width: 200, height: 200, borderRadius: "50%", background: "rgba(255,255,255,0.03)", pointerEvents: "none" }} />
 
         {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 48, position: "relative", zIndex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: isMobile ? 8 : 48, position: "relative", zIndex: 1 }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {Icons.leaf()}
           </div>
           <span style={{ color: "white", fontWeight: 700, fontSize: 20, letterSpacing: "-0.3px" }}>EcoAir VN</span>
         </div>
 
-        <div style={{ position: "relative", zIndex: 1, width: "100%" }}>
+        <div style={{ position: "relative", zIndex: 1, width: "100%", display: isMobile ? "none" : "block" }}>
           {leftContent}
         </div>
 
         {/* Bottom nav */}
-        <div style={{ position: "absolute", bottom: 32, left: 52, display: "flex", gap: 14, zIndex: 1 }}>
+        <div style={{ position: "absolute", bottom: 32, left: 52, display: isMobile ? "none" : "flex", gap: 14, zIndex: 1 }}>
           {[Icons.home, Icons.cloud, Icons.chart, Icons.person].map((icon, i) => (
             <div key={i} style={{
               width: 36, height: 36, borderRadius: 8,
@@ -140,11 +146,11 @@ export function AuthLayout({ leftContent, rightContent }) {
         flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
-        padding: "40px 60px",
+        padding: isMobile ? "20px 14px 28px" : "40px 60px",
         backgroundColor: "white",
         overflowY: "auto",
       }}>
-        <div style={{ width: "100%", maxWidth: 400 }}>
+        <div style={{ width: "100%", maxWidth: isMobile ? 520 : 400 }}>
           {rightContent}
         </div>
       </div>
@@ -189,6 +195,7 @@ export function InputField({ label, type = "text", placeholder, value, onChange,
             border: `1.5px solid ${error ? theme.red : theme.gray300}`,
             borderRadius: 10,
             fontSize: 14,
+            minHeight: 44,
             color: theme.gray700,
             backgroundColor: theme.white,
             outline: "none",
@@ -217,6 +224,7 @@ export function GreenButton({ children, onClick, loading, style = {} }) {
       style={{
         width: "100%",
         padding: "13px",
+        minHeight: 44,
         background: loading ? theme.gray300 : "linear-gradient(135deg,#16a34a,#22c55e)",
         color: "white",
         border: "none",

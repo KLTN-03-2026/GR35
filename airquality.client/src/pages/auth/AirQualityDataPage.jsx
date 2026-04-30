@@ -1,5 +1,6 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Box, Stack, useMediaQuery } from "@mui/material";
 import ndamapgl from "ndamap-gl";
 import "ndamap-gl/dist/ndamap-gl.css";
 import MainLayout from "../../components/layout/MainLayout";
@@ -79,6 +80,8 @@ const NDAMAPS_STYLE = import.meta.env.VITE_NDAMAPS_STYLE || "https://nda-tiles.o
 
 export default function AirQualityDataPage() {
     const navigate = useNavigate();
+    const isMobile = useMediaQuery("(max-width:600px)");
+    const isTablet = useMediaQuery("(max-width:900px)");
     const [activeLayer, setActiveLayer] = useState("aqi");
     const [stations, setStations] = useState([]);
     const [rankings, setRankings] = useState({ polluted: [], cleanest: [], totalCities: 0 });
@@ -305,7 +308,7 @@ export default function AirQualityDataPage() {
     return (
         <MainLayout activePage="Dữ liệu chất lượng không khí">
             <section style={{ paddingTop: 92, paddingBottom: 56, background: "#f3f6f4", minHeight: "100vh" }}>
-                <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px" }}>
+                <div style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? "0 10px" : "0 24px" }}>
                     <div
                         style={{
                             marginBottom: 16,
@@ -321,7 +324,7 @@ export default function AirQualityDataPage() {
                         }}
                     >
                         <div>
-                            <h1 style={{ margin: 0, color: theme.text, fontSize: 30, fontWeight: 800 }}>
+                            <h1 style={{ margin: 0, color: theme.text, fontSize: isMobile ? 24 : 30, fontWeight: 800 }}>
                                 Dữ liệu chất lượng không khí
                             </h1>
                             <div style={{ marginTop: 6, fontSize: 13, color: theme.textMuted }}>
@@ -329,7 +332,7 @@ export default function AirQualityDataPage() {
                             </div>
                         </div>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                             {lastUpdated && (
                                 <span style={{ fontSize: 12.5, color: theme.textLight }}>
                                     Cập nhật lúc {lastUpdated}
@@ -347,6 +350,7 @@ export default function AirQualityDataPage() {
                                     fontSize: 13,
                                     fontWeight: 700,
                                     cursor: loading ? "not-allowed" : "pointer",
+                                    minHeight: 44,
                                 }}
                             >
                                 {loading ? "Đang tải..." : "Tải lại dữ liệu"}
@@ -354,7 +358,14 @@ export default function AirQualityDataPage() {
                         </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginBottom: 16 }}>
+                    <Box
+                        sx={{
+                            display: "grid",
+                            gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" },
+                            gap: 1.25,
+                            mb: 2,
+                        }}
+                    >
                         <StatCard title="Trạm đang hiển thị" value={validStations.length} sub="Trạm có toạ độ hợp lệ" tone="brand" />
                         <StatCard title="AQI trung bình" value={averageAqi} sub="Toàn bộ trạm quan trắc" tone="default" />
                         <StatCard
@@ -369,7 +380,7 @@ export default function AirQualityDataPage() {
                             sub={cleanestAqi?.city || "Chưa có dữ liệu"}
                             tone="good"
                         />
-                    </div>
+                    </Box>
 
                     {error && (
                         <div
@@ -388,8 +399,8 @@ export default function AirQualityDataPage() {
                         </div>
                     )}
 
-                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 18, alignItems: "start" }}>
-                        <div style={{ background: "white", border: `1px solid ${theme.border}`, borderRadius: 16, padding: 14 }}>
+                    <Stack direction={{ xs: "column", md: "row" }} spacing={2.2} alignItems="flex-start">
+                        <Box sx={{ flex: 1, width: "100%", background: "white", border: `1px solid ${theme.border}`, borderRadius: "16px", p: "14px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 10, alignItems: "center", flexWrap: "wrap" }}>
                                 <div style={{ display: "flex", gap: 8 }}>
                                     {[
@@ -403,7 +414,7 @@ export default function AirQualityDataPage() {
                                                 key={tab.key}
                                                 onClick={() => tab.enabled && setActiveLayer(tab.key)}
                                                 style={{
-                                                    padding: "6px 14px",
+                                                    padding: "8px 14px",
                                                     borderRadius: 999,
                                                     border: isActive ? "none" : `1px solid ${theme.border}`,
                                                     background: isActive ? theme.green : "#f8fafc",
@@ -412,6 +423,7 @@ export default function AirQualityDataPage() {
                                                     fontWeight: 700,
                                                     cursor: tab.enabled ? "pointer" : "not-allowed",
                                                     opacity: tab.enabled ? 1 : 0.55,
+                                                    minHeight: 44,
                                                 }}
                                             >
                                                 {tab.label}
@@ -431,7 +443,7 @@ export default function AirQualityDataPage() {
                                 </div>
                             )}
 
-                            <div style={{ height: 560, borderRadius: 14, overflow: "hidden", border: `1px solid ${theme.border}`, position: "relative" }}>
+                            <div style={{ height: isMobile ? 420 : 560, borderRadius: 14, overflow: "hidden", border: `1px solid ${theme.border}`, position: "relative" }}>
                                 <div ref={mapContainerRef} style={{ height: "100%", width: "100%" }} />
 
                                 {loading && (
@@ -487,9 +499,9 @@ export default function AirQualityDataPage() {
                                     ))}
                                 </div>
                             </div>
-                        </div>
+                        </Box>
 
-                        <aside style={{ background: "white", border: `1px solid ${theme.border}`, borderRadius: 16, padding: 16, position: "sticky", top: 78 }}>
+                        <aside style={{ width: isTablet ? "100%" : 320, background: "white", border: `1px solid ${theme.border}`, borderRadius: 16, padding: 16, position: isTablet ? "static" : "sticky", top: 78 }}>
                             <h3 style={{ margin: "0 0 14px", fontSize: 22, color: theme.text }}>Xếp hạng AQI</h3>
                             <RankingList
                                 title="Ô nhiễm nhất"
@@ -520,20 +532,21 @@ export default function AirQualityDataPage() {
                                 {loading ? "Đang tải dữ liệu bản đồ và bảng xếp hạng..." : "Dữ liệu được cập nhật theo bản ghi mới nhất."}
                             </div>
                         </aside>
-                    </div>
+                    </Stack>
 
-                    <div style={{ marginTop: 22, display: "grid", gap: 16 }}>
+                    <Stack spacing={2} sx={{ mt: 2.75 }}>
                         <div style={{ background: "#fff", border: `1px solid ${theme.border}`, borderRadius: 16, padding: "18px 18px 14px" }}>
-                            <h2 style={{ margin: "0 0 18px", fontSize: 22, fontWeight: 800, color: theme.text }}>
+                            <h2 style={{ margin: "0 0 18px", fontSize: isMobile ? 18 : 22, fontWeight: 800, color: theme.text }}>
                                 Ô nhiễm không khí ảnh hưởng đến trẻ em như thế nào?
                             </h2>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 0 }}>
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 0 }}>
                                 {childImpacts.map((item, idx) => (
                                     <div
                                         key={item.title}
                                         style={{
                                             padding: "8px 12px 12px",
-                                            borderRight: idx < childImpacts.length - 1 ? `1px solid ${theme.border}` : "none",
+                                            borderRight: !isMobile && idx < childImpacts.length - 1 ? `1px solid ${theme.border}` : "none",
+                                            borderBottom: isMobile && idx < childImpacts.length - 1 ? `1px solid ${theme.border}` : "none",
                                         }}
                                     >
                                         <div
@@ -552,7 +565,7 @@ export default function AirQualityDataPage() {
                                             {item.icon}
                                         </div>
                                         <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8, color: theme.text }}>{item.title}</div>
-                                        <div style={{ fontSize: 17, color: theme.textMuted, lineHeight: 1.6 }}>{item.desc}</div>
+                                        <div style={{ fontSize: isMobile ? 15 : 17, color: theme.textMuted, lineHeight: 1.6 }}>{item.desc}</div>
                                     </div>
                                 ))}
                             </div>
@@ -561,7 +574,7 @@ export default function AirQualityDataPage() {
                             </div>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16 }}>
+                        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, minmax(0, 1fr))" }, gap: 2 }}>
                             <div style={{ background: "#fff", border: `1px solid ${theme.border}`, borderRadius: 14, display: "flex", flexDirection: "column" }}>
                                 <div style={{ padding: "18px 16px", minHeight: 220 }}>
                                     <div style={{ fontSize: 36, fontWeight: 900, color: theme.text, marginBottom: 10 }}>99%</div>
@@ -621,11 +634,11 @@ export default function AirQualityDataPage() {
                                     Nguồn: IHME (Institute for Health Metrics and Evaluation) 2024
                                 </div>
                             </div>
-                        </div>
+                        </Box>
 
                         <div>
                             <h3 style={{ margin: "2px 0 10px", fontSize: 22, color: theme.text }}>Hiểu rõ hơn về ô nhiễm không khí</h3>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14 }}>
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 14 }}>
                                 {pollutantKnowledge.map((item) => (
                                     <div key={item.title} style={{ background: "#fff", border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px 14px" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -642,7 +655,7 @@ export default function AirQualityDataPage() {
                             <h3 style={{ margin: "6px 0 10px", fontSize: 22, color: theme.text }}>
                                 Tác động đến sức khỏe và nguồn gây ô nhiễm không khí
                             </h3>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
                                 <div style={{ background: "#fff", border: `1px solid ${theme.border}`, borderRadius: 14, padding: "14px 14px 10px" }}>
                                     <div style={{ fontSize: 16, fontWeight: 800, color: theme.text, marginBottom: 8 }}>
                                         Những yếu tố nguy cơ tử vong chính trên toàn thế giới là gì?
@@ -651,7 +664,7 @@ export default function AirQualityDataPage() {
                                         Trong số 62 triệu người tử vong mỗi năm (tính đến năm 2021), theo yếu tố nguy cơ:
                                     </div>
 
-                                    <div style={{ border: `1px solid ${theme.border}`, borderRadius: 10, overflow: "hidden" }}>
+                                    <div style={{ border: `1px solid ${theme.border}`, borderRadius: 10, overflowX: "auto" }}>
                                         <div style={{ display: "grid", gridTemplateColumns: "48px 1fr 120px", background: "#f8fafc", padding: "8px 10px", fontSize: 12, color: theme.textMuted, fontWeight: 700 }}>
                                             <span>#</span>
                                             <span>Các yếu tố rủi ro</span>
@@ -713,7 +726,7 @@ export default function AirQualityDataPage() {
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </Stack>
                 </div>
             </section>
         </MainLayout>

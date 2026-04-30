@@ -1,5 +1,6 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { Box, Stack, Typography } from "@mui/material";
 import MainLayout from "../../components/layout/MainLayout";
 import theme from "../../components/layout/theme";
 
@@ -124,24 +125,24 @@ export default function PricingPage() {
 
     return (
         <MainLayout activePage="Gói">
-            <section
-                style={{
-                    paddingTop: 118,
-                    paddingBottom: 96,
-                    paddingLeft: 24,
-                    paddingRight: 24,
+            <Box
+                component="section"
+                sx={{
+                    pt: "118px",
+                    pb: { xs: 7, md: 12 },
+                    px: { xs: 1.5, md: 3 },
                     background: "#f2f4f8",
                     minHeight: "100vh",
                     fontFamily: "'Be Vietnam Pro', 'Segoe UI', sans-serif",
                 }}
             >
-                <div style={{ maxWidth: 1140, margin: "0 auto" }}>
-                    <h1 style={{ fontSize: 52, lineHeight: 1.1, marginTop: 0, marginBottom: 14, color: "#0f172a", textAlign: "center", fontWeight: 800, letterSpacing: "-1.1px" }}>
+                <Box sx={{ maxWidth: 1140, mx: "auto" }}>
+                    <Typography component="h1" sx={{ fontSize: { xs: 34, md: 52 }, lineHeight: 1.1, mt: 0, mb: 1.5, color: "#0f172a", textAlign: "center", fontWeight: 800, letterSpacing: "-1.1px" }}>
                         Đầu tư cho <span style={{ color: "#0d9468" }}>lá phổi</span> của bạn.
-                    </h1>
-                    <p style={{ marginTop: 0, marginBottom: 38, color: "#475569", textAlign: "center", fontSize: 21, fontWeight: 500, lineHeight: 1.45 }}>
+                    </Typography>
+                    <Typography sx={{ mt: 0, mb: 4.75, color: "#475569", textAlign: "center", fontSize: { xs: 16, md: 21 }, fontWeight: 500, lineHeight: 1.45 }}>
                         Mở khóa sức mạnh của AI để bảo vệ sức khỏe gia đình bạn 24/7.
-                    </p>
+                    </Typography>
 
                     <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 42, flexWrap: "wrap" }}>
                         <span style={{ padding: "7px 16px", borderRadius: 999, background: "#eafcf3", color: "#0f766e", fontSize: 12, fontWeight: 700 }}>Hàng tháng</span>
@@ -167,7 +168,7 @@ export default function PricingPage() {
                         </div>
                     )}
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 18 }}>
+                    <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" }, gap: 2.2 }}>
                         <div style={{ background: "#eef2f7", borderRadius: 14, padding: "24px 18px 18px", border: "1px solid #e7ebf3", display: "flex", flexDirection: "column", minHeight: 430 }}>
                             <div style={{ fontSize: 27, fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>Gói Cơ Bản</div>
                             <div style={{ marginBottom: 14, display: "flex", alignItems: "flex-end", gap: 8 }}>
@@ -257,18 +258,18 @@ export default function PricingPage() {
                                 {isPro ? "Đang dùng Pro" : loading ? "Đang chuyển đến VNPAY..." : "Nâng cấp Pro ngay"}
                             </button>
                         </div>
-                    </div>
+                    </Box>
 
-                    <div style={{ marginTop: 18, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", padding: "0 4px" }}>
+                    <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between" spacing={1.5} sx={{ mt: 2.2, px: 0.5 }}>
                         <div style={{ color: theme.textMuted, fontSize: 14 }}>
                             Gói hiện tại: <strong style={{ color: theme.text }}>{subscription.tier}</strong>
                             {isPro && subscription.expiresAt && (
                                 <span> · Hết hạn: <strong style={{ color: theme.text }}>{formatDate(subscription.expiresAt)}</strong></span>
                             )}
                         </div>
-                    </div>
-                </div>
-            </section>
+                    </Stack>
+                </Box>
+            </Box>
         </MainLayout>
     );
 }

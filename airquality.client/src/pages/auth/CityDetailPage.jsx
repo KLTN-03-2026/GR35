@@ -1,6 +1,7 @@
-﻿/* eslint-disable no-unused-vars */
+/* eslint-disable no-unused-vars */
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { Box, Stack, useMediaQuery } from "@mui/material";
 import { MapContainer, Marker, TileLayer, Circle } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -175,6 +176,8 @@ function Skeleton({ width, height, style }) {
 export default function CityDetailPage() {
     const { slug } = useParams();
     const navigate = useNavigate();
+    const isMobile = useMediaQuery("(max-width:600px)");
+    const isTablet = useMediaQuery("(max-width:900px)");
 
     const [city, setCity] = useState(null);
     const [history, setHistory] = useState([]);
@@ -331,11 +334,11 @@ export default function CityDetailPage() {
                         filter: "blur(80px)", pointerEvents: "none",
                     }} />
 
-                    <div style={{ maxWidth: 1120, margin: "0 auto", padding: "24px 20px 0" }}>
+                    <div style={{ maxWidth: 1120, margin: "0 auto", padding: isMobile ? "16px 10px 0" : "24px 20px 0" }}>
 
                         {/* Breadcrumb */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, fontSize: 13, color: C.textSub }}>
-                            <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 99, background: hexToRgb("#fff", 0.06), border: `1px solid ${C.cardBorder}`, color: C.textSub, fontWeight: 600, cursor: "pointer", fontSize: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, fontSize: 13, color: C.textSub, flexWrap: "wrap" }}>
+                            <button onClick={() => navigate("/")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 99, background: hexToRgb("#fff", 0.06), border: `1px solid ${C.cardBorder}`, color: C.textSub, fontWeight: 600, cursor: "pointer", fontSize: 12, minHeight: 44 }}>
                                 ← Trang chủ
                             </button>
                             <span style={{ color: C.textMuted }}>›</span>
@@ -347,11 +350,11 @@ export default function CityDetailPage() {
                                     onClick={toggleFav}
                                     title={isFav ? "Bỏ Yêu thích" : "Yêu thích"}
                                     style={{
-                                        marginLeft: 8, padding: "5px 14px", borderRadius: 99,
+                                        marginLeft: 8, padding: "8px 14px", borderRadius: 99,
                                         background: isFav ? "rgba(239,68,68,0.15)" : hexToRgb("#fff", 0.06),
                                         border: `1px solid ${isFav ? "#ef4444" : C.cardBorder}`,
                                         color: isFav ? "#ef4444" : C.textSub,
-                                        cursor: "pointer", fontSize: 12, fontWeight: 600,
+                                        cursor: "pointer", fontSize: 12, fontWeight: 600, minHeight: 44,
                                         transition: "all 0.2s",
                                     }}
                                 >
@@ -371,7 +374,7 @@ export default function CityDetailPage() {
                                         Dữ liệu thời gian thực · {city.region}
                                     </span>
                                 </div>
-                                <h1 style={{ margin: 0, fontSize: 36, fontWeight: 900, color: C.text, letterSpacing: -0.5 }}>
+                                <h1 style={{ margin: 0, fontSize: isMobile ? 26 : 36, fontWeight: 900, color: C.text, letterSpacing: -0.5 }}>
                                     {city.provinceName}
                                 </h1>
                                 <div style={{ marginTop: 4, fontSize: 12.5, color: C.textMuted }}>
@@ -390,7 +393,7 @@ export default function CityDetailPage() {
                                     AQI (US) · {city.dominantPollutant ?? "—"}
                                 </span>
                                 <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
-                                    <span style={{ fontSize: 72, fontWeight: 900, lineHeight: 1, color: lv.color, letterSpacing: -2 }}>
+                                    <span style={{ fontSize: isMobile ? 50 : 72, fontWeight: 900, lineHeight: 1, color: lv.color, letterSpacing: -2 }}>
                                         {city.calculatedAqi ?? "—"}
                                     </span>
                                     <img src={lv.icon} alt={lv.label} style={{ width: 52, height: 52, marginBottom: 6 }} />
@@ -438,10 +441,10 @@ export default function CityDetailPage() {
                 </div>
 
                 {/* ─── BODY ─────────────────────────────────────────── */}
-                <div style={{ maxWidth: 1120, margin: "0 auto", padding: "24px 20px 48px" }}>
+                <div style={{ maxWidth: 1120, margin: "0 auto", padding: isMobile ? "16px 10px 36px" : "24px 20px 48px" }}>
 
                     {/* ROW 1: AQI pollutant sub-indices + Health advice */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 16, marginBottom: 16 }}>
+                    <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2 }}>
 
                         {/* Pollutant sub-indices */}
                         <GlassCard style={{ padding: "22px 24px" }} glowColor={lv.color}>
@@ -468,7 +471,7 @@ export default function CityDetailPage() {
                         {/* Raw pollutant concentrations */}
                         <GlassCard style={{ padding: "22px 24px" }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 16 }}>Nồng độ chất ô nhiễm</div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 8 }}>
                                 {[
                                     { label: "PM2.5", val: fmt(city.pm25), unit: "µg/m³", color: "#f59e0b" },
                                     { label: "PM10", val: fmt(city.pm10), unit: "µg/m³", color: "#f97316" },
@@ -480,19 +483,19 @@ export default function CityDetailPage() {
                                 ].map(p => <Pill key={p.label} {...p} value={p.val} />)}
                             </div>
                         </GlassCard>
-                    </div>
+                    </Stack>
 
                     {/* ROW 2: History + Map */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16, marginBottom: 16 }}>
+                    <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2 }}>
 
                         {/* History sparkline */}
                         {/* History sparkline replaced with HistoryChart */}
-                        <div style={{ minWidth: 0 }}>
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
                             <HistoryChart history={history} locationName={city.provinceName} />
-                        </div>
+                        </Box>
 
                         {/* Mini map */}
-                        <GlassCard style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                        <GlassCard style={{ width: isTablet ? "100%" : 320, overflow: "hidden", display: "flex", flexDirection: "column" }}>
                             <div style={{ padding: "18px 18px 12px", fontSize: 14, fontWeight: 700, color: C.text }}>
                                 Vị trí thành phố
                             </div>
@@ -527,7 +530,7 @@ export default function CityDetailPage() {
                                 </div>
                             </div>
                         </GlassCard>
-                    </div>
+                    </Stack>
 
                     {/* ROW 3: Stations list */}
                     <GlassCard style={{ padding: "22px 24px", marginBottom: 16 }}>

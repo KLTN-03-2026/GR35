@@ -1,4 +1,4 @@
-﻿.national-air-page {
+.national-air-page {
     min-height: 100vh;
     background: #f4f7f6;
     padding: 88px 18px 40px;
@@ -68,10 +68,11 @@
     background: #fff;
     color: #334155;
     border-radius: 999px;
-    padding: 7px 12px;
+    padding: 9px 12px;
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
+    min-height: 44px;
 }
 
 .national-air-toggle-group button.active {
@@ -173,7 +174,7 @@
     width: calc(100% - 28px);
     border: 1px solid #d5dfdc;
     border-radius: 10px;
-    padding: 9px 11px;
+    padding: 11px 12px;
     outline: none;
     font-size: 13px;
 }
@@ -237,6 +238,41 @@
     color: #64748b;
 }
 
+.mobile-sheet-trigger {
+    position: fixed;
+    right: 12px;
+    bottom: 18px;
+    z-index: 1250;
+    border: none;
+    border-radius: 999px;
+    background: #0d6e4e;
+    color: #fff;
+    padding: 12px 16px;
+    min-height: 44px;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 8px 20px rgba(13, 110, 78, 0.32);
+}
+
+.mobile-sheet-handle-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0 4px;
+    background: #fff;
+}
+
+.mobile-sheet-handle {
+    width: 44px;
+    height: 4px;
+    border-radius: 999px;
+    background: #cbd5e1;
+}
+
+.mobile-sheet-card {
+    border: none;
+    border-radius: 0;
+}
+
 @media (max-width: 1180px) {
     .national-air-layout {
         grid-template-columns: 1fr;
@@ -263,5 +299,36 @@
 
     .national-air-map {
         height: 420px;
+    }
+
+    .national-air-toolbar {
+        padding: 10px;
+    }
+
+    .national-air-toggle-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .national-air-toggle-group button {
+        width: 100%;
+    }
+
+    .national-air-legend {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        bottom: 10px;
+    }
+
+    .national-air-table-body th,
+    .national-air-table-body td {
+        padding: 9px 8px;
+        font-size: 12px;
+    }
+
+    .national-air-table-body {
+        max-height: calc(78vh - 128px);
     }
 }

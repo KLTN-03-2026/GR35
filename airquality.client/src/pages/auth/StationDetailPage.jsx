@@ -1,5 +1,7 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { useMediaQuery } from "@mui/material";
+import { Box, Stack } from "@mui/material";
 import { MapContainer, Marker, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -145,6 +147,8 @@ function HealthTile({ icon, label, active }) {
 export default function StationDetailPage() {
     const { stationId } = useParams();
     const navigate = useNavigate();
+    const isMobile = useMediaQuery("(max-width:600px)");
+    const isTablet = useMediaQuery("(max-width:900px)");
 
     const [station, setStation] = useState(null);
     const [history, setHistory] = useState([]);
@@ -265,7 +269,7 @@ export default function StationDetailPage() {
     return (
         <MainLayout activePage="Du lieu chat luong khong khi">
             <div style={{ background: T.bg, minHeight: "100vh", paddingTop: 80, paddingBottom: 48, fontFamily: "'Be Vietnam Pro', 'Segoe UI', sans-serif" }}>
-                <div style={{ maxWidth: 1080, margin: "0 auto", padding: "0 20px" }}>
+                <div style={{ maxWidth: 1080, margin: "0 auto", padding: isMobile ? "0 10px" : "0 20px" }}>
 
                     {/* ── Top nav bar ──────────────────────────── */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
@@ -319,7 +323,7 @@ export default function StationDetailPage() {
 
                     {/* ── Station title ──────────────────────────── */}
                     <div style={{ marginBottom: 20 }}>
-                        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: T.text }}>
+                        <h1 style={{ margin: 0, fontSize: isMobile ? 20 : 24, fontWeight: 800, color: T.text }}>
                             {station.stationName}
                         </h1>
                         <div style={{ marginTop: 4, fontSize: 13, color: T.textSub }}>
@@ -330,7 +334,7 @@ export default function StationDetailPage() {
                     {/* ═══════════════════════════════════════════ */}
                     {/* ROW 1: AQI hero + Weather                   */}
                     {/* ═══════════════════════════════════════════ */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                    <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2 }}>
 
                         {/* AQI Hero */}
                         <Card style={{ padding: "28px 28px 24px", background: hexToRgb(lv.color, 0.08), border: `1.5px solid ${lv.color}22` }}>
@@ -428,14 +432,14 @@ export default function StationDetailPage() {
                                 </div>
                             </div>
                         </Card>
-                    </div>
+                    </Stack>
 
                     {/* ═══════════════════════════════════════════ */}
                     {/* ROW 2: Pollutants                           */}
                     {/* ═══════════════════════════════════════════ */}
-                    <Card style={{ padding: "24px", marginBottom: 16 }}>
+                    <Card style={{ padding: isMobile ? "14px" : "24px", marginBottom: 16 }}>
                         <SectionTitle icon="🧪">Chỉ số chất ô nhiễm</SectionTitle>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 32px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "0 32px" }}>
                             <div>
                                 <PollutantRow label="PM2.5" value={station.pm25} unit="μg/m³" max={500} />
                                 <PollutantRow label="PM10" value={station.pm10} unit="μg/m³" max={600} />
@@ -452,9 +456,9 @@ export default function StationDetailPage() {
                     {/* ═══════════════════════════════════════════ */}
                     {/* ROW 3: History + Health + Map               */}
                     {/* ═══════════════════════════════════════════ */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16 }}>
+                    <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                         {/* Left column */}
-                        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: 1 }}>
 
                             {/* History */}
                             {/* History */}
@@ -483,10 +487,10 @@ export default function StationDetailPage() {
                                     {getHealthTiles(aqi).map((h, i) => <HealthTile key={i} {...h} />)}
                                 </div>
                             </Card>
-                        </div>
+                        </Box>
 
                         {/* Right column: mini map */}
-                        <Card style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                        <Card style={{ width: isTablet ? "100%" : 320, overflow: "hidden", display: "flex", flexDirection: "column" }}>
                             <div style={{ padding: "18px 18px 12px" }}>
                                 <SectionTitle icon="🗺️">Vị trí trạm</SectionTitle>
                             </div>
@@ -533,7 +537,7 @@ export default function StationDetailPage() {
                                 </div>
                             </div>
                         </Card>
-                    </div>
+                    </Stack>
 
                     {/* AI PRO banner */}
                     <Card style={{ marginTop: 16, padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", background: "linear-gradient(120deg, rgba(16, 185, 129, 0.1), #0b0f19)" }}>
