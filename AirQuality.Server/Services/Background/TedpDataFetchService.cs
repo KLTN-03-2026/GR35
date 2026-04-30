@@ -22,7 +22,7 @@ public class TedpDataFetchService(
     private const string AqiHourUrl = $"{BaseUrl}/aqi_hour/search/findByStationIdInAndGetTimeBetweenOrderByGetTimeDesc";
 
     private static readonly TimeSpan Interval = TimeSpan.FromHours(1);
-    private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(0);
     private static readonly TimeSpan FetchWindow = TimeSpan.FromHours(3);
 
     // ─── Entry Point ──────────────────────────────────────────────────────

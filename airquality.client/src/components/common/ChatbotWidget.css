@@ -504,3 +504,104 @@
         transform: translateY(0);
     }
 }
+
+/* ── Message Content Wrapper ────────────────────────────────────────── */
+.chatbot-msg-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+/* ── Response Type Badges ────────────────────────────────────────────── */
+.chatbot-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: system-ui, 'Segoe UI', sans-serif;
+    width: fit-content;
+    margin-top: 2px;
+}
+
+.chatbot-badge-fc {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.chatbot-badge-rag {
+    background: rgba(99, 102, 241, 0.1);
+    color: #6366f1;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.chatbot-badge-hybrid {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.chatbot-badge-detail {
+    font-size: 10px;
+    opacity: 0.75;
+    font-weight: 400;
+}
+
+/* ── Source Chips ─────────────────────────────────────────────────────── */
+.chatbot-sources {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.chatbot-source-chip {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.04);
+    color: #6b7280;
+    font-family: system-ui, sans-serif;
+    white-space: nowrap;
+}
+
+/* ── Horizontal Rule in bot messages ─────────────────────────────────── */
+.chatbot-hr {
+    border: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    margin: 8px 0;
+}
+
+/* ── Dark mode additions ─────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+    .chatbot-badge-fc {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .chatbot-badge-rag {
+        background: rgba(99, 102, 241, 0.15);
+        color: #a5b4fc;
+        border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .chatbot-badge-hybrid {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+        border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .chatbot-source-chip {
+        background: rgba(255, 255, 255, 0.06);
+        color: #9ca3af;
+    }
+
+    .chatbot-hr {
+        border-top-color: rgba(255, 255, 255, 0.08);
+    }
+}

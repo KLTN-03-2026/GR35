@@ -3,6 +3,8 @@ using AirQuality.Server.Models.Configurations;
 using AirQuality.Server.Services;
 using AirQuality.Server.Services.Auth;
 using AirQuality.Server.Services.Background;
+using AirQuality.Server.Services.Chatbot;
+using AirQuality.Server.Services.Chatbot.Functions;
 using AirQuality.Server.Services.Interfaces;
 using AirQuality.Server.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -61,9 +63,26 @@ builder.Services
 builder.Services.AddSignalR();
 
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
-builder.Services.AddScoped<ChatbotService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
+
+// ── Chatbot AI Services ──────────────────────────────────────────────
+// Function Calling: đăng ký tất cả IChatbotFunction implementations
+builder.Services.AddScoped<IChatbotFunction, GetCityAqiFunction>();
+builder.Services.AddScoped<IChatbotFunction, CompareCitiesFunction>();
+builder.Services.AddScoped<IChatbotFunction, GetForecastFunction>();
+builder.Services.AddScoped<IChatbotFunction, GetAqiRankingFunction>();
+builder.Services.AddScoped<IChatbotFunction, GetStationInfoFunction>();
+builder.Services.AddScoped<IChatbotFunction, GetAqiTrendFunction>();
+builder.Services.AddScoped<FunctionCallingService>();
+
+// RAG + Vector Database
+builder.Services.AddSingleton<EmbeddingService>();
+builder.Services.AddSingleton<VectorSearchService>();
+builder.Services.AddScoped<RagService>();
+
+// Chatbot Orchestrator
+builder.Services.AddScoped<ChatbotService>();
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("Thiếu cấu hình Jwt.");
@@ -138,6 +157,10 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await SeedData.EnsureSeedRolesAsync(dbContext);
+
+    // Seed knowledge base cho RAG chatbot
+    var embeddingService = scope.ServiceProvider.GetRequiredService<EmbeddingService>();
+    await KnowledgeBaseSeeder.SeedAsync(dbContext, embeddingService);
 }
 
 app.UseDefaultFiles();
