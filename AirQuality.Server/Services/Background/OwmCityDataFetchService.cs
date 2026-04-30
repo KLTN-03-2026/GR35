@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using AirQuality.Server.Common;
 using AirQuality.Server.Data;
 using AirQuality.Server.Models.Entites;
@@ -19,7 +19,7 @@ public class OwmCityDataFetchService(
     ILogger<OwmCityDataFetchService> logger) : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromHours(1);
-    private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(0);
     private const int DelayBetweenCitiesMs = 1200;
     private const int BatchSize = 10;
     private const int HttpTimeoutSeconds = 15;
@@ -172,8 +172,8 @@ public class OwmCityDataFetchService(
         HttpClient client, string baseUrl, string apiKey,
         int cityId, double lat, double lon, CancellationToken ct)
     {
-        var weather = await FetchWeatherAsync(client, baseUrl, apiKey, lat, lon, ct);
-        var airPollution = await FetchAirPollutionAsync(client, baseUrl, apiKey, lat, lon, ct);
+            var weather = await FetchWeatherAsync(client, baseUrl, apiKey, lat, lon, ct);
+            var airPollution = await FetchAirPollutionAsync(client, baseUrl, apiKey, lat, lon, ct);
 
         if (weather == null && airPollution == null)
             return null;

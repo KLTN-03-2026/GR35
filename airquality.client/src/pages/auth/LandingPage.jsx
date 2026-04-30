@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { Box, useMediaQuery } from "@mui/material";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -117,7 +118,7 @@ function hexToRgba(hex, alpha = 1) {
 }
 
 /* ─── AQI Info Section ───────────────────────────────────────────────── */
-function AqiInfoSection() {
+function AqiInfoSection({ isMobile }) {
   const [headerRef, headerVisible] = useScrollReveal();
   const [listRef, listVisible] = useScrollReveal({ threshold: 0.05 });
   const [activePollutant, setActivePollutant] = useState("AQI (US)");
@@ -179,7 +180,7 @@ function AqiInfoSection() {
   return (
     <section
       style={{
-        padding: "80px 48px",
+        padding: isMobile ? "48px 16px" : "80px 48px",
         background: theme.text, // Dark background
         color: "white",
         fontFamily: "'Be Vietnam Pro', 'Segoe UI', sans-serif",
@@ -189,7 +190,7 @@ function AqiInfoSection() {
         {/* Header row */}
         <div
           ref={headerRef}
-          style={{ display: "flex", gap: "40px", alignItems: "flex-start", marginBottom: 32 }}
+          style={{ display: "flex", gap: isMobile ? 16 : "40px", flexDirection: isMobile ? "column" : "row", alignItems: "flex-start", marginBottom: 32 }}
         >
           <div style={{ flex: 1, ...fadeUp(headerVisible, 0) }}>
             <h2 style={{ fontSize: 32, fontWeight: 800, color: "white", marginBottom: 10, marginTop: 0 }}>
@@ -204,7 +205,7 @@ function AqiInfoSection() {
         </div>
 
         {/* Filters/Tabs mock */}
-        <div style={{ display: "flex", background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 6, marginBottom: 24, width: "fit-content", ...fadeUp(headerVisible, 250) }}>
+        <div style={{ display: "flex", flexWrap: "wrap", background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 6, marginBottom: 24, width: "fit-content", ...fadeUp(headerVisible, 250) }}>
           {tabs.map((tab) => {
             const isActive = activePollutant === tab;
             return (
@@ -212,7 +213,7 @@ function AqiInfoSection() {
                 key={tab}
                 onClick={() => setActivePollutant(tab)}
                 style={{
-                  padding: "8px 24px",
+                  padding: isMobile ? "8px 12px" : "8px 24px",
                   borderRadius: 8,
                   background: isActive ? "rgba(17,24,39,0.82)" : "transparent",
                   color: isActive ? "#3fa9ff" : "rgba(255,255,255,0.7)",
@@ -234,22 +235,23 @@ function AqiInfoSection() {
               key={item.level}
               style={{
                 display: "flex",
+                flexDirection: isMobile ? "column" : "row",
                 alignItems: "center",
                 background: "rgba(255,255,255,0.05)",
                 borderRadius: 12,
-                padding: "16px 24px",
+                padding: isMobile ? "14px" : "16px 24px",
                 border: "1px solid rgba(255,255,255,0.05)",
                 ...fadeUp(listVisible, i * 100),
               }}
             >
-              <div style={{ flex: "0 0 200px", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ flex: isMobile ? "none" : "0 0 200px", width: isMobile ? "100%" : "auto", display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 16, height: 16, borderRadius: 4, background: item.color }} />
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 15, color: "white" }}>{item.level}</div>
                   <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{item.range}</div>
                 </div>
               </div>
-              <div style={{ flex: 1, fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.6, paddingRight: 24 }}>
+              <div style={{ flex: 1, fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.6, paddingRight: isMobile ? 0 : 24 }}>
                 {item.desc}
               </div>
               <div style={{ flexShrink: 0 }}>
@@ -264,7 +266,7 @@ function AqiInfoSection() {
 }
 
 /* ─── Hero Section ─────────────────────────────────────────────── */
-function HeroSection() {
+function HeroSection({ isMobile }) {
   const navigate = useNavigate();
   const [heroRef, heroVisible] = useScrollReveal({ threshold: 0.05 });
   const [dashboardRef, dashboardVisible] = useScrollReveal({ threshold: 0.1 });
@@ -442,7 +444,7 @@ function HeroSection() {
   return (
     <section
       style={{
-        paddingTop: 120,
+        paddingTop: isMobile ? 90 : 120,
         paddingBottom: 60,
         background: "linear-gradient(180deg, #eaf2ea 0%, #f5f9f5 100%)",
         textAlign: "center",
@@ -466,7 +468,7 @@ function HeroSection() {
         }
       `}</style>
 
-      <div ref={heroRef} style={{ maxWidth: 760, margin: "0 auto", padding: "0 24px" }}>
+      <div ref={heroRef} style={{ maxWidth: 760, margin: "0 auto", padding: isMobile ? "0 14px" : "0 24px" }}>
         {/* Badge */}
         <div style={{ marginBottom: 20, ...fadeUp(heroVisible, 0) }}>
           <span
@@ -487,7 +489,7 @@ function HeroSection() {
 
         <h1
           style={{
-            fontSize: 52,
+            fontSize: isMobile ? 34 : 52,
             fontWeight: 800,
             lineHeight: 1.15,
             color: theme.text,
@@ -500,7 +502,7 @@ function HeroSection() {
         </h1>
         <h1
           style={{
-            fontSize: 52,
+            fontSize: isMobile ? 34 : 52,
             fontWeight: 800,
             lineHeight: 1.15,
             color: theme.green,
@@ -514,11 +516,11 @@ function HeroSection() {
 
         <p
           style={{
-            fontSize: 17,
+            fontSize: isMobile ? 15 : 17,
             color: theme.textMuted,
             lineHeight: 1.7,
             maxWidth: 520,
-            margin: "0 auto 36px",
+            margin: "0 auto 24px",
             ...fadeUp(heroVisible, 300),
           }}
         >
@@ -546,7 +548,7 @@ function HeroSection() {
             {query && (
               <button type="button" onClick={() => { setQuery(""); setSearchResults({ cities: [], stations: [] }); setShowDrop(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 18, paddingRight: 8, display: "flex", alignItems: "center" }}>×</button>
             )}
-            <button type="submit" style={{ padding: "12px 22px", background: theme.green, color: "white", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, borderRadius: "0 10px 10px 0", flexShrink: 0 }}>Tìm kiếm</button>
+            {!isMobile && <button type="submit" style={{ padding: "12px 22px", background: theme.green, color: "white", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, borderRadius: "0 10px 10px 0", flexShrink: 0, minHeight: 44 }}>Tìm kiếm</button>}
           </form>
 
           {/* Dropdown */}
@@ -606,7 +608,7 @@ function HeroSection() {
         ref={dashboardRef}
         style={{
           maxWidth: "none",
-          margin: "60px auto 0",
+          margin: isMobile ? "36px auto 0" : "60px auto 0",
           padding: 0,
           textAlign: "left",
           position: "relative",
@@ -620,7 +622,7 @@ function HeroSection() {
             marginLeft: "calc(50% - 50vw)",
             borderTop: "1px solid #2a343a",
             borderBottom: "1px solid #2a343a",
-            height: 360,
+            height: isMobile ? 280 : 360,
             position: "relative",
             overflow: "hidden",
             zIndex: 1,
@@ -682,7 +684,7 @@ function HeroSection() {
             <div style={{ padding: "10px 16px", background: "rgba(31,41,55,0.65)", color: "#cbd5e1", fontSize: 14, fontWeight: 500 }}>☀ Thời tiết</div>
           </div>
 
-          <div style={{
+          {!isMobile && <div style={{
             position: "absolute",
             top: 12,
             right: 20,
@@ -694,33 +696,33 @@ function HeroSection() {
             fontWeight: 600,
           }}>
             <span style={{ color: "#22d3ee" }}>AQI</span> Map ⤢
-          </div>
+          </div>}
         </div>
 
         <div
           style={{
             background: "linear-gradient(180deg, #1b2126 0%, #0d1215 100%)",
-            borderRadius: 20,
-            padding: "16px 16px 24px",
+            borderRadius: isMobile ? 14 : 20,
+            padding: isMobile ? "12px 10px 18px" : "16px 16px 24px",
             color: "white",
             boxShadow: "0 24px 48px rgba(0,0,0,0.2)",
             border: "1px solid #2a343a",
             maxWidth: 1280,
-            margin: "-50px auto 0",
+            margin: isMobile ? "-26px auto 0" : "-50px auto 0",
             position: "relative",
             zIndex: 5,
           }}
         >
           {/* Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, padding: "0 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", alignItems: "flex-start", marginBottom: 20, gap: isMobile ? 10 : 0, padding: isMobile ? "0 6px" : "0 16px" }}>
             <div>
-              <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 6, color: "#f8fafc" }}>Real-time Air Quality Index (AQI)</div>
+              <div style={{ fontSize: isMobile ? 18 : 24, fontWeight: 700, marginBottom: 6, color: "#f8fafc" }}>Real-time Air Quality Index (AQI)</div>
               <div style={{ color: "#3b82f6", fontSize: 13, marginBottom: 6, cursor: "pointer", textDecoration: "underline" }} onClick={() => navigate(`/thanh-pho/${cityDetail?.slug || 'ha-noi'}`)}>📍 {currentCityName}, Vietnam</div>
               <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, fontStyle: "italic" }}>
                 Cập nhật lần cuối: {formatLocalTime(currentTimestamp)} (Thời gian địa phương)
               </div>
             </div>
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               <button style={{
                 display: "flex", alignItems: "center", gap: 6, background: "transparent",
                 border: "1px solid rgba(255,255,255,0.2)", borderRadius: 16, padding: "6px 12px",
@@ -729,10 +731,10 @@ function HeroSection() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" /></svg>
                 Locate me
               </button>
-              <button style={{ width: 32, height: 32, borderRadius: "50%", background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#60a5fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <button style={{ width: 44, height: 44, borderRadius: "50%", background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#60a5fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
               </button>
-              <button style={{ width: 32, height: 32, borderRadius: "50%", background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <button style={{ width: 44, height: 44, borderRadius: "50%", background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
               </button>
             </div>
@@ -742,8 +744,9 @@ function HeroSection() {
           <div style={{
             background: `linear-gradient(to bottom, #1f2937, ${dashboardTintStrong})`,
             borderRadius: 16,
-            padding: "32px 32px 48px",
+            padding: isMobile ? "16px 14px 20px" : "32px 32px 48px",
             display: "flex",
+            flexDirection: isMobile ? "column" : "row",
             position: "relative",
             overflow: "hidden",
             boxShadow: "inset 0 0 40px rgba(0,0,0,0.5)"
@@ -775,7 +778,7 @@ function HeroSection() {
               </div>
 
               <div style={{ display: "flex", alignItems: "flex-end", gap: 8, marginBottom: 24, textShadow: "0 0 20px rgba(255,255,255,0.2)" }}>
-                <span style={{ fontSize: 84, fontWeight: 800, lineHeight: 0.9, color: currentColor }}>{currentAqi || "--"}</span>
+                <span style={{ fontSize: isMobile ? 56 : 84, fontWeight: 800, lineHeight: 0.9, color: currentColor }}>{currentAqi || "--"}</span>
                 <span style={{ fontSize: 16, fontWeight: 600, color: "rgba(255,255,255,0.6)", paddingBottom: 12 }}>AQI (US)</span>
               </div>
 
@@ -805,13 +808,13 @@ function HeroSection() {
             </div>
 
             {/* Center Character */}
-            <div style={{ position: "absolute", bottom: -10, left: "45%", transform: "translateX(-50%)", zIndex: 2 }}>
+            {!isMobile && <div style={{ position: "absolute", bottom: -10, left: "45%", transform: "translateX(-50%)", zIndex: 2 }}>
               <img src={getCharacterByAqi(currentAqi)} alt="Character" style={{ height: 260, filter: "drop-shadow(0 10px 15px rgba(0,0,0,0.3))" }} />
-            </div>
+            </div>}
 
             {/* Right Column (Weather Data) */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-end", zIndex: 1 }}>
-              <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.15)", padding: 24, width: 360, backdropFilter: "blur(8px)", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: isMobile ? "stretch" : "flex-end", zIndex: 1, marginTop: isMobile ? 22 : 0 }}>
+              <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.15)", padding: isMobile ? 14 : 24, width: isMobile ? "100%" : 360, backdropFilter: "blur(8px)", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="#94a3b8"><path d="M17.5 19c2.5 0 4.5-2 4.5-4.5S20 10 17.5 10c-.3 0-.6 0-.8.1-1.3-3.6-5.1-5.6-8.9-4.2-2.4 1-4.2 3.1-4.6 5.6C1.4 11.9 0 13.8 0 16c0 2.8 2.2 5 5 5h12.5z" /></svg>
@@ -825,7 +828,7 @@ function HeroSection() {
 
                 <div style={{ height: 1, background: "rgba(255,255,255,0.1)", marginBottom: 16 }} />
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, textAlign: "center" }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1.5, textAlign: "center" }}>
                   <div>
                     <div style={{ display: "flex", justifyContent: "center", marginBottom: 6, color: "rgba(255,255,255,0.7)" }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" /></svg>
@@ -847,15 +850,15 @@ function HeroSection() {
                     <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 2 }}>Chỉ số UV</div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>0</div>
                   </div>
-                </div>
+                </Box>
               </div>
             </div>
           </div>
 
           {/* Pollutants row */}
-          <div style={{ marginTop: 32 }}>
+          <div style={{ marginTop: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Các Chất Ô nhiễm Không khí Chính</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" }, gap: 1.5 }}>
               {pollutantCards.map((p) => (
                 <div key={p.name} style={{ background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: "16px", border: `1px solid ${p.color}40`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
@@ -870,7 +873,7 @@ function HeroSection() {
                   </div>
                 </div>
               ))}
-            </div>
+            </Box>
           </div>
 
         </div>
@@ -880,7 +883,7 @@ function HeroSection() {
 }
 
 /* ─── Tech Section ──────────────────────────────────────────────── */
-function TechSection() {
+function TechSection({ isMobile }) {
   const navigate = useNavigate();
   const [headerRef, headerVisible] = useScrollReveal();
   const [gridRef, gridVisible] = useScrollReveal({ threshold: 0.05 });
@@ -949,16 +952,16 @@ function TechSection() {
 
   return (
     <section
-      style={{ padding: "80px 48px", background: "white", fontFamily: "'Be Vietnam Pro', 'Segoe UI', sans-serif" }}
+      style={{ padding: isMobile ? "48px 16px" : "80px 48px", background: "white", fontFamily: "'Be Vietnam Pro', 'Segoe UI', sans-serif" }}
     >
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         {/* Header row */}
         <div
           ref={headerRef}
-          style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 48 }}
+          style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "flex-start", justifyContent: "space-between", gap: isMobile ? 16 : 0, marginBottom: 32 }}
         >
           <div style={fadeUp(headerVisible, 0)}>
-            <h2 style={{ fontSize: 32, fontWeight: 800, color: theme.text, marginBottom: 10, marginTop: 0 }}>
+            <h2 style={{ fontSize: isMobile ? 26 : 32, fontWeight: 800, color: theme.text, marginBottom: 10, marginTop: 0 }}>
               Công nghệ bảo hộ tiên tiến
             </h2>
             <p style={{ fontSize: 15, color: theme.textMuted, lineHeight: 1.7, maxWidth: 480, margin: 0 }}>
@@ -986,7 +989,7 @@ function TechSection() {
         </div>
 
         {/* Feature cards – staggered */}
-        <div ref={gridRef} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
+        <Box ref={gridRef} sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr" }, gap: 2 }}>
           {features.map((f, i) => (
             <div
               key={f.title}
@@ -1014,14 +1017,14 @@ function TechSection() {
               </p>
             </div>
           ))}
-        </div>
+        </Box>
       </div>
     </section>
   );
 }
 
 /* ─── Why Section ───────────────────────────────────────────────── */
-function WhySection() {
+function WhySection({ isMobile }) {
   const [imgRef, imgVisible] = useScrollReveal();
   const [listRef, listVisible] = useScrollReveal({ threshold: 0.1 });
 
@@ -1046,14 +1049,14 @@ function WhySection() {
   return (
     <section
       style={{
-        padding: "80px 48px",
+        padding: isMobile ? "48px 16px" : "80px 48px",
         background: "#f5f9f5",
         fontFamily: "'Be Vietnam Pro', 'Segoe UI', sans-serif",
       }}
     >
-      <div style={{ maxWidth: 960, margin: "0 auto", display: "flex", gap: 64, alignItems: "center" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto", display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 24 : 64, alignItems: "center" }}>
         {/* Image card – slides from left */}
-        <div ref={imgRef} style={{ flex: "0 0 320px", position: "relative", ...fadeLeft(imgVisible, 0) }}>
+        <div ref={imgRef} style={{ flex: isMobile ? "none" : "0 0 320px", width: isMobile ? "100%" : "auto", position: "relative", ...fadeLeft(imgVisible, 0) }}>
           <div
             style={{
               background: "linear-gradient(145deg, #0a2e1e 0%, #0d4a2e 40%, #0f6e45 100%)",
@@ -1101,7 +1104,7 @@ function WhySection() {
         <div ref={listRef} style={{ flex: 1 }}>
           <h2
             style={{
-              fontSize: 36,
+              fontSize: isMobile ? 28 : 36,
               fontWeight: 800,
               color: theme.text,
               marginBottom: 32,
@@ -1152,12 +1155,14 @@ function WhySection() {
 
 /* ─── Page ──────────────────────────────────────────────────────── */
 export default function LandingPage() {
+  const isMobile = useMediaQuery("(max-width:600px)");
+
   return (
     <MainLayout activePage="Trang chủ">
-      <HeroSection />
-      <AqiInfoSection />
-      <TechSection />
-      <WhySection />
+      <HeroSection isMobile={isMobile} />
+      <AqiInfoSection isMobile={isMobile} />
+      <TechSection isMobile={isMobile} />
+      <WhySection isMobile={isMobile} />
     </MainLayout>
   );
 }

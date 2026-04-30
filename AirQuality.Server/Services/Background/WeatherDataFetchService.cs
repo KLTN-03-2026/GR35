@@ -18,7 +18,7 @@ public class WeatherDataFetchService(
     ILogger<WeatherDataFetchService> logger) : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromHours(1);
-    private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(1,5);
     private static readonly TimeSpan FetchWindow = TimeSpan.FromHours(3);
 
     // ─── Entry Point ──────────────────────────────────────────────────────
