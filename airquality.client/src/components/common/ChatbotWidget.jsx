@@ -17,17 +17,73 @@ function formatBotText(text) {
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        // links: [text](/path) → clickable anchor
+        // 1. Markdown links: [text](/path) → clickable anchor
         .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="chatbot-link">$1</a>')
-        // 👉 Xem chi tiết tại: /path → clickable
-        .replace(/👉\s*Xem chi tiết[^:]*:\s*(\/[^\s<]+)/g, '👉 <a href="$1" class="chatbot-link">Xem chi tiết tại đây</a>')
-        // 📍 Xem chi tiết: /path → clickable (fallback from raw context)
-        .replace(/📍\s*Xem chi tiết:\s*(\/[^\s<]+)/g, '📍 <a href="$1" class="chatbot-link">Xem chi tiết</a>')
+        // 2. Catch raw /thanh-pho/slug paths NOT already inside an href
+        .replace(/(?<!href=")(?<!">)(\/thanh-pho\/[a-z0-9-]+)/g, '<a href="$1" class="chatbot-link">Xem chi tiết</a>')
+        // 3. Fallback: "Xem chi tiết: /path" or "Xem chi tiết tại: /path"
+        .replace(/Xem chi tiết[^:]*:\s*(\/[^\s<]+)/g, '<a href="$1" class="chatbot-link">Xem chi tiết</a>')
         // bold
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        // --- horizontal rule
+        .replace(/\n---\n/g, '<hr class="chatbot-hr"/>')
         // newlines → br
         .replace(/\n/g, '<br/>');
     return html;
+}
+
+// Response type badge
+function ResponseTypeBadge({ responseType, functionsCalled, documentsUsed }) {
+    if (!responseType || responseType === 'error') return null;
+
+    const config = {
+        function_calling: {
+            icon: '📊',
+            label: 'Dữ liệu thực tế',
+            className: 'chatbot-badge-fc',
+        },
+        rag: {
+            icon: '📚',
+            label: 'Kiến thức',
+            className: 'chatbot-badge-rag',
+        },
+        hybrid: {
+            icon: '🔄',
+            label: 'Kết hợp',
+            className: 'chatbot-badge-hybrid',
+        },
+    };
+
+    const c = config[responseType];
+    if (!c) return null;
+
+    return (
+        <div className={`chatbot-badge ${c.className}`}>
+            <span>{c.icon} {c.label}</span>
+            {functionsCalled && functionsCalled.length > 0 && (
+                <span className="chatbot-badge-detail">
+                    {functionsCalled.map(f => f.replace('get_', '').replace(/_/g, ' ')).join(', ')}
+                </span>
+            )}
+            {documentsUsed > 0 && (
+                <span className="chatbot-badge-detail">
+                    {documentsUsed} tài liệu tham khảo
+                </span>
+            )}
+        </div>
+    );
+}
+
+// Source chips
+function SourceChips({ sources }) {
+    if (!sources || sources.length === 0) return null;
+    return (
+        <div className="chatbot-sources">
+            {sources.map((s, i) => (
+                <span key={i} className="chatbot-source-chip">{s}</span>
+            ))}
+        </div>
+    );
 }
 
 export default function ChatbotWidget() {
@@ -35,7 +91,7 @@ export default function ChatbotWidget() {
     const [messages, setMessages] = useState([
         {
             role: 'bot',
-            text: 'Xin chào! 👋 Tôi là **EcoAir Assistant**.\nHãy hỏi tôi về chất lượng không khí tại bất kỳ tỉnh/thành nào ở Việt Nam!',
+            text: 'Xin chào! Tôi là **EcoAir Assistant**.\nHãy hỏi tôi về chất lượng không khí tại bất kỳ tỉnh/thành nào ở Việt Nam!',
         },
     ]);
     const [input, setInput] = useState('');
@@ -79,6 +135,10 @@ export default function ChatbotWidget() {
                 {
                     role: 'bot',
                     text: data.answer || 'Không có phản hồi.',
+                    responseType: data.responseType,
+                    sources: data.sources,
+                    functionsCalled: data.functionsCalled,
+                    documentsUsed: data.documentsUsed,
                 },
             ]);
         } catch {
@@ -86,7 +146,7 @@ export default function ChatbotWidget() {
                 ...prev,
                 {
                     role: 'bot',
-                    text: 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau. 😔',
+                    text: 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.',
                 },
             ]);
         } finally {
@@ -121,7 +181,7 @@ export default function ChatbotWidget() {
                     <div className="chatbot-header-info">
                         <p className="chatbot-header-title">EcoAir Assistant</p>
                         <p className="chatbot-header-subtitle">
-                            Trợ lý AI chất lượng không khí
+                            AI Chatbot
                         </p>
                     </div>
                     <button
@@ -140,13 +200,23 @@ export default function ChatbotWidget() {
                             <div className="chatbot-msg-avatar">
                                 {msg.role === 'bot' ? '🌿' : '👤'}
                             </div>
-                            <div>
+                            <div className="chatbot-msg-content">
                                 <div
                                     className="chatbot-msg-bubble"
                                     dangerouslySetInnerHTML={{
                                         __html: formatBotText(msg.text),
                                     }}
                                 />
+                                {msg.role === 'bot' && (
+                                    <>
+                                        <ResponseTypeBadge
+                                            responseType={msg.responseType}
+                                            functionsCalled={msg.functionsCalled}
+                                            documentsUsed={msg.documentsUsed}
+                                        />
+                                        <SourceChips sources={msg.sources} />
+                                    </>
+                                )}
                             </div>
                         </div>
                     ))}

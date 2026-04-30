@@ -447,7 +447,7 @@ export default function CityDetailPage() {
                     <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2 }}>
 
                         {/* Pollutant sub-indices */}
-                        <GlassCard style={{ padding: "22px 24px" }} glowColor={lv.color}>
+                        <GlassCard style={{ flex: 1, display: "flex", flexDirection: "column", padding: "22px 24px" }} glowColor={lv.color}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                                 <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Chỉ số ô nhiễm (Sub-Index AQI)</div>
                                 <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 600, background: hexToRgb(C.accent, 0.1), padding: "4px 10px", borderRadius: 99, border: `1px solid ${hexToRgb(C.accent, 0.2)}` }}>
@@ -462,16 +462,18 @@ export default function CityDetailPage() {
                             <AqiBar label="SO₂" value={city.aqiSo2} color="#ec4899" max={300} />
                             <AqiBar label="O₃" value={city.aqiO3} color="#06b6d4" max={300} />
 
-                            <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: C.radiusSm, background: hexToRgb(lv.color, 0.08), border: `1px solid ${hexToRgb(lv.color, 0.2)}`, fontSize: 12, color: C.textSub, lineHeight: 1.6 }}>
-                                <strong style={{ color: lv.color }}>Chất ô nhiễm chính: {city.dominantPollutant ?? "—"}</strong>
-                                {city.healthAdvice && <><br />ℹ️ {city.healthAdvice}</>}
+                            <div style={{ marginTop: "auto", paddingTop: 14 }}>
+                                <div style={{ padding: "10px 14px", borderRadius: C.radiusSm, background: hexToRgb(lv.color, 0.08), border: `1px solid ${hexToRgb(lv.color, 0.2)}`, fontSize: 12, color: C.textSub, lineHeight: 1.6 }}>
+                                    <strong style={{ color: lv.color }}>Chất ô nhiễm chính: {city.dominantPollutant ?? "—"}</strong>
+                                    {city.healthAdvice && <><br />ℹ️ {city.healthAdvice}</>}
+                                </div>
                             </div>
                         </GlassCard>
 
                         {/* Raw pollutant concentrations */}
-                        <GlassCard style={{ padding: "22px 24px" }}>
+                        <GlassCard style={{ flex: 1, display: "flex", flexDirection: "column", padding: "22px 24px" }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 16 }}>Nồng độ chất ô nhiễm</div>
-                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 8 }}>
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 8, flex: 1, alignContent: "center" }}>
                                 {[
                                     { label: "PM2.5", val: fmt(city.pm25), unit: "µg/m³", color: "#f59e0b" },
                                     { label: "PM10", val: fmt(city.pm10), unit: "µg/m³", color: "#f97316" },

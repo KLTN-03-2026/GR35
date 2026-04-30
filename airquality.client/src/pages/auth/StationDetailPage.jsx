@@ -337,7 +337,7 @@ export default function StationDetailPage() {
                     <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2 }}>
 
                         {/* AQI Hero */}
-                        <Card style={{ padding: "28px 28px 24px", background: hexToRgb(lv.color, 0.08), border: `1.5px solid ${lv.color}22` }}>
+                        <Card style={{ flex: 1, display: "flex", flexDirection: "column", padding: "28px 28px 24px", background: hexToRgb(lv.color, 0.08), border: `1.5px solid ${lv.color}22` }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                                 <div>
                                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", color: lv.color, marginBottom: 4 }}>
@@ -388,14 +388,16 @@ export default function StationDetailPage() {
 
                             {/* Health advice strip */}
                             {station.healthAdvice && (
-                                <div style={{ marginTop: 20, padding: "10px 14px", borderRadius: T.radiusSm, background: hexToRgb(lv.color, 0.08), border: `1px solid ${lv.color}22`, fontSize: 12.5, color: T.text, lineHeight: 1.5 }}>
-                                    ℹ️ {station.healthAdvice}
+                                <div style={{ marginTop: "auto", paddingTop: 20 }}>
+                                    <div style={{ padding: "10px 14px", borderRadius: T.radiusSm, background: hexToRgb(lv.color, 0.08), border: `1px solid ${lv.color}22`, fontSize: 12.5, color: T.text, lineHeight: 1.5 }}>
+                                        ℹ️ {station.healthAdvice}
+                                    </div>
                                 </div>
                             )}
                         </Card>
 
                         {/* Weather */}
-                        <Card style={{ padding: "24px" }}>
+                        <Card style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px" }}>
                             <SectionTitle icon="🌤️">Thời tiết tại trạm</SectionTitle>
                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                 <WeatherItem icon="🌡️" label="Nhiệt độ" value={station.temperature != null ? `${Math.round(station.temperature)}°C` : "—"} />
@@ -408,7 +410,7 @@ export default function StationDetailPage() {
                             )}
 
                             {/* AQI range bar */}
-                            <div style={{ marginTop: 20 }}>
+                            <div style={{ marginTop: "auto", paddingTop: 20 }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 11, color: T.textLight }}>
                                     <span>0</span><span>100</span><span>200</span><span>300</span><span>500</span>
                                 </div>
