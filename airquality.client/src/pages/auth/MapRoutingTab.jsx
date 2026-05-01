@@ -254,7 +254,7 @@ function RouteCard({ route, color, isPrimary }) {
 }
 
 // ─── Main MapRoutingTab ──────────────────────────────────────────────────────
-export default function MapRoutingTab() {
+export default function MapRoutingTab({ isMobile }) {
     const { accessToken, subscriptionTier } = useAuth();
     const isPro = (subscriptionTier ?? "").toLowerCase() === "pro";
     const mapRef = useRef(null);
@@ -397,10 +397,10 @@ export default function MapRoutingTab() {
 
     // ─── Render ───────────────────────────────────────────────────────────────
     return (
-        <div style={{ display: "flex", gap: 16, height: "calc(100vh - 160px)", minHeight: 500 }}>
+        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 16, height: isMobile ? "auto" : "calc(100vh - 160px)", minHeight: 500 }}>
             {/* Left panel */}
             <div style={{
-                width: 340, minWidth: 300, display: "flex", flexDirection: "column", gap: 12,
+                width: isMobile ? "100%" : 340, minWidth: isMobile ? "100%" : 300, display: "flex", flexDirection: "column", gap: 12,
                 background: C.white, borderRadius: 16, padding: "18px 16px",
                 border: `1px solid ${C.border}`, overflowY: "auto",
                 boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
@@ -667,7 +667,7 @@ export default function MapRoutingTab() {
             </div>
 
             {/* Map area */}
-            <div style={{ flex: 1, borderRadius: 16, overflow: "hidden", position: "relative" }}>
+            <div style={{ flex: 1, borderRadius: 16, overflow: "hidden", position: "relative", minHeight: isMobile ? 400 : "auto" }}>
                 <Map
                     ref={mapRef}
                     reuseMaps

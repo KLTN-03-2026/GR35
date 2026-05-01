@@ -116,9 +116,11 @@ export function AuthLayout({ leftContent, rightContent }) {
 
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: isMobile ? 8 : 48, position: "relative", zIndex: 1 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {Icons.leaf()}
-          </div>
+          <img
+            src="/logoecoair.png"
+            alt="EcoAir Logo"
+            style={{ width: 48, height: 48, borderRadius: 12, objectFit: "cover" }}
+          />
           <span style={{ color: "white", fontWeight: 700, fontSize: 20, letterSpacing: "-0.3px" }}>EcoAir VN</span>
         </div>
 
@@ -161,9 +163,11 @@ export function AuthLayout({ leftContent, rightContent }) {
 export function LogoSmall() {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 28 }}>
-      <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#16a34a,#4ade80)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {Icons.leaf()}
-      </div>
+      <img
+        src="/logoecoair.png"
+        alt="EcoAir Logo"
+        style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover" }}
+      />
       <span style={{ fontWeight: 700, fontSize: 17, color: theme.green1 }}>EcoAir VN</span>
     </div>
   );

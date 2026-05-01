@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -67,8 +67,16 @@ function AdminNavItem({ icon, label, active, badge, onClick }) {
 function AdminSidebar({ onLogout }) {
     const location = useLocation();
     const navigate = useNavigate();
+    const { role, permissions } = useAuth() || {};
 
-    const navItems = [
+    let userPermissions = [];
+    try {
+        if (permissions) userPermissions = JSON.parse(permissions);
+    } catch { }
+
+    const isSuperAdmin = role === 'super admin' || role === 'super-admin';
+
+    const allNavItems = [
         {
             path: "/admin", label: "Tổng quan hệ thống",
             icon: <Icon d={["M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"]} />,
@@ -103,7 +111,18 @@ function AdminSidebar({ onLogout }) {
             path: "/admin/logs", label: "Hệ thống & Logs",
             icon: <Icon d={["M8 9l3 3-3 3", "M13 12h3", "M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"]} />,
         },
+        {
+            path: "/admin/authorization", label: "Phân quyền chức năng",
+            icon: <Icon d={["M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"]} />,
+        },
     ];
+
+    const navItems = allNavItems.filter(item => {
+        if (isSuperAdmin) return true;
+        if (item.path === '/admin') return true;
+        if (item.path === '/admin/authorization') return false; // Only for super admin
+        return userPermissions.includes(item.path);
+    });
 
     const isActive = (itemPath, exact) => {
         if (exact) return location.pathname === itemPath || location.pathname === itemPath + "/";
@@ -118,17 +137,13 @@ function AdminSidebar({ onLogout }) {
         }}>
             <div style={{ padding: "20px 20px 16px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => navigate("/admin")}>
-                    <div style={{
-                        width: 36, height: 36, borderRadius: 10,
-                        background: "linear-gradient(135deg,#0d6e4e,#22c55e)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                            <path d="M12 2C8 2 4 5.5 4 10c0 4.2 3.2 7.5 8 10.2C17 17.5 20 14.2 20 10c0-4.5-4-8-8-8z" />
-                        </svg>
-                    </div>
+                    <img
+                        src="/logoecoair.png"
+                        alt="EcoAir Logo"
+                        style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover" }}
+                    />
                     <div>
-                        <div style={{ fontWeight: 700, fontSize: 16, color: D.text }}>EcoAir VN</div>
+                        <div style={{ fontWeight: 800, fontSize: 16, color: D.text }}>EcoAir VN</div>
                         <div style={{ fontSize: 9, color: D.textDim, letterSpacing: 1.5, fontWeight: 600 }}>ADMINISTRATOR</div>
                     </div>
                 </div>
@@ -214,7 +229,40 @@ function AdminHeader({ userName }) {
 }
 
 export default function AdminLayout() {
-    const { userName, logout } = useAuth() || {}; // Ensure fallback if context is loosely bound
+    const { userName, logout, role, permissions } = useAuth() || {}; // Ensure fallback if context is loosely bound
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const isSuperAdmin = role === 'super admin' || role === 'super-admin';
+        if (isSuperAdmin) return;
+
+        let userPermissions = [];
+        try {
+            if (permissions) userPermissions = JSON.parse(permissions);
+        } catch { }
+
+        const allPaths = [
+            "/admin/data",
+            "/admin/station-monitor",
+            "/admin/ai-config",
+            "/admin/reports",
+            "/admin/contacts",
+            "/admin/user-management",
+            "/admin/logs",
+            "/admin/authorization"
+        ];
+
+        // Find if current path requires permission
+        const requiresPermission = allPaths.find(p => location.pathname === p || location.pathname.startsWith(p + '/'));
+
+        if (requiresPermission) {
+            if (requiresPermission === "/admin/authorization" || !userPermissions.includes(requiresPermission)) {
+                // Not authorized
+                navigate('/admin', { replace: true });
+            }
+        }
+    }, [location.pathname, role, permissions, navigate]);
 
     return (
         <div style={{ display: "flex", minHeight: "100vh", background: D.bg, fontFamily: D.font, color: D.text }}>

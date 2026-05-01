@@ -46,7 +46,7 @@ function formatTime(iso) {
 }
 
 // ─── PlacesTab ────────────────────────────────────────────────────────────────
-export default function PlacesTab() {
+export default function PlacesTab({ isMobile }) {
     const { accessToken } = useAuth();
     const [places, setPlaces] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -142,12 +142,12 @@ export default function PlacesTab() {
     return (
         <div style={{ fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif" }}>
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 12, marginBottom: 20 }}>
                 <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: C.text }}>Địa điểm</h2>
                 <div style={{
                     display: "flex", alignItems: "center", gap: 8,
                     background: C.white, border: `1px solid ${C.border}`,
-                    borderRadius: 10, padding: "8px 14px", minWidth: 250,
+                    borderRadius: 10, padding: "8px 14px", minWidth: isMobile ? "100%" : 250,
                 }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.textLight} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />

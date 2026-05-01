@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     Box,
@@ -121,22 +121,17 @@ export default function Navbar({ activePage = "Trang chủ" }) {
                 }}
                 onClick={() => navigate("/")}
             >
-                <div
+                <img
+                    src="/logoecoair.png"
+                    alt="EcoAir Logo"
                     style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 6,
-                        background: "linear-gradient(135deg, #0d6e4e, #22c55e)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        width: 32,
+                        height: 32,
+                        borderRadius: 8,
+                        objectFit: "cover"
                     }}
-                >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                        <path d="M12 2C8 2 4 5.5 4 10c0 4.2 3.2 7.5 8 10.2C17 17.5 20 14.2 20 10c0-4.5-4-8-8-8z" />
-                    </svg>
-                </div>
-                <span style={{ fontWeight: 700, fontSize: isMobile ? 14:15, color: theme.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                />
+                <span style={{ fontWeight: 800, fontSize: isMobile ? 15 : 16, color: theme.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     EcoAir VN
                 </span>
             </div>

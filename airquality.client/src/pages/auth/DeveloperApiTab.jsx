@@ -33,7 +33,7 @@ function formatDate(value) {
     });
 }
 
-export default function DeveloperApiTab() {
+export default function DeveloperApiTab({ isMobile }) {
     const navigate = useNavigate();
     const { accessToken, subscriptionTier } = useAuth();
 
@@ -197,7 +197,7 @@ export default function DeveloperApiTab() {
                 padding: 18,
                 boxShadow: C.shadow,
             }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 18 }}>
+                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", gap: 12, alignItems: isMobile ? "flex-start" : "center", marginBottom: 18 }}>
                     <div>
                         <h3 style={{ margin: 0, color: C.text, fontSize: 30, lineHeight: 1.1 }}>Air Quality API</h3>
                     </div>
@@ -260,7 +260,7 @@ export default function DeveloperApiTab() {
                         padding: 12,
                         background: C.blueSoft,
                     }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 160px auto", gap: 10, alignItems: "end" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 160px auto", gap: 10, alignItems: "end" }}>
                             <div>
                                 <label style={{ display: "block", marginBottom: 6, fontSize: 12, color: C.textMuted }}>Tên project</label>
                                 <input
@@ -306,7 +306,7 @@ export default function DeveloperApiTab() {
                     </div>
                 )}
 
-                <div style={{ border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
                         <thead>
                             <tr style={{ background: "#f8fafc", borderBottom: `1px solid ${C.border}` }}>

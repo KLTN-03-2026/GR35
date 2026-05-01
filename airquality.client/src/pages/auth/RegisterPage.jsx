@@ -15,35 +15,6 @@ import { GoogleLogin } from "@react-oauth/google";
 function LeftContent() {
     return (
         <div style={{ textAlign: "center" }}>
-            {/* Leaf icon */}
-            <div
-                style={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: "50%",
-                    background: "rgba(255,255,255,0.18)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 28px",
-                    border: "2px solid rgba(255,255,255,0.25)",
-                }}
-            >
-                {Icons.leaf("white")}
-            </div>
-
-            <h2
-                style={{
-                    color: "white",
-                    fontSize: 32,
-                    fontWeight: 800,
-                    margin: "0 0 16px",
-                    letterSpacing: "-0.4px",
-                }}
-            >
-                EcoAir VN
-            </h2>
-
             <p
                 style={{
                     color: "rgba(255,255,255,0.80)",

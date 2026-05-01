@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from "react";
+﻿import { useRef, useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, useMediaQuery } from "@mui/material";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
@@ -483,7 +483,7 @@ function HeroSection({ isMobile }) {
               border: "1px solid #a7f3d0",
             }}
           >
-            THẾ HỆ BẢO VỆ MỚI
+            THẾ HỆ 
           </span>
         </div>
 

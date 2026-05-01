@@ -267,7 +267,8 @@ public class AuthController(
             accessToken,
             fullName = user.FullName,
             subscriptionTier = user.SubscriptionTier,
-            subscriptionExpiresAt = user.SubscriptionExpiresAt
+            subscriptionExpiresAt = user.SubscriptionExpiresAt,
+            permissions = user.Permissions
         });
     }
 
@@ -342,7 +343,8 @@ public class AuthController(
             accessToken,
             fullName = user.FullName,
             subscriptionTier = user.SubscriptionTier,
-            subscriptionExpiresAt = user.SubscriptionExpiresAt
+            subscriptionExpiresAt = user.SubscriptionExpiresAt,
+            permissions = user.Permissions
         });
     }
 
@@ -484,7 +486,8 @@ public class AuthController(
             subscriptionTier = user.SubscriptionTier,
             subscriptionStartedAt = user.SubscriptionStartedAt,
             subscriptionExpiresAt = user.SubscriptionExpiresAt,
-            healCondition = user.HealCondition
+            healCondition = user.HealCondition,
+            permissions = user.Permissions
         });
     }
 

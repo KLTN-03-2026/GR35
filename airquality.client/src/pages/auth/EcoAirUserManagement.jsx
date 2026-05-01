@@ -41,6 +41,9 @@ export default function EcoAirUserManagement() {
   });
   const [users, setUsers] = useState([]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
   // Thêm người dùng states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newFullName, setNewFullName] = useState('');
@@ -111,6 +114,13 @@ export default function EcoAirUserManagement() {
       badge,
     };
   }), [users]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, users.length]);
+
+  const totalPages = Math.ceil(viewUsers.length / itemsPerPage);
+  const paginatedUsers = viewUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   function updateLocalUser(userId, updater) {
     setUsers((prev) => {
@@ -364,7 +374,7 @@ export default function EcoAirUserManagement() {
               </tr>
             </thead>
             <tbody>
-              {viewUsers.map((u) => (
+              {paginatedUsers.map((u) => (
                 <tr key={u.userId} style={{ borderBottom: '1px solid #f2f4f7' }}>
                   <td style={{ padding: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -451,6 +461,34 @@ export default function EcoAirUserManagement() {
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #f2f4f7', display: 'flex', justifyContent: 'center', gap: 10, alignItems: 'center' }}>
+            <button
+              onClick={() => setCurrentPage(p => p - 1)}
+              disabled={currentPage === 1}
+              style={{
+                padding: '6px 12px', border: '1px solid #d0d5dd', background: '#fff', color: currentPage === 1 ? '#98a2b3' : '#344054',
+                borderRadius: 8, fontSize: 13, cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Trang trước
+            </button>
+            <span style={{ fontSize: 13, color: '#667085' }}>
+              Trang <strong>{currentPage}</strong> / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => p + 1)}
+              disabled={currentPage === totalPages}
+              style={{
+                padding: '6px 12px', border: '1px solid #d0d5dd', background: '#fff', color: currentPage === totalPages ? '#98a2b3' : '#344054',
+                borderRadius: 8, fontSize: 13, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Trang tiếp
+            </button>
+          </div>
+        )}
 
         {!loading && viewUsers.length === 0 && (
           <div style={{ padding: 18, fontSize: 13, color: '#667085' }}>

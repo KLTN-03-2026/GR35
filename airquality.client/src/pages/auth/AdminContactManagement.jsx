@@ -14,6 +14,9 @@ function getStatusBadge(status) {
 
 export default function AdminContactManagement() {
     const [contacts, setContacts] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 5;
+
     const [stats, setStats] = useState({ total: 0, pending: 0, processing: 0, resolved: 0 });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -31,7 +34,7 @@ export default function AdminContactManagement() {
             setLoading(true);
             setError('');
             try {
-                const queryParams = new URLSearchParams({ page: '1', pageSize: '100' });
+                const queryParams = new URLSearchParams({ page: '1', pageSize: '1000' });
                 if (searchTerm.trim()) queryParams.set('search', searchTerm.trim());
                 if (statusFilter !== '') queryParams.set('status', statusFilter);
 
@@ -55,6 +58,13 @@ export default function AdminContactManagement() {
         loadData();
         return () => { ignore = true; };
     }, [reloadKey, searchTerm, statusFilter]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter, contacts.length]);
+
+    const totalPages = Math.ceil(contacts.length / itemsPerPage);
+    const paginatedContacts = contacts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     async function handleStatusChange(id, newStatus) {
         try {
@@ -199,7 +209,7 @@ export default function AdminContactManagement() {
                                     <td colSpan="6" style={{ textAlign: 'center', padding: '20px', color: '#7a8da0' }}>Không có dữ liệu liên hệ</td>
                                 </tr>
                             )}
-                            {contacts.map(c => {
+                            {paginatedContacts.map(c => {
                                 const b = getStatusBadge(c.status);
                                 return (
                                     <tr key={c.id} style={{ borderBottom: '1px solid #1e3048' }}>
@@ -239,6 +249,28 @@ export default function AdminContactManagement() {
                     </table>
                 </div>
                 {loading && <div style={{ padding: 16, color: '#7a8da0' }}>Đang tải danh sách...</div>}
+
+                {totalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 10, padding: '16px 20px', borderTop: '1px solid #1e3048', alignItems: 'center' }}>
+                        <button
+                            onClick={() => setCurrentPage(prev => prev - 1)}
+                            disabled={currentPage === 1}
+                            style={{ padding: '6px 12px', background: 'transparent', border: '1px solid #1e3048', color: currentPage === 1 ? '#4a5d70' : '#e8edf3', borderRadius: 8, cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+                        >
+                            Trang trước
+                        </button>
+                        <span style={{ fontSize: 13, color: '#7a8da0' }}>
+                            Trang <strong style={{ color: '#e8edf3' }}>{currentPage}</strong> / {totalPages}
+                        </span>
+                        <button
+                            onClick={() => setCurrentPage(prev => prev + 1)}
+                            disabled={currentPage === totalPages}
+                            style={{ padding: '6px 12px', background: 'transparent', border: '1px solid #1e3048', color: currentPage === totalPages ? '#4a5d70' : '#e8edf3', borderRadius: 8, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+                        >
+                            Trang tiếp
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Modal */}

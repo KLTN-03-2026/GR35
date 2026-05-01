@@ -41,7 +41,8 @@ public class UserManagementController(ApplicationDbContext dbContext) : Controll
                 Role = u.Role.RoleName,
                 u.Status,
                 u.CreatedAt,
-                u.LastLogin
+                u.LastLogin,
+                u.Permissions
             })
             .ToListAsync();
 
@@ -63,7 +64,8 @@ public class UserManagementController(ApplicationDbContext dbContext) : Controll
                 StatusText = u.Status == 1 ? (isOnline ? "Hoạt động" : "Ngoại tuyến") : "Đã khóa",
                 IsOnline = isOnline,
                 u.CreatedAt,
-                u.LastLogin
+                u.LastLogin,
+                u.Permissions
             };
         }).ToList();
 
@@ -133,7 +135,8 @@ public class UserManagementController(ApplicationDbContext dbContext) : Controll
                 x.Role.RoleName,
                 x.Status,
                 x.CreatedAt,
-                x.LastLogin
+                x.LastLogin,
+                x.Permissions
             ))
             .FirstAsync();
 
@@ -170,7 +173,8 @@ public class UserManagementController(ApplicationDbContext dbContext) : Controll
                 x.Role.RoleName,
                 x.Status,
                 x.CreatedAt,
-                x.LastLogin
+                x.LastLogin,
+                x.Permissions
             ))
             .FirstAsync();
 
@@ -244,7 +248,8 @@ public class UserManagementController(ApplicationDbContext dbContext) : Controll
                 x.Role.RoleName,
                 x.Status,
                 x.CreatedAt,
-                x.LastLogin
+                x.LastLogin,
+                x.Permissions
             ))
             .FirstAsync();
 
@@ -273,7 +278,8 @@ public class UserManagementController(ApplicationDbContext dbContext) : Controll
             StatusText = u.Status == 1 ? (isOnline ? "Hoạt động" : "Ngoại tuyến") : "Đã khóa",
             IsOnline = isOnline,
             u.CreatedAt,
-            u.LastLogin
+            u.LastLogin,
+            u.Permissions
         };
     }
 
@@ -297,6 +303,45 @@ public class UserManagementController(ApplicationDbContext dbContext) : Controll
     public sealed record AddUserRequest(string FullName, string Email, string Password, string RoleKey);
     public sealed record UpdateUserRoleRequest(string? RoleKey);
     public sealed record UpdateUserStatusRequest(bool IsLocked);
+    public sealed record UpdateUserPermissionsRequest(string? Permissions);
+
+    [HttpPatch("{userId:int}/permissions")]
+    public async Task<IActionResult> UpdateUserPermissions(int userId, [FromBody] UpdateUserPermissionsRequest request)
+    {
+        var user = await dbContext.Users
+            .Include(x => x.Role)
+            .FirstOrDefaultAsync(x => x.UserId == userId);
+
+        if (user is null)
+        {
+            return NotFound(new { message = "Không tìm thấy người dùng." });
+        }
+
+        user.Permissions = request.Permissions;
+        await dbContext.SaveChangesAsync();
+
+        var updated = await dbContext.Users
+            .AsNoTracking()
+            .Include(x => x.Role)
+            .Where(x => x.UserId == userId)
+            .Select(x => new UserProjection(
+                x.UserId,
+                x.FullName,
+                x.Email,
+                x.Role.RoleName,
+                x.Status,
+                x.CreatedAt,
+                x.LastLogin,
+                x.Permissions
+            ))
+            .FirstAsync();
+
+        return Ok(new
+        {
+            Message = "Cập nhật phân quyền thành công.",
+            User = BuildUserResponse(updated, DateTime.UtcNow.AddMinutes(-15))
+        });
+    }
 
     private sealed record UserProjection(
         int UserId,
@@ -305,5 +350,6 @@ public class UserManagementController(ApplicationDbContext dbContext) : Controll
         string Role,
         int Status,
         DateTime CreatedAt,
-        DateTime? LastLogin);
+        DateTime? LastLogin,
+        string? Permissions);
 }

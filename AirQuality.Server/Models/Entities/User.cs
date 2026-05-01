@@ -56,6 +56,10 @@ public class User
     [Column("subscription_expires_at")]
     public DateTime? SubscriptionExpiresAt { get; set; }
 
+    [Column("permissions")]
+    [MaxLength(1000)]
+    public string? Permissions { get; set; } = "[]";
+
     [ForeignKey(nameof(RoleId))]
     public Role Role { get; set; } = null!;
 
