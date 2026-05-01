@@ -75,7 +75,7 @@ function getConditionTips(conditions) {
     return tips.length ? tips : ["Hồ sơ hiện tại đã sẵn sàng cho cảnh báo cá nhân hóa."];
 }
 
-export default function ProfileHealthTab({ onProfileUpdated }) {
+export default function ProfileHealthTab({ onProfileUpdated, isMobile }) {
     const { accessToken } = useAuth();
     const [loading, setLoading] = useState(true);
     const [savingProfile, setSavingProfile] = useState(false);
@@ -360,7 +360,7 @@ export default function ProfileHealthTab({ onProfileUpdated }) {
                 </div>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.3fr 1fr", gap: 16 }}>
                 <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 14, padding: 18, boxShadow: "0 2px 10px rgba(15,23,42,0.04)" }}>
                     <h3 style={{ margin: "0 0 4px", fontSize: 15, color: C.text }}>Hồ sơ cá nhân hóa sức khỏe</h3>
                     <p style={{ margin: "0 0 14px", color: C.textLight, fontSize: 12 }}>Dữ liệu này giúp hệ thống tinh chỉnh cảnh báo AQI theo mức nhạy cảm của bạn.</p>
@@ -590,7 +590,7 @@ export default function ProfileHealthTab({ onProfileUpdated }) {
 
             <form onSubmit={handleChangePassword} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 14, padding: 18, boxShadow: "0 2px 10px rgba(15,23,42,0.04)" }}>
                 <h3 style={{ margin: "0 0 12px", fontSize: 15, color: C.text }}>Thay đổi mật khẩu</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginBottom: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 10, marginBottom: 10 }}>
                     <div style={{ position: "relative" }}>
                         <input
                             type={showPassword.current ? "text" : "password"}

@@ -23,12 +23,12 @@ export default function Footer() {
                 <Grid container spacing={{ xs: 2, md: 4 }} sx={{ mb: { xs: 2.5, md: 4 } }}>
                     <Grid size={{ xs: 12, md: 5 }}>
                         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.2 }}>
-                            <Box sx={{ width: 26, height: 26, borderRadius: "6px", background: "linear-gradient(135deg,#0d6e4e,#22c55e)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
-                                    <path d="M12 2C8 2 4 5.5 4 10c0 4.2 3.2 7.5 8 10.2C17 17.5 20 14.2 20 10c0-4.5-4-8-8-8z" />
-                                </svg>
-                            </Box>
-                            <Typography sx={{ fontWeight: 700, fontSize: 15, color: theme.text }}>EcoAir VN</Typography>
+                            <img
+                                src="/logoecoair.png"
+                                alt="EcoAir Logo"
+                                style={{ width: 28, height: 28, borderRadius: 6, objectFit: "cover" }}
+                            />
+                            <Typography sx={{ fontWeight: 800, fontSize: 16, color: theme.text }}>EcoAir VN</Typography>
                         </Stack>
                         <Typography sx={{ fontSize: 13, color: theme.textMuted, lineHeight: 1.7, maxWidth: 320 }}>
                             Nền tảng AI giám sát và dự báo chất lượng không khí giúp cộng đồng chủ động bảo vệ sức khỏe.

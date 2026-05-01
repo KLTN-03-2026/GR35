@@ -139,8 +139,10 @@ function NavItem({ icon, label, active, onClick }) {
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
-function Sidebar({ activeTab, setActiveTab, onLogout, userName, isPro }) {
+function Sidebar({ activeTab, setActiveTab, onLogout, userName, isPro, isMobile, isOpen, onClose }) {
     const navigate = useNavigate();
+
+    if (isMobile && !isOpen) return null;
 
     const navItems = [
         {
@@ -178,143 +180,161 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userName, isPro }) {
     ];
 
     return (
-        <aside style={{
-            width: C.sidebarW, minWidth: C.sidebarW, height: "100vh", position: "fixed",
-            top: 0, left: 0, background: C.white, borderRight: `1px solid ${C.border}`,
-            display: "flex", flexDirection: "column", zIndex: 50,
-            fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif",
-        }}>
-            {/* Logo */}
-            <div style={{ padding: "18px 16px 14px", borderBottom: `1px solid ${C.border}` }}>
+        <>
+            {isMobile && isOpen && (
                 <div
-                    onClick={() => navigate('/')}
-                    style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
-                >
-                    <div style={{
-                        width: 32, height: 32, borderRadius: 8,
-                        background: "linear-gradient(135deg,#0d6e4e,#22c55e)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                            <path d="M12 2C8 2 4 5.5 4 10c0 4.2 3.2 7.5 8 10.2C17 17.5 20 14.2 20 10c0-4.5-4-8-8-8z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>EcoAir VN</div>
-                        <div style={{ fontSize: 10, color: C.textLight, marginTop: -1 }}>NGƯỜI BẢO HỘ THANH KHIẾT</div>
-                    </div>
-                </div>
-            </div>
-
-            {/* User info */}
-            <div style={{ padding: "14px 16px", borderBottom: `1px solid ${C.border}` }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{
-                        width: 36, height: 36, borderRadius: "50%",
-                        background: "linear-gradient(135deg,#f59e0b,#f97316)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 15, fontWeight: 700, color: "white",
-                    }}>
-                        {userName.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{userName}</div>
-                        {isPro && (
-                            <div style={{
-                                display: "inline-flex", alignItems: "center", gap: 4,
-                                background: C.yellow, borderRadius: 4, padding: "1px 7px",
-                                fontSize: 10, fontWeight: 700, color: "white", marginTop: 2,
-                            }}>⭐ PRO</div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Nav */}
-            <nav style={{ flex: 1, padding: "12px 10px", overflowY: "auto" }}>
-                {navItems.map((item) => (
-                    <NavItem
-                        key={item.id}
-                        icon={item.icon}
-                        label={item.label}
-                        active={activeTab === item.id}
-                        onClick={() => setActiveTab(item.id)}
-                    />
-                ))}
-            </nav>
-
-            {/* Bottom */}
-            <div style={{ padding: "12px 10px", borderTop: `1px solid ${C.border}` }}>
-                <NavItem
-                    icon={<Icon d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />}
-                    label="Cài đặt"
-                    active={activeTab === "settings"}
-                    onClick={() => setActiveTab("settings")}
-                />
-                <div
-                    onClick={onLogout}
+                    onClick={onClose}
                     style={{
-                        display: "flex", alignItems: "center", gap: 10,
-                        padding: "9px 14px", borderRadius: 8, cursor: "pointer",
-                        color: "#ef4444", fontSize: 13.5, fontWeight: 500,
-                        marginTop: 2,
+                        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                        background: "rgba(0,0,0,0.4)", zIndex: 99
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#fff1f2")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                >
-                    <Icon d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke="#ef4444" />
-                    Đăng xuất
+                />
+            )}
+            <aside style={{
+                width: C.sidebarW, minWidth: C.sidebarW, height: "100vh", position: "fixed",
+                top: 0, left: isMobile && !isOpen ? -C.sidebarW : 0,
+                background: C.white, borderRight: `1px solid ${C.border}`,
+                display: "flex", flexDirection: "column", zIndex: 100,
+                transition: "left 0.3s ease",
+                fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif",
+            }}>
+                {/* Logo */}
+                <div style={{ padding: "18px 16px 14px", borderBottom: `1px solid ${C.border}` }}>
+                    <div
+                        onClick={() => navigate('/')}
+                        style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+                    >
+                        <img
+                            src="/logoecoair.png"
+                            alt="EcoAir Logo"
+                            style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }}
+                        />
+                        <div>
+                            <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>EcoAir VN</div>
+                            <div style={{ fontSize: 10, color: C.textLight, marginTop: -1 }}>NGƯỜI BẢO HỘ THANH KHIẾT</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </aside>
+
+                {/* User info */}
+                <div style={{ padding: "14px 16px", borderBottom: `1px solid ${C.border}` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{
+                            width: 36, height: 36, borderRadius: "50%",
+                            background: "linear-gradient(135deg,#f59e0b,#f97316)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 15, fontWeight: 700, color: "white",
+                        }}>
+                            {userName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{userName}</div>
+                            {isPro && (
+                                <div style={{
+                                    display: "inline-flex", alignItems: "center", gap: 4,
+                                    background: C.yellow, borderRadius: 4, padding: "1px 7px",
+                                    fontSize: 10, fontWeight: 700, color: "white", marginTop: 2,
+                                }}>⭐ PRO</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Nav */}
+                <nav style={{ flex: 1, padding: "12px 10px", overflowY: "auto" }}>
+                    {navItems.map((item) => (
+                        <NavItem
+                            key={item.id}
+                            icon={item.icon}
+                            label={item.label}
+                            active={activeTab === item.id}
+                            onClick={() => { setActiveTab(item.id); if (isMobile) onClose(); }}
+                        />
+                    ))}
+                </nav>
+
+                {/* Bottom */}
+                <div style={{ padding: "12px 10px", borderTop: `1px solid ${C.border}` }}>
+                    <NavItem
+                        icon={<Icon d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" />}
+                        label="Cài đặt"
+                        active={activeTab === "settings"}
+                        onClick={() => { setActiveTab("settings"); if (isMobile) onClose(); }}
+                    />
+                    <div
+                        onClick={onLogout}
+                        style={{
+                            display: "flex", alignItems: "center", gap: 10,
+                            padding: "9px 14px", borderRadius: 8, cursor: "pointer",
+                            color: "#ef4444", fontSize: 13.5, fontWeight: 500,
+                            marginTop: 2,
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#fff1f2")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                        <Icon d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke="#ef4444" />
+                        Đăng xuất
+                    </div>
+                </div>
+            </aside>
+        </>
     );
 }
 
 // ─── Dashboard Header ─────────────────────────────────────────────────────────
-function DashboardHeader({ userName }) {
+function DashboardHeader({ userName, isMobile }) {
     const navigate = useNavigate();
     const greetings = ["Chào mừng trở lại,", "Xin chào,"];
     return (
         <header style={{
-            position: "fixed", top: 0, left: C.sidebarW, right: 0, height: 60,
+            position: "fixed", top: 0, left: isMobile ? 0 : C.sidebarW, right: 0, height: 60,
             background: "rgba(255,255,255,0.97)", borderBottom: `1px solid ${C.border}`,
-            display: "flex", alignItems: "center", padding: "0 28px",
+            display: "flex", alignItems: "center", padding: isMobile ? "0 16px" : "0 28px",
             zIndex: 40, backdropFilter: "blur(8px)",
             fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif",
-            gap: 16,
+            gap: isMobile ? 12 : 16,
         }}>
             {/* Greeting */}
-            <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 17, fontWeight: 700, color: C.text }}>
-                    {greetings[0]} <span style={{ color: C.green }}>{userName}!</span>
+            {!isMobile && (
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: C.text }}>
+                        {greetings[0]} <span style={{ color: C.green }}>{userName}!</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: C.textMuted }}>
+                        Hôm nay không khí khu vực của bạn rất trong lành.
+                    </div>
                 </div>
-                <div style={{ fontSize: 12, color: C.textMuted }}>
-                    Hôm nay không khí khu vực của bạn rất trong lành.
+            )}
+            {isMobile && (
+                <div style={{ flex: 1, fontSize: 16, fontWeight: 700, color: C.green }}>
+                    EcoAir VN
                 </div>
-            </div>
+            )}
 
             {/* Search */}
-            <div style={{
-                display: "flex", alignItems: "center", gap: 8,
-                background: "#f9fafb", border: `1px solid ${C.border}`,
-                borderRadius: 10, padding: "7px 14px", minWidth: 220,
-            }}>
-                <Icon d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" size={15} />
-                <input
-                    placeholder="Tìm trạm, khu vực..."
-                    style={{ border: "none", outline: "none", background: "transparent", fontSize: 13, color: C.text, width: "100%" }}
-                />
-            </div>
+            {!isMobile && (
+                <div style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    background: "#f9fafb", border: `1px solid ${C.border}`,
+                    borderRadius: 10, padding: "7px 14px", minWidth: 220,
+                }}>
+                    <Icon d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" size={15} />
+                    <input
+                        placeholder="Tìm trạm, khu vực..."
+                        style={{ border: "none", outline: "none", background: "transparent", fontSize: 13, color: C.text, width: "100%" }}
+                    />
+                </div>
+            )}
 
             {/* Upgrade button */}
             <button style={{
                 display: "flex", alignItems: "center", gap: 6,
-                padding: "8px 18px", background: C.yellow,
+                padding: isMobile ? "8px 12px" : "8px 18px", background: C.yellow,
                 color: "white", border: "none", borderRadius: 10,
                 fontSize: 13, fontWeight: 600, cursor: "pointer",
                 boxShadow: "0 2px 8px rgba(245,158,11,0.3)",
             }} onClick={() => navigate('/goi')}>
-                ✦ Nâng cấp Pro
+                ✦ {isMobile ? "Pro" : "Nâng cấp Pro"}
             </button>
 
             {/* Bell */}
@@ -381,8 +401,8 @@ function KpiCard({ label, value, subtext, accent, icon }) {
             background: C.white,
             border: `1px solid ${C.border}`,
             borderRadius: 16,
-            padding: "18px 20px",
-            minWidth: 180,
+            padding: "16px",
+            minWidth: 140,
             flex: 1,
         }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
@@ -474,7 +494,7 @@ function QuickAction({ title, desc, accent, onClick }) {
     );
 }
 
-function OverviewTab({ accessToken, subscriptionTier, userName, setActiveTab }) {
+function OverviewTab({ accessToken, subscriptionTier, userName, setActiveTab, isMobile }) {
     const isPro = (subscriptionTier ?? "").toLowerCase() === "pro";
     const [overview, setOverview] = useState({
         loading: true,
@@ -644,7 +664,7 @@ function OverviewTab({ accessToken, subscriptionTier, userName, setActiveTab }) 
                 background: "linear-gradient(135deg, #0b3f2d 0%, #0d6e4e 45%, #22c55e 100%)",
                 color: "white",
             }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 20, flexDirection: isMobile ? "column" : "row" }}>
                     <div style={{ flex: 2, minWidth: 280 }}>
                         <div style={{ fontSize: 13, opacity: 0.82 }}>Bức tranh tổng thể hôm nay</div>
                         <div style={{ fontSize: 28, fontWeight: 800, marginTop: 8 }}>
@@ -736,7 +756,7 @@ function OverviewTab({ accessToken, subscriptionTier, userName, setActiveTab }) 
                 />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(280px, 1fr)", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 2fr) minmax(280px, 1fr)", gap: 16 }}>
                 <Card>
                     <SectionTitle
                         title="Xu hướng chất lượng không khí"
@@ -999,11 +1019,60 @@ function PlaceholderTab({ title }) {
     );
 }
 
+// ─── Mobile Bottom Navigation ──────────────────────────────────────────────────
+function BottomNav({ activeTab, setActiveTab, onOpenMenu }) {
+    const tabs = [
+        { id: "overview", label: "Tổng quan", icon: <Icon d={["M3 3h7v7H3z", "M14 3h7v7h-7z", "M3 14h7v7H3z", "M14 14h7v7h-7z"]} size={22} /> },
+        { id: "places", label: "Địa điểm", icon: <Icon d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z" size={22} strokeWidth={1.5} /> },
+        { id: "map", label: "Bản đồ", icon: <Icon d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" size={22} strokeWidth={1.5} /> },
+        { id: "profile", label: "Hồ sơ", icon: <Icon d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" size={22} strokeWidth={1.5} /> },
+        { id: "menu", label: "Menu", icon: <Icon d="M4 6h16M4 12h16M4 18h16" size={22} strokeWidth={1.5} /> },
+    ];
+
+    return (
+        <div style={{
+            position: "fixed", bottom: 0, left: 0, right: 0, height: 60,
+            background: C.white, borderTop: `1px solid ${C.border}`,
+            display: "flex", justifyContent: "space-around", alignItems: "center",
+            zIndex: 90, paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        }}>
+            {tabs.map(t => {
+                const isActive = t.id === "menu" ? false : activeTab === t.id;
+                const targetColor = isActive ? C.green : C.textLight;
+                return (
+                    <div key={t.id} onClick={() => t.id === "menu" ? onOpenMenu() : setActiveTab(t.id)}
+                        style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", flex: 1 }}>
+                        <span style={{ color: targetColor, display: "flex", transition: "color 0.2s" }}>
+                            {t.icon}
+                        </span>
+                        <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 500, color: targetColor, transition: "color 0.2s" }}>
+                            {t.label}
+                        </span>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 // ─── Main Dashboard Page ──────────────────────────────────────────────────────
 export default function EcoAirDashboard() {
     const { userName, logout, subscriptionTier, accessToken } = useAuth();
     const [activeTab, setActiveTab] = useState("overview");
     const [displayName, setDisplayName] = useState(userName || "");
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    useEffect(() => {
+        const handleResize = () => {
+            const mobile = window.innerWidth < 1024;
+            setIsMobile(mobile);
+            if (!mobile) setIsDrawerOpen(false);
+        };
+        handleResize(); // trigger once to be sure
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
     const isPro = (subscriptionTier ?? "").toLowerCase() === "pro";
     const tabTitles = {
         overview: "Tổng quan",
@@ -1019,12 +1088,16 @@ export default function EcoAirDashboard() {
 
     return (
         <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: C.bg, fontFamily: "'Be Vietnam Pro','Segoe UI',sans-serif" }}>
-            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={logout} userName={displayName} isPro={isPro} />
+            <Sidebar
+                activeTab={activeTab} setActiveTab={setActiveTab}
+                onLogout={logout} userName={displayName} isPro={isPro}
+                isMobile={isMobile} isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)}
+            />
 
-            <div style={{ marginLeft: C.sidebarW, flex: 1, display: "flex", flexDirection: "column", height: "100vh" }}>
-                <DashboardHeader userName={displayName} />
+            <div style={{ marginLeft: isMobile ? 0 : C.sidebarW, flex: 1, display: "flex", flexDirection: "column", height: "100vh", minWidth: 0, overflowX: "hidden" }}>
+                <DashboardHeader userName={displayName} isMobile={isMobile} />
 
-                <main style={{ marginTop: 60, flex: 1, padding: "28px 28px 24px", overflowY: "auto" }}>
+                <main style={{ marginTop: 60, marginBottom: isMobile ? 60 : 0, flex: 1, padding: isMobile ? "20px 16px" : "28px 28px 24px", overflowY: "auto", overflowX: "hidden" }}>
                     {/* Breadcrumb */}
                     <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 18 }}>
                         Dashboard &rsaquo; <span style={{ color: C.green, fontWeight: 600 }}>{tabTitles[activeTab]}</span>
@@ -1036,20 +1109,29 @@ export default function EcoAirDashboard() {
                             subscriptionTier={subscriptionTier}
                             userName={displayName}
                             setActiveTab={setActiveTab}
+                            isMobile={isMobile}
                         />
                     )}
-                    {activeTab === "places" && <PlacesTab />}
-                    {activeTab === "report" && <ReportTab />}
-                    {activeTab === "developer" && <DeveloperApiTab />}
-                    {activeTab === "alert" && <AlertConfigTab />}
-                    {activeTab === "profile" && <ProfileHealthTab onProfileUpdated={setDisplayName} />}
-                    {activeTab === "history" && <HistoryExportTab />}
-                    {activeTab === "map" && <MapRoutingTab />}
+                    {activeTab === "places" && <PlacesTab isMobile={isMobile} />}
+                    {activeTab === "report" && <ReportTab isMobile={isMobile} />}
+                    {activeTab === "developer" && <DeveloperApiTab isMobile={isMobile} />}
+                    {activeTab === "alert" && <AlertConfigTab isMobile={isMobile} />}
+                    {activeTab === "profile" && <ProfileHealthTab onProfileUpdated={setDisplayName} isMobile={isMobile} />}
+                    {activeTab === "history" && <HistoryExportTab isMobile={isMobile} />}
+                    {activeTab === "map" && <MapRoutingTab isMobile={isMobile} />}
                     {activeTab !== "overview" && activeTab !== "places" && activeTab !== "report" && activeTab !== "developer" && activeTab !== "alert" && activeTab !== "profile" && activeTab !== "history" && activeTab !== "map" && <PlaceholderTab title={tabTitles[activeTab]} />}
                 </main>
 
-                <DashboardFooter />
+                {!isMobile && <DashboardFooter />}
             </div>
+
+            {isMobile && (
+                <BottomNav
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    onOpenMenu={() => setIsDrawerOpen(true)}
+                />
+            )}
         </div>
     );
 }

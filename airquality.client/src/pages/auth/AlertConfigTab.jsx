@@ -41,7 +41,7 @@ const STEPS = [
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function AlertConfigTab() {
+export default function AlertConfigTab({ isMobile }) {
     const { accessToken, subscriptionTier } = useAuth();
     const isPro = subscriptionTier?.toLowerCase() === "pro";
     const [loading, setLoading] = useState(isPro);
@@ -236,7 +236,7 @@ export default function AlertConfigTab() {
             <div style={{
                 background: "linear-gradient(135deg, #0d6e4e 0%, #10b981 50%, #34d399 100%)",
                 borderRadius: 16, color: "white", padding: "20px 22px",
-                display: "flex", alignItems: "center", gap: 16,
+                display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", gap: 16,
             }}>
                 <div style={{
                     width: 48, height: 48, borderRadius: "50%",
@@ -273,7 +273,7 @@ export default function AlertConfigTab() {
                 </div>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
                 {/* ── LEFT COLUMN ─────────────────────────────────────────── */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                     {/* ── Telegram Setup Guide ───────────────────────────── */}
@@ -434,7 +434,7 @@ export default function AlertConfigTab() {
                             background: C.bg, border: `1px solid ${C.border}`, marginBottom: 12,
                         }}>
                             <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 8 }}>Thêm quy tắc mới</div>
-                            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                            <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 8, alignItems: isMobile ? "stretch" : "flex-end" }}>
                                 <div style={{ flex: 2 }}>
                                     <label style={{ fontSize: 11, color: C.textMuted, display: "block", marginBottom: 3 }}>Trạm quan trắc</label>
                                     <select

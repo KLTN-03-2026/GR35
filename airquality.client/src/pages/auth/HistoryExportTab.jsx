@@ -18,7 +18,7 @@ const C = {
     bg: "#f9fafb"
 };
 
-export default function HistoryExportTab() {
+export default function HistoryExportTab({ isMobile }) {
     const { subscriptionTier } = useAuth();
     const isPro = subscriptionTier?.toLowerCase() === 'pro';
     const [entityType, setEntityType] = useState('city');
@@ -214,7 +214,7 @@ export default function HistoryExportTab() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Header / Description */}
             <div style={{ background: C.white, borderRadius: 14, padding: "20px 24px", border: `1px solid ${C.border}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 16 }}>
                     <div>
                         <h2 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: "0 0 6px 0", display: 'flex', alignItems: 'center', gap: 8 }}>
                             <Database size={20} color={C.green} />
@@ -227,9 +227,9 @@ export default function HistoryExportTab() {
                 </div>
 
                 {/* Filters */}
-                <div style={{ display: 'flex', gap: 16, marginTop: 24, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 16, marginTop: 24, flexWrap: 'wrap' }}>
                     {/* Type Filter */}
-                    <div style={{ flex: 1, minWidth: 200 }}>
+                    <div style={{ flex: 1, minWidth: isMobile ? '100%' : 200 }}>
                         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>Phân loại</label>
                         <select
                             style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${C.border}`, outline: 'none', background: C.bg }}
@@ -242,7 +242,7 @@ export default function HistoryExportTab() {
                     </div>
 
                     {/* Entity Filter */}
-                    <div style={{ flex: 1, minWidth: 200 }}>
+                    <div style={{ flex: 1, minWidth: isMobile ? '100%' : 200 }}>
                         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>
                             {entityType === 'city' ? 'Thành phố' : 'Trạm quan trắc'}
                         </label>
@@ -261,7 +261,7 @@ export default function HistoryExportTab() {
                     </div>
 
                     {/* Date Range Filter */}
-                    <div style={{ flex: 1, minWidth: 140 }}>
+                    <div style={{ flex: 1, minWidth: isMobile ? '100%' : 140 }}>
                         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>Thời gian</label>
                         <select
                             style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${C.border}`, outline: 'none', background: C.bg }}
@@ -276,7 +276,7 @@ export default function HistoryExportTab() {
                     </div>
 
                     {/* PM2.5 Filter */}
-                    <div style={{ flex: 1, minWidth: 140 }}>
+                    <div style={{ flex: 1, minWidth: isMobile ? '100%' : 140 }}>
                         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>Lọc PM2.5 (≥)</label>
                         <input
                             type="number"
@@ -287,7 +287,7 @@ export default function HistoryExportTab() {
                         />
                     </div>
 
-                    <div style={{ flex: 1, minWidth: 120, alignSelf: 'flex-end' }}>
+                    <div style={{ flex: 1, minWidth: isMobile ? '100%' : 120, alignSelf: 'flex-end', marginTop: isMobile ? 8 : 0 }}>
                         <button
                             onClick={fetchHistory}
                             style={{
@@ -304,8 +304,8 @@ export default function HistoryExportTab() {
 
                 {/* Custom Dates Row */}
                 {dateRange === 'custom' && (
-                    <div style={{ display: 'flex', gap: 16, marginTop: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                        <div style={{ flex: 1, minWidth: 150 }}>
+                    <div style={{ display: 'flex', gap: 16, marginTop: 16, alignItems: 'flex-end', flexDirection: isMobile ? 'column' : 'row', flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1, minWidth: isMobile ? '100%' : 150 }}>
                             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>Từ ngày</label>
                             <input
                                 type="date"
@@ -314,7 +314,7 @@ export default function HistoryExportTab() {
                                 onChange={(e) => setCustomStartDate(e.target.value)}
                             />
                         </div>
-                        <div style={{ flex: 1, minWidth: 150 }}>
+                        <div style={{ flex: 1, minWidth: isMobile ? '100%' : 150 }}>
                             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>Đến ngày</label>
                             <input
                                 type="date"
@@ -337,7 +337,7 @@ export default function HistoryExportTab() {
 
             {/* Results Section */}
             <div style={{ background: C.white, borderRadius: 14, padding: "20px 24px", border: `1px solid ${C.border}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 16, marginBottom: 20 }}>
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: C.text }}>
                         Biểu đồ & Dữ liệu
                     </h3>

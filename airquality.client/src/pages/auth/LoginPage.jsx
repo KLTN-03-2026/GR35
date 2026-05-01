@@ -149,6 +149,11 @@ export default function LoginPage() {
             localStorage.setItem("role", roleToStore);
             localStorage.setItem("userName", result.fullName ?? result.userName ?? result.FullName ?? fallbackName);
             localStorage.setItem("subscriptionTier", result.subscriptionTier ?? "Free");
+            if (result.permissions) {
+                localStorage.setItem("permissions", result.permissions);
+            } else {
+                localStorage.removeItem("permissions");
+            }
         }
 
         if (roleToStore === "admin" || roleToStore === "super admin") {

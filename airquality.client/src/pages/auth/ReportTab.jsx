@@ -15,7 +15,7 @@ const C = {
     cardBg: "#f8fafc", // A very light blue-gray for form bg
 };
 
-export default function ReportTab() {
+export default function ReportTab({ isMobile }) {
     const { accessToken } = useAuth();
     const [image, setImage] = useState(null);
     const [imagePreview, setImagePreview] = useState("");
@@ -124,7 +124,7 @@ export default function ReportTab() {
     };
 
     return (
-        <div style={{ display: "flex", gap: 30, fontFamily: "'Be Vietnam Pro', sans-serif" }}>
+        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 30, fontFamily: "'Be Vietnam Pro', sans-serif" }}>
 
             {/* LEFT: MAIN FORM */}
             <div style={{ flex: 1 }}>
@@ -285,7 +285,7 @@ export default function ReportTab() {
             </div>
 
             {/* RIGHT: SIDEBAR */}
-            <div style={{ width: 340, display: "flex", flexDirection: "column", gap: 20, position: "sticky", top: 24, alignSelf: "flex-start" }}>
+            <div style={{ width: isMobile ? "100%" : 340, display: "flex", flexDirection: "column", gap: 20, position: isMobile ? "relative" : "sticky", top: 24, alignSelf: "flex-start" }}>
 
                 {/* Guide Card */}
                 <div style={{ background: C.greenDeep, borderRadius: 16, padding: 24, color: C.white }}>
