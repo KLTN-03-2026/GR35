@@ -121,61 +121,61 @@ function hexToRgba(hex, alpha = 1) {
 function AqiInfoSection({ isMobile }) {
   const [headerRef, headerVisible] = useScrollReveal();
   const [listRef, listVisible] = useScrollReveal({ threshold: 0.05 });
-  const [activePollutant, setActivePollutant] = useState("AQI (US)");
+  const [activePollutant, setActivePollutant] = useState("VN_AQI");
 
   const pollutantLevels = {
-    "AQI (US)": [
-      { level: "Tốt", range: "(0 đến 50)", color: "#63cc2f", img: "/tot.webp", desc: "Không khí trong lành và không có độc tố. Thoải mái hoạt động ngoài trời mà không lo lắng về sức khỏe." },
-      { level: "Vừa phải", range: "(51 đến 100)", color: "#f5d233", img: "/trungbinh.webp", desc: "Chất lượng không khí có thể chấp nhận được đối với hầu hết mọi người, nhưng những người nhạy cảm có thể cảm thấy khó chịu nhẹ." },
-      { level: "Kém", range: "(101 đến 150)", color: "#f39a3d", img: "/kem.webp", desc: "Hơi khó thở một chút có thể xảy ra, đặc biệt đối với những người có vấn đề về hô hấp." },
-      { level: "Không lành mạnh", range: "(151 đến 200)", color: "#ec4f83", img: "/xau.webp", desc: "Chất lượng không khí này đặc biệt nguy hiểm cho trẻ em, phụ nữ mang thai và người cao tuổi. Hạn chế hoạt động ngoài trời." },
-      { level: "Nghiêm trọng", range: "(201 đến 300)", color: "#b748c8", img: "/ratxau.webp", desc: "Tiếp xúc lâu dài có thể gây ra các vấn đề sức khỏe mãn tính hoặc tổn thương cơ quan. Tránh hoạt động ngoài trời." },
-      { level: "Nguy hiểm", range: "(301+)", color: "#e92b49", img: "/nguyhai.webp", desc: "Mức độ ô nhiễm nguy hiểm cao. Nguy cơ sức khỏe đe dọa tính mạng với việc tiếp xúc lâu dài. Ở trong nhà và thực hiện các biện pháp phòng ngừa." },
+    "VN_AQI": [
+      { level: "Tốt", range: "(0 đến 50)", color: "#00E400", img: "/tot.webp", desc: "Chất lượng không khí tốt, không ảnh hưởng tới sức khỏe." },
+      { level: "Trung bình", range: "(51 đến 100)", color: "#FFFF00", img: "/trungbinh.webp", desc: "Chất lượng không khí ở mức chấp nhận được. Tuy nhiên, đối với những người nhạy cảm có thể chịu những tác động nhất định tới sức khỏe." },
+      { level: "Kém", range: "(101 đến 150)", color: "#FF7E00", img: "/kem.webp", desc: "Những người nhạy cảm gặp phải các vấn đề về sức khỏe, những người bình thường ít ảnh hưởng." },
+      { level: "Xấu", range: "(151 đến 200)", color: "#FF0000", img: "/xau.webp", desc: "Những người bình thường bắt đầu có các ảnh hưởng tới sức khỏe, nhóm người nhạy cảm có thể gặp những vấn đề sức khỏe nghiêm trọng hơn." },
+      { level: "Rất xấu", range: "(201 đến 300)", color: "#8F3F97", img: "/ratxau.webp", desc: "Cảnh báo ảnh hưởng tới sức khỏe: mọi người bị ảnh hưởng tới sức khỏe nghiêm trọng hơn." },
+      { level: "Nguy hại", range: "(301 đến 500)", color: "#7E0023", img: "/nguyhai.webp", desc: "Cảnh báo khẩn cấp về sức khỏe: Toàn bộ dân số bị ảnh hưởng tới sức khỏe tới mức nghiêm trọng." },
     ],
     "PM2.5": [
-      { level: "Tốt", range: "(0 đến 30)", color: "#63cc2f", img: "/tot.webp", desc: "Chất lượng không khí hoàn hảo và rõ ràng. Không có rủi ro sức khỏe cho bất kỳ nhóm nào." },
-      { level: "Vừa phải", range: "(31 đến 60)", color: "#f5d233", img: "/trungbinh.webp", desc: "Chất lượng không khí có thể chấp nhận được, nhưng các nhóm nhạy cảm có thể trải qua sự kích thích hô hấp nhẹ." },
-      { level: "Kém", range: "(61 đến 90)", color: "#f39a3d", img: "/kem.webp", desc: "Khó chịu nhẹ và khó thở có thể xảy ra, đặc biệt đối với các nhóm nhạy cảm." },
-      { level: "Không lành mạnh", range: "(91 đến 120)", color: "#ec4f83", img: "/xau.webp", desc: "Mọi người có thể gặp phải tác động sức khỏe; các nhóm nhạy cảm có thể gặp phải hậu quả nghiêm trọng hơn." },
-      { level: "Nghiêm trọng", range: "(121 đến 250)", color: "#b748c8", img: "/ratxau.webp", desc: "Cảnh báo sức khỏe! Mọi người có thể gặp phải tác động sức khỏe nghiêm trọng." },
-      { level: "Nguy hiểm", range: "(251 đến 380+)", color: "#e92b49", img: "/nguyhai.webp", desc: "Cảnh báo sức khỏe trong tình trạng khẩn cấp. Toàn bộ dân số có khả năng bị ảnh hưởng." },
+      { level: "Tốt", range: "(0 đến 25)", color: "#00E400", img: "/tot.webp", desc: "Chất lượng không khí tốt, không ảnh hưởng tới sức khỏe." },
+      { level: "Trung bình", range: "(25.1 đến 50)", color: "#FFFF00", img: "/trungbinh.webp", desc: "Chất lượng không khí ở mức chấp nhận được. Tuy nhiên, đối với những người nhạy cảm có thể chịu những tác động nhất định tới sức khỏe." },
+      { level: "Kém", range: "(50.1 đến 80)", color: "#FF7E00", img: "/kem.webp", desc: "Những người nhạy cảm gặp phải các vấn đề về sức khỏe, những người bình thường ít ảnh hưởng." },
+      { level: "Xấu", range: "(80.1 đến 150)", color: "#FF0000", img: "/xau.webp", desc: "Những người bình thường bắt đầu có các ảnh hưởng tới sức khỏe, nhóm người nhạy cảm có thể gặp những vấn đề sức khỏe nghiêm trọng hơn." },
+      { level: "Rất xấu", range: "(150.1 đến 250)", color: "#8F3F97", img: "/ratxau.webp", desc: "Cảnh báo ảnh hưởng tới sức khỏe: mọi người bị ảnh hưởng tới sức khỏe nghiêm trọng hơn." },
+      { level: "Nguy hại", range: "(250.1+)", color: "#7E0023", img: "/nguyhai.webp", desc: "Cảnh báo khẩn cấp về sức khỏe: Toàn bộ dân số bị ảnh hưởng tới sức khỏe tới mức nghiêm trọng." },
     ],
     O3: [
-      { level: "Tốt", range: "(0 đến 50)", color: "#63cc2f", img: "/tot.webp", desc: "Chất lượng không khí tuyệt vời mà không có tác động đến sức khỏe." },
-      { level: "Vừa phải", range: "(51 đến 100)", color: "#f5d233", img: "/trungbinh.webp", desc: "Chất lượng không khí có thể chấp nhận; tuy nhiên, những người nhạy cảm có thể trải qua triệu chứng hô hấp." },
-      { level: "Kém", range: "(101 đến 168)", color: "#f39a3d", img: "/kem.webp", desc: "Các cá nhân nhạy cảm có thể trải qua những tác động nghiêm trọng hơn lên phổi và tim." },
-      { level: "Không lành mạnh", range: "(169 đến 208)", color: "#ec4f83", img: "/xau.webp", desc: "Trẻ em, người lớn hoạt động và những người có bệnh hô hấp gặp phải tác động sức khỏe." },
-      { level: "Nghiêm trọng", range: "(209 đến 748)", color: "#b748c8", img: "/ratxau.webp", desc: "Tác động sức khỏe nghiêm trọng đối với toàn bộ dân số và tình trạng khẩn cấp cho các nhóm nhạy cảm." },
-      { level: "Nguy hiểm", range: "(749 đến 1250+)", color: "#e92b49", img: "/nguyhai.webp", desc: "Tác động sức khỏe nghiêm trọng; tình trạng khẩn cấp đối với toàn bộ dân số." },
+      { level: "Tốt", range: "(0 đến 160)", color: "#00E400", img: "/tot.webp", desc: "Chất lượng không khí tốt, không ảnh hưởng tới sức khỏe." },
+      { level: "Trung bình", range: "(160.1 đến 200)", color: "#FFFF00", img: "/trungbinh.webp", desc: "Chất lượng không khí ở mức chấp nhận được. Tuy nhiên, đối với những người nhạy cảm có thể chịu những tác động nhất định tới sức khỏe." },
+      { level: "Kém", range: "(200.1 đến 300)", color: "#FF7E00", img: "/kem.webp", desc: "Những người nhạy cảm gặp phải các vấn đề về sức khỏe, những người bình thường ít ảnh hưởng." },
+      { level: "Xấu", range: "(300.1 đến 400)", color: "#FF0000", img: "/xau.webp", desc: "Những người bình thường bắt đầu có các ảnh hưởng tới sức khỏe, nhóm người nhạy cảm có thể gặp những vấn đề sức khỏe nghiêm trọng hơn." },
+      { level: "Rất xấu", range: "(400.1 đến 800)", color: "#8F3F97", img: "/ratxau.webp", desc: "Cảnh báo ảnh hưởng tới sức khỏe: mọi người bị ảnh hưởng tới sức khỏe nghiêm trọng hơn." },
+      { level: "Nguy hại", range: "(800.1+)", color: "#7E0023", img: "/nguyhai.webp", desc: "Cảnh báo khẩn cấp về sức khỏe: Toàn bộ dân số bị ảnh hưởng tới sức khỏe tới mức nghiêm trọng." },
     ],
     CO: [
-      { level: "Tốt", range: "(0 đến 8330)", color: "#63cc2f", img: "/tot.webp", desc: "Không khí sạch và an toàn. Không có tác động sức khỏe nào dự kiến." },
-      { level: "Vừa phải", range: "(8331 đến 16670)", color: "#f5d233", img: "/trungbinh.webp", desc: "Chất lượng không khí có thể chấp nhận được, nhưng một số cá nhân nhạy cảm có thể gặp phải tác động sức khỏe nhẹ." },
-      { level: "Kém", range: "(16671 đến 25000)", color: "#f39a3d", img: "/kem.webp", desc: "Tiếp xúc lâu dài có thể gây ra nhức đầu nhẹ và mệt mỏi, đặc biệt ở các nhóm dễ bị tổn thương." },
-      { level: "Không lành mạnh", range: "(25001 đến 33330)", color: "#ec4f83", img: "/xau.webp", desc: "Tăng nguy cơ tác động tim mạch và triệu chứng nghiêm trọng hơn ở các nhóm nhạy cảm." },
-      { level: "Nghiêm trọng", range: "(33331 đến 41670)", color: "#b748c8", img: "/ratxau.webp", desc: "Tác động sức khỏe nghiêm trọng, bao gồm sự nhầm lẫn và thị lực bị suy giảm; tình trạng khẩn cấp cho các nhóm nhạy cảm." },
-      { level: "Nguy hiểm", range: "(41671 đến 50000+)", color: "#e92b49", img: "/nguyhai.webp", desc: "Nguy hiểm ngay lập tức cho sức khỏe. Nguy cơ cao về tác động tim mạch và thần kinh, có thể gây tử vong." },
+      { level: "Tốt", range: "(0 đến 10000)", color: "#00E400", img: "/tot.webp", desc: "Chất lượng không khí tốt, không ảnh hưởng tới sức khỏe." },
+      { level: "Trung bình", range: "(10001 đến 30000)", color: "#FFFF00", img: "/trungbinh.webp", desc: "Chất lượng không khí ở mức chấp nhận được. Tuy nhiên, đối với những người nhạy cảm có thể chịu những tác động nhất định tới sức khỏe." },
+      { level: "Kém", range: "(30001 đến 45000)", color: "#FF7E00", img: "/kem.webp", desc: "Những người nhạy cảm gặp phải các vấn đề về sức khỏe, những người bình thường ít ảnh hưởng." },
+      { level: "Xấu", range: "(45001 đến 60000)", color: "#FF0000", img: "/xau.webp", desc: "Những người bình thường bắt đầu có các ảnh hưởng tới sức khỏe, nhóm người nhạy cảm có thể gặp những vấn đề sức khỏe nghiêm trọng hơn." },
+      { level: "Rất xấu", range: "(60001 đến 90000)", color: "#8F3F97", img: "/ratxau.webp", desc: "Cảnh báo ảnh hưởng tới sức khỏe: mọi người bị ảnh hưởng tới sức khỏe nghiêm trọng hơn." },
+      { level: "Nguy hại", range: "(90001+)", color: "#7E0023", img: "/nguyhai.webp", desc: "Cảnh báo khẩn cấp về sức khỏe: Toàn bộ dân số bị ảnh hưởng tới sức khỏe tới mức nghiêm trọng." },
     ],
     SO2: [
-      { level: "Tốt", range: "(0 đến 40)", color: "#63cc2f", img: "/tot.webp", desc: "Chất lượng không khí xuất sắc. Không có rủi ro sức khỏe." },
-      { level: "Vừa phải", range: "(41 đến 80)", color: "#f5d233", img: "/trungbinh.webp", desc: "Chất lượng không khí có thể chấp nhận, nhưng nhạy cảm có thể trải qua triệu chứng hô hấp nhẹ." },
-      { level: "Kém", range: "(81 đến 380)", color: "#f39a3d", img: "/kem.webp", desc: "Có khả năng gia tăng triệu chứng hô hấp và bệnh phổi ở các cá nhân nhạy cảm." },
-      { level: "Không lành mạnh", range: "(381 đến 800)", color: "#ec4f83", img: "/xau.webp", desc: "Hơi thở trở nên khó khăn, đặc biệt là đối với trẻ em, những người bị hen suyễn và người cao tuổi." },
-      { level: "Nghiêm trọng", range: "(801 đến 1600)", color: "#b748c8", img: "/ratxau.webp", desc: "Rủi ro nghiêm trọng về các vấn đề hô hấp và tác động tim mạch cho mọi người." },
-      { level: "Nguy hiểm", range: "(1601 đến 2600+)", color: "#e92b49", img: "/nguyhai.webp", desc: "Cảnh báo sức khỏe trong tình trạng khẩn cấp. Rủi ro đáng kể về bệnh nghiêm trọng và tác động đe dọa tính mạng." },
+      { level: "Tốt", range: "(0 đến 125)", color: "#00E400", img: "/tot.webp", desc: "Chất lượng không khí tốt, không ảnh hưởng tới sức khỏe." },
+      { level: "Trung bình", range: "(125.1 đến 350)", color: "#FFFF00", img: "/trungbinh.webp", desc: "Chất lượng không khí ở mức chấp nhận được. Tuy nhiên, đối với những người nhạy cảm có thể chịu những tác động nhất định tới sức khỏe." },
+      { level: "Kém", range: "(350.1 đến 550)", color: "#FF7E00", img: "/kem.webp", desc: "Những người nhạy cảm gặp phải các vấn đề về sức khỏe, những người bình thường ít ảnh hưởng." },
+      { level: "Xấu", range: "(550.1 đến 800)", color: "#FF0000", img: "/xau.webp", desc: "Những người bình thường bắt đầu có các ảnh hưởng tới sức khỏe, nhóm người nhạy cảm có thể gặp những vấn đề sức khỏe nghiêm trọng hơn." },
+      { level: "Rất xấu", range: "(800.1 đến 1600)", color: "#8F3F97", img: "/ratxau.webp", desc: "Cảnh báo ảnh hưởng tới sức khỏe: mọi người bị ảnh hưởng tới sức khỏe nghiêm trọng hơn." },
+      { level: "Nguy hại", range: "(1600.1+)", color: "#7E0023", img: "/nguyhai.webp", desc: "Cảnh báo khẩn cấp về sức khỏe: Toàn bộ dân số bị ảnh hưởng tới sức khỏe tới mức nghiêm trọng." },
     ],
     NO2: [
-      { level: "Tốt", range: "(0 đến 40)", color: "#63cc2f", img: "/tot.webp", desc: "Chất lượng không khí tối ưu. Không có khả năng ảnh hưởng đến sức khỏe." },
-      { level: "Vừa phải", range: "(41 đến 80)", color: "#f5d233", img: "/trungbinh.webp", desc: "Chất lượng không khí có thể chấp nhận; các cá nhân nhạy cảm có thể trải qua sự khó chịu hô hấp nhẹ." },
-      { level: "Kém", range: "(81 đến 180)", color: "#f39a3d", img: "/kem.webp", desc: "Tăng nguy cơ nhiễm trùng hô hấp và giảm chức năng phổi ở các nhóm nhạy cảm." },
-      { level: "Không lành mạnh", range: "(181 đến 190)", color: "#ec4f83", img: "/xau.webp", desc: "Mọi người có thể trải qua các tác động sức khỏe nghiêm trọng hơn, đặc biệt là lên hệ hô hấp." },
-      { level: "Nghiêm trọng", range: "(191 đến 400)", color: "#b748c8", img: "/ratxau.webp", desc: "Cảnh báo sức khỏe: tác động sức khỏe nghiêm trọng cho tất cả; tình trạng khẩn cấp cho các nhóm nhạy cảm." },
-      { level: "Nguy hiểm", range: "(401 đến 500+)", color: "#e92b49", img: "/nguyhai.webp", desc: "Tác động đe dọa tính mạng cho toàn bộ dân số. Nguy cơ sức khỏe ngay lập tức." },
+      { level: "Tốt", range: "(0 đến 100)", color: "#00E400", img: "/tot.webp", desc: "Chất lượng không khí tốt, không ảnh hưởng tới sức khỏe." },
+      { level: "Trung bình", range: "(100.1 đến 200)", color: "#FFFF00", img: "/trungbinh.webp", desc: "Chất lượng không khí ở mức chấp nhận được. Tuy nhiên, đối với những người nhạy cảm có thể chịu những tác động nhất định tới sức khỏe." },
+      { level: "Kém", range: "(200.1 đến 700)", color: "#FF7E00", img: "/kem.webp", desc: "Những người nhạy cảm gặp phải các vấn đề về sức khỏe, những người bình thường ít ảnh hưởng." },
+      { level: "Xấu", range: "(700.1 đến 1200)", color: "#FF0000", img: "/xau.webp", desc: "Những người bình thường bắt đầu có các ảnh hưởng tới sức khỏe, nhóm người nhạy cảm có thể gặp những vấn đề sức khỏe nghiêm trọng hơn." },
+      { level: "Rất xấu", range: "(1200.1 đến 2350)", color: "#8F3F97", img: "/ratxau.webp", desc: "Cảnh báo ảnh hưởng tới sức khỏe: mọi người bị ảnh hưởng tới sức khỏe nghiêm trọng hơn." },
+      { level: "Nguy hại", range: "(2350.1+)", color: "#7E0023", img: "/nguyhai.webp", desc: "Cảnh báo khẩn cấp về sức khỏe: Toàn bộ dân số bị ảnh hưởng tới sức khỏe tới mức nghiêm trọng." },
     ],
   };
 
-  const tabs = ["AQI (US)", "PM2.5", "O3", "CO", "SO2", "NO2"];
-  const levels = pollutantLevels[activePollutant] ?? pollutantLevels["AQI (US)"];
+  const tabs = ["VN_AQI", "PM2.5", "O3", "CO", "SO2", "NO2"];
+  const levels = pollutantLevels[activePollutant] ?? pollutantLevels["VN_AQI"];
 
   return (
     <section
@@ -483,7 +483,7 @@ function HeroSection({ isMobile }) {
               border: "1px solid #a7f3d0",
             }}
           >
-            THẾ HỆ 
+            THẾ HỆ BẢO VỆ MỚI
           </span>
         </div>
 
