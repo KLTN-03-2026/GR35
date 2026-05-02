@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, SwipeableDrawer, useMediaQuery } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import DeckGL from "@deck.gl/react";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
 import { ScatterplotLayer, IconLayer } from "@deck.gl/layers";
@@ -84,6 +85,8 @@ export default function NationalAirQualityPage() {
     const [search, setSearch] = useState("");
     const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
     const [sheetOpen, setSheetOpen] = useState(false);
+    const [selectedStation, setSelectedStation] = useState(null);
+    const navigate = useNavigate();
 
     const metricConfig = METRICS[metric];
 
@@ -250,6 +253,18 @@ export default function NationalAirQualityPage() {
                 getFillColor: (d) => getMetricColor(metricConfig, d[stationMetricKey], 190),
                 getLineColor: [17, 24, 39, 190],
                 pickable: true,
+                onClick: ({ object }) => {
+                    if (object) {
+                        setSelectedStation(object);
+                        setViewState({
+                            ...viewState,
+                            longitude: Number(object.lng),
+                            latitude: Number(object.lat),
+                            zoom: 12,
+                            transitionDuration: 800,
+                        });
+                    }
+                },
             }),
             new ScatterplotLayer({
                 id: "national-air-reports-bg",
@@ -427,6 +442,9 @@ export default function NationalAirQualityPage() {
                                 onViewStateChange={({ viewState: nextViewState }) => setViewState(nextViewState)}
                                 controller={true}
                                 layers={layers}
+                                onClick={(info) => {
+                                    if (!info.object) setSelectedStation(null);
+                                }}
                                 getTooltip={({ object, layer }) => {
                                     if (!object) return null;
                                     if (layer.id === "national-air-reports" || layer.id === "national-air-reports-bg") {
@@ -470,6 +488,34 @@ export default function NationalAirQualityPage() {
                                 </Map>
                             </DeckGL>
 
+                            {selectedStation && (
+                                <div className="station-popup-overlay">
+                                    <div className="station-popup">
+                                        <button
+                                            type="button"
+                                            className="station-popup-close"
+                                            onClick={() => setSelectedStation(null)}
+                                            aria-label="Đóng"
+                                        >
+                                            ✕
+                                        </button>
+                                        <div className="station-popup-name">{selectedStation.stationName}</div>
+                                        <div className="station-popup-province">{selectedStation.provinceName}</div>
+                                        <div className="station-popup-metrics">
+                                            <span className="station-popup-metric-badge" style={{ background: `rgba(${getMetricColor(metricConfig, selectedStation[metricConfig.stationKey], 255).join(',')})` }}>
+                                                {metricConfig.label}: {Number(selectedStation[metricConfig.stationKey] ?? 0).toFixed(1)}
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="station-popup-detail-btn"
+                                            onClick={() => navigate(`/tram/${selectedStation.stationId}`)}
+                                        >
+                                            Xem chi tiết →
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
 
                             <div className="national-air-legend">

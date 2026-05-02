@@ -66,7 +66,7 @@ public class ContactController(ApplicationDbContext dbContext, IEmailService ema
     /// Trả về danh sách liên hệ (phân trang, search, filter, sort theo ngày mới nhất)
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "super admin, admin")]
     public async Task<IActionResult> GetContacts([FromQuery] string? search, [FromQuery] ContactStatus? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         if (page < 1) page = 1;
@@ -127,7 +127,7 @@ public class ContactController(ApplicationDbContext dbContext, IEmailService ema
     /// Trả về chi tiết 1 liên hệ
     /// </summary>
     [HttpGet("{id}")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "super admin, admin")]
     public async Task<IActionResult> GetContact(Guid id)
     {
         var contact = await dbContext.Contacts.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
@@ -141,7 +141,7 @@ public class ContactController(ApplicationDbContext dbContext, IEmailService ema
     /// Cập nhật trạng thái xử lý
     /// </summary>
     [HttpPut("{id}/status")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "super admin, admin")]
     public async Task<IActionResult> UpdateContactStatus(Guid id, [FromBody] UpdateContactStatusRequest request)
     {
         var contact = await dbContext.Contacts.FirstOrDefaultAsync(c => c.Id == id);
@@ -160,7 +160,7 @@ public class ContactController(ApplicationDbContext dbContext, IEmailService ema
     /// Gửi email phản hồi cho user, cập nhật Status thành Resolved và lưu ID của admin xử lý
     /// </summary>
     [HttpPost("{id}/reply")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "super admin, admin")]
     public async Task<IActionResult> ReplyContact(Guid id, [FromBody] ReplyContactRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.ReplyMessage))
@@ -213,7 +213,7 @@ public class ContactController(ApplicationDbContext dbContext, IEmailService ema
     /// Xóa 1 liên hệ
     /// </summary>
     [HttpDelete("{id}")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "super admin, admin")]
     public async Task<IActionResult> DeleteContact(Guid id)
     {
         var contact = await dbContext.Contacts.FirstOrDefaultAsync(c => c.Id == id);
