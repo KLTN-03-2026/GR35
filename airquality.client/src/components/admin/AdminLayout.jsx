@@ -108,6 +108,10 @@ function AdminSidebar({ onLogout }) {
             icon: <Icon d={["M15 7a2 2 0 012 2", "M19 7a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"]} />,
         },
         {
+            path: "/admin/statistics", label: "Thống kê & Báo cáo",
+            icon: <Icon d={["M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"]} />,
+        },
+        {
             path: "/admin/logs", label: "Hệ thống & Logs",
             icon: <Icon d={["M8 9l3 3-3 3", "M13 12h3", "M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"]} />,
         },
@@ -249,6 +253,7 @@ export default function AdminLayout() {
             "/admin/reports",
             "/admin/contacts",
             "/admin/user-management",
+            "/admin/statistics",
             "/admin/logs",
             "/admin/authorization"
         ];

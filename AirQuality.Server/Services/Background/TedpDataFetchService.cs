@@ -16,8 +16,10 @@ namespace AirQuality.Server.Services.Background;
 public class TedpDataFetchService(
     IHttpClientFactory httpClientFactory,
     IServiceScopeFactory serviceScopeFactory,
+    BackgroundJobTracker jobTracker,
     ILogger<TedpDataFetchService> logger) : BackgroundService
 {
+    private const string JobName = "TedpDataFetchService";
     private const string BaseUrl = "https://tedp.vn/api";
     private const string ProvinceUrl = $"{BaseUrl}/province?size=1000";
     private const string PublicDataUrl = $"{BaseUrl}/public-data/search/findPublicDataWithValidParentIn?stationType=4&size=5000";
@@ -32,13 +34,18 @@ public class TedpDataFetchService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        jobTracker.RegisterJob(JobName, "Cào dữ liệu CLKK từ TEDP (tedp.vn) — tỉnh, trạm, AQI giờ", "1 giờ");
         logger.LogInformation("TedpDataFetchService started.");
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
+                jobTracker.ReportStart(JobName);
                 await FetchAndProcessDataAsync(stoppingToken);
+                sw.Stop();
+                jobTracker.ReportSuccess(JobName, 0, sw.Elapsed);
             }
             catch (OperationCanceledException)
             {
@@ -46,6 +53,8 @@ public class TedpDataFetchService(
             }
             catch (Exception ex)
             {
+                sw.Stop();
+                jobTracker.ReportError(JobName, ex);
                 logger.LogError(ex, "Unexpected error in TEDP fetch loop.");
             }
 
@@ -420,8 +429,11 @@ public class TedpDataFetchService(
             {
                 // Update
                 existing.StationName = LimitLength(ts.StationName, 150);
-                existing.Latitude = Math.Round((decimal)ts.Latitude, 6);
-                existing.Longitude = Math.Round((decimal)ts.Longitude, 6);
+                if (ts.Latitude != 0 && ts.Longitude != 0)
+                {
+                    existing.Latitude = Math.Round((decimal)ts.Latitude, 6);
+                    existing.Longitude = Math.Round((decimal)ts.Longitude, 6);
+                }
                 existing.City = LimitLength(city, 50);
             }
             else

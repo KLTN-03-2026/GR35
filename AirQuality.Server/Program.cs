@@ -23,7 +23,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
-//builder.Services.AddHostedService<TedpDataFetchService>();
+builder.Services.AddSingleton<BackgroundJobTracker>();
+builder.Services.AddHostedService<TedpDataFetchService>();
 //builder.Services.AddHostedService<WeatherDataFetchService>();
 //builder.Services.AddHostedService<TelegramDailyAlertService>();
 //builder.Services.AddHostedService<TelegramThresholdAlertService>();
