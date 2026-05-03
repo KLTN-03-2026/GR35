@@ -25,6 +25,8 @@ import ContactPage from './pages/auth/ContactPage';
 import ApiDocumentationPage from './pages/auth/ApiDocumentationPage';
 import AdminContactManagement from './pages/auth/AdminContactManagement';
 import AdminAuthorization from './pages/auth/AdminAuthorization';
+import AdminStatistics from './pages/auth/AdminStatistics';
+import AdminSystemLogs from './pages/auth/AdminSystemLogs';
 import ChatbotWidget from './components/common/ChatbotWidget';
 
 function getPageTitle(pathname) {
@@ -50,6 +52,8 @@ function getPageTitle(pathname) {
         if (pathname === '/admin/data') return 'Admin - Giám sát dữ liệu AQI | EcoAir VN';
         if (pathname === '/admin/reports') return 'Admin - Duyệt báo cáo | EcoAir VN';
         if (pathname === '/admin/authorization') return 'Admin - Phân quyền chức năng | EcoAir VN';
+        if (pathname === '/admin/statistics') return 'Admin - Thống kê & Báo cáo | EcoAir VN';
+        if (pathname === '/admin/logs') return 'Admin - Hệ thống & Logs | EcoAir VN';
         return 'Admin | EcoAir VN';
     }
 
@@ -114,6 +118,8 @@ export default function App() {
                     <Route path="reports" element={<DuyetBaoCaoDiemNongCongDong />} />
                     <Route path="contacts" element={<AdminContactManagement />} />
                     <Route path="authorization" element={<AdminAuthorization />} />
+                    <Route path="statistics" element={<AdminStatistics />} />
+                    <Route path="logs" element={<AdminSystemLogs />} />
                 </Route>
 
                 {/* Fallback */}

@@ -15,8 +15,10 @@ public class WeatherDataFetchService(
     IHttpClientFactory httpClientFactory,
     IServiceScopeFactory serviceScopeFactory,
     IConfiguration configuration,
+    BackgroundJobTracker jobTracker,
     ILogger<WeatherDataFetchService> logger) : BackgroundService
 {
+    private const string JobName = "WeatherDataFetchService";
     private static readonly TimeSpan Interval = TimeSpan.FromHours(1);
     private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan FetchWindow = TimeSpan.FromHours(3);
@@ -25,6 +27,7 @@ public class WeatherDataFetchService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        jobTracker.RegisterJob(JobName, "Lấy dữ liệu thời tiết từ OWM gắn vào observations trạm TEDP", "1 giờ (delay 1 phút)");
         logger.LogInformation("WeatherDataFetchService started. Waiting {Delay} before first run.", InitialDelay);
 
         // Delay ban đầu để TEDP service kịp insert observations
@@ -39,9 +42,13 @@ public class WeatherDataFetchService(
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
+                jobTracker.ReportStart(JobName);
                 await FetchAndUpdateWeatherAsync(stoppingToken);
+                sw.Stop();
+                jobTracker.ReportSuccess(JobName, 0, sw.Elapsed);
             }
             catch (OperationCanceledException)
             {
@@ -49,6 +56,8 @@ public class WeatherDataFetchService(
             }
             catch (Exception ex)
             {
+                sw.Stop();
+                jobTracker.ReportError(JobName, ex);
                 logger.LogError(ex, "Unexpected error in Weather fetch loop.");
             }
 

@@ -1,12 +1,192 @@
 # 2. THIẾT KẾ CƠ SỞ DỮ LIỆU
 
+## 2.0. Sơ đồ Thực thể Liên kết (ER Diagram)
+
+Do cấu trúc cơ sở dữ liệu lớn, sơ đồ ERD được chia thành 5 phân hệ (Module) nhỏ để dễ dàng quan sát và trình bày trong báo cáo:
+
+### Module 1: Người Dùng & Phân Quyền
+```mermaid
+erDiagram
+    Roles {
+        int role_id PK
+        string role_name 
+    }
+    ActionTypes {
+        int action_type_id PK
+    }
+    Users {
+        int user_id PK
+        string email
+        int role_id FK
+        string permissions
+    }
+    AuditLogs {
+        int log_id PK
+        int user_id FK
+        int action_type_id FK
+    }
+    ApiKeys {
+        int api_key_id PK
+        int user_id FK
+    }
+
+    Roles ||--o{ Users : "ủy quyền"
+    ActionTypes ||--o{ AuditLogs : "phân loại"
+    Users ||--o{ AuditLogs : "tạo ra"
+    Users ||--o{ ApiKeys : "sở hữu"
+```
+
+### Module 2: Trạm Quan Trắc & Dữ Liệu
+```mermaid
+erDiagram
+    Cities {
+        int city_id PK
+        string province_name
+    }
+    CityAirQualitySnapshots {
+        int snapshot_id PK
+        float pm25
+        int city_id FK
+    }
+    Stations {
+        int station_id PK
+        string station_name 
+    }
+    AirQualityObservations {
+        int observation_id PK
+        float pm25
+        int station_id FK
+    }
+    AQICategories {
+        int category_id PK
+        int min_aqi 
+    }
+
+    Cities ||--o{ CityAirQualitySnapshots : "sở hữu dữ liệu"
+    Stations ||--o{ AirQualityObservations : "đo lường"
+```
+
+### Module 3: AI & Dự Báo Chỉ Số
+```mermaid
+erDiagram
+    Stations {
+        int station_id PK
+    }
+    AIModels {
+        int model_id PK
+        string model_name 
+    }
+    ModelEvaluations {
+        int evaluation_id PK
+        float rmse
+        int model_id FK
+    }
+    ForecastData {
+        int forecast_id PK
+        int predicted_aqi
+        int station_id FK
+        int model_id FK
+    }
+    KnowledgeDocuments {
+        int document_id PK
+        string title
+        string category
+    }
+    
+    Stations ||--o{ ForecastData : "nhận kết quả"
+    AIModels ||--o{ ForecastData : "xuất kết quả"
+    AIModels ||--o{ ModelEvaluations : "đánh giá độ mượt"
+```
+
+### Module 4: Tương Tác & Cộng Đồng
+```mermaid
+erDiagram
+    Users {
+        int user_id PK
+    }
+    Stations {
+        int station_id PK
+    }
+    Cities {
+        int city_id PK
+    }
+    UserFavoriteStations {
+        int user_id PK,FK
+        int station_id PK,FK 
+    }
+    UserFavoriteCities {
+        int user_id PK,FK
+        int city_id PK,FK 
+    }
+    CommunityReports {
+        bigint report_id PK
+        int user_id FK 
+    }
+    Contacts {
+        uuid id PK
+        string message 
+    }
+
+    Users ||--o{ CommunityReports : "báo cáo"
+    Users ||--o{ UserFavoriteStations : "lưu trạm"
+    Stations ||--o{ UserFavoriteStations : "được lưu"
+    Users ||--o{ UserFavoriteCities : "ghim TP"
+    Cities ||--o{ UserFavoriteCities : "được ghim"
+```
+
+### Module 5: Thanh Toán & Thông Báo
+```mermaid
+erDiagram
+    Users {
+        int user_id PK
+    }
+    SubscriptionPayments {
+        bigint payment_id PK
+        string status
+        int user_id FK 
+    }
+    NotificationPlatforms {
+        int platform_id PK
+        string platform_name 
+    }
+    UserLinkedAccounts {
+        int link_id PK
+        int user_id FK
+        int platform_id FK 
+    }
+    AlertConfigs {
+        int config_id PK
+        int user_id FK
+        int platform_id FK 
+    }
+    NotificationHistories {
+        int notification_id PK
+        int user_id FK
+        int platform_id FK 
+    }
+    AppNotifications {
+        uuid id PK
+        int user_id FK
+        string title
+    }
+
+    Users ||--o{ SubscriptionPayments : "thanh toán (Bill)"
+    Users ||--o{ UserLinkedAccounts : "liên kết mạng xã hội"
+    NotificationPlatforms ||--o{ UserLinkedAccounts : "cung cấp nền tảng"
+    Users ||--o{ AlertConfigs : "thiết lập Auto-push"
+    NotificationPlatforms ||--o{ AlertConfigs : "thông qua"
+    Users ||--o{ NotificationHistories : "nhận (Log)"
+    NotificationPlatforms ||--o{ NotificationHistories : "dịch vụ trung gian"
+    Users ||--o{ AppNotifications : "nhận tin nhắn app"
+```
+
 ## 2.1. Lược đồ cơ sở dữ liệu
 
 Khóa chính được gạch dưới, khóa ngoại được bôi đen
 
 - Roles (<u>role_id</u>, role_name, description): Dùng để chứa danh mục các quyền của hệ thống (Super Admin, Admin, Member, ...)
 - ActionTypes (<u>action_type_id</u>): Dùng để chứa các loại thao tác để log lịch sử hệ thống
-- Users (<u>user_id</u>, full_name, email, password_hash, status, created_at, last_login, heal_condition, subscription_tier, subscription_started_at, subscription_expires_at, **role_id**): Dùng để chứa thông tin chi tiết về tài khoản người dùng và quản trị viên trong hệ thống
+- Users (<u>user_id</u>, full_name, email, password_hash, status, created_at, last_login, heal_condition, subscription_tier, subscription_started_at, subscription_expires_at, permissions, **role_id**): Dùng để chứa thông tin chi tiết về tài khoản người dùng và quản trị viên trong hệ thống
 - ApiKeys (<u>api_key_id</u>, project_name, key_value, created_at, expires_at, calls_used, **user_id**): Dùng để cung cấp chìa khóa API cho Developer / Third-party truy xuất thông tin từ nền tảng
 - AuditLogs (<u>log_id</u>, ip_address, timestamp, **user_id**, **action_type_id**): Dùng để ghi lại phân tích truy vết thao tác và lịch sử của người dùng
 - Contacts (<u>id</u>, full_name, email, subject, message, status, created_at, updated_at, replied_by_admin_id): Dùng để lưu lại đơn liên hệ, góp ý, hoặc yêu cầu hỗ trợ từ khách vãng lai và người dùng hệ thống
@@ -27,6 +207,8 @@ Khóa chính được gạch dưới, khóa ngoại được bôi đen
 - UserLinkedAccounts (<u>link_id</u>, external_account_id, linked_at, **user_id**, **platform_id**): Dùng để chứa thông tin các tài khoản mạng xã hội mà người dùng đã liên kết để nhận thông báo
 - AlertConfigs (<u>config_id</u>, aqi_threshold, is_active, **user_id**, **station_id**, **platform_id**): Dùng để chứa cấu hình ngữ cảnh ngưỡng AQI giới hạn kích hoạt thông báo tự động cho từng User
 - NotificationHistories (<u>notification_id</u>, message_content, sent_at, status, **user_id**, **platform_id**): Dùng để tracking lịch sử và content SMS/Email mà App đã ngầm vận hành đẩy cho User
+- AppNotifications (<u>id</u>, title, message, is_read, type, related_link, created_at, **user_id**): Dùng để lưu trữ các thông báo hiển thị trực tiếp trong ứng dụng cho người dùng
+- KnowledgeDocuments (<u>document_id</u>, title, content, category, embedding_json, created_at, updated_at): Dùng để lưu trữ cơ sở tri thức (Knowledge Base) phục vụ cho hệ thống Chatbot RAG (Retrieval-Augmented Generation)
 
 <br/>
 
@@ -66,6 +248,7 @@ Khóa chính được gạch dưới, khóa ngoại được bôi đen
 | subscription_tier| Nvarchar(20) | No | | "Free" | | Hạng mức gói cước (Free / Pro) |
 | subscription_started_at| Datetime2 | Yes | | None | | Thời điểm gia hạn gói cước |
 | subscription_expires_at| Datetime2 | Yes | | None | | Ngày dự kiến hết hạn dịch vụ |
+| permissions | Nvarchar(1000) | Yes | | "[]" | | Phân quyền chi tiết dạng JSON |
 
 <br/>
 
@@ -369,3 +552,32 @@ Khóa chính được gạch dưới, khóa ngoại được bôi đen
 | status | Nvarchar | No | | None | | Confirm Result "Thành CÔng" (Sent) / Cúp điện failed |
 | user_id | Int | No | FK | None | | Gửi cho ai |
 | platform_id | Int | No | FK | None | | Nến gửi kênh nào |
+
+<br/>
+
+-Table AppNotifications : Dùng để lưu trữ các thông báo hiển thị trực tiếp trong ứng dụng cho người dùng.
+
+| Field | Type | Null | Key | Default | Extra | Description |
+|---|---|---|---|---|---|---|
+| id | UniqueIdentifier | No | PK | (newid()) | | ID duy nhất của thông báo |
+| user_id | Int | No | FK | None | | Định danh người dùng nhận thông báo |
+| title | Nvarchar(255) | No | | None | | Tiêu tiêu thông báo |
+| message | Nvarchar(max) | No | | None | | Nội dung chi tiết thông báo |
+| is_read | Bit | No | | 0 | | Trạng thái đã đọc (1: rồi, 0: chưa) |
+| type | Int | No | | 0 | | Loại thông báo (System, Alert, Promo, ...) |
+| related_link | Nvarchar(500) | Yes | | None | | Liên kết điều hướng khi nhấn vào |
+| created_at | Datetime2 | No | | (getutcdate()) | | Thời điểm tạo thông báo |
+
+<br/>
+
+-Table KnowledgeDocuments : Dùng để lưu trữ cơ sở tri thức phục vụ cho hệ hệ thống Chatbot RAG (Retrieval-Augmented Generation).
+
+| Field | Type | Null | Key | Default | Extra | Description |
+|---|---|---|---|---|---|---|
+| document_id| Int | No | PK | None | auto_increment | ID định danh tài liệu |
+| title | Nvarchar(200) | No | | None | | Tiêu đề đoạn tri thức |
+| content | Nvarchar(max) | No | | None | | Nội dung văn bản tri thức |
+| category | Nvarchar(50) | No | | None | | Phân loại (Sức khỏe, Thuật ngữ, ...) |
+| embedding_json | Nvarchar(max) | Yes | | None | | Vector embedding dạng JSON |
+| created_at | Datetime2 | No | | (getutcdate()) | | Thời điểm tạo bản ghi |
+| updated_at | Datetime2 | No | | (getutcdate()) | | Thời điểm cập nhật cuối |

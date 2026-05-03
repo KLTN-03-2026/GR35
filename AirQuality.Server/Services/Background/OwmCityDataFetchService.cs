@@ -16,8 +16,10 @@ public class OwmCityDataFetchService(
     IHttpClientFactory httpClientFactory,
     IServiceScopeFactory serviceScopeFactory,
     IConfiguration configuration,
+    BackgroundJobTracker jobTracker,
     ILogger<OwmCityDataFetchService> logger) : BackgroundService
 {
+    private const string JobName = "OwmCityDataFetchService";
     private static readonly TimeSpan Interval = TimeSpan.FromHours(1);
     private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(0);
     private const int DelayBetweenCitiesMs = 1200;
@@ -28,6 +30,7 @@ public class OwmCityDataFetchService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        jobTracker.RegisterJob(JobName, "Lấy dữ liệu thời tiết & CLKK từ OpenWeatherMap cho 63 tỉnh/TP", "1 giờ");
         logger.LogInformation("OwmCityDataFetchService started. Waiting {Delay} before first run.", InitialDelay);
 
         try { await Task.Delay(InitialDelay, stoppingToken); }
@@ -35,13 +38,19 @@ public class OwmCityDataFetchService(
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
+                jobTracker.ReportStart(JobName);
                 await FetchAllCitiesAsync(stoppingToken);
+                sw.Stop();
+                jobTracker.ReportSuccess(JobName, 0, sw.Elapsed);
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex)
             {
+                sw.Stop();
+                jobTracker.ReportError(JobName, ex);
                 logger.LogError(ex, "Unexpected error in OWM city fetch loop.");
             }
 

@@ -9,12 +9,15 @@ public class TelegramDailyAlertService(
     IServiceProvider serviceProvider,
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration,
+    BackgroundJobTracker jobTracker,
     ILogger<TelegramDailyAlertService> logger) : BackgroundService
 {
+    private const string JobName = "TelegramDailyAlertService";
     private readonly TimeSpan _targetTime = new TimeSpan(7, 5, 0); // 7:05 AM
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        jobTracker.RegisterJob(JobName, "Gửi tin nhắn Telegram tổng hợp AQI hàng ngày (7:05 sáng)", "Hàng ngày 7:05 AM");
         logger.LogInformation("TelegramDailyAlertService is starting.");
 
         while (!stoppingToken.IsCancellationRequested)
@@ -37,12 +40,18 @@ public class TelegramDailyAlertService(
 
             await Task.Delay(delay, stoppingToken);
 
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
+                jobTracker.ReportStart(JobName);
                 await DoWorkAsync(stoppingToken);
+                sw.Stop();
+                jobTracker.ReportSuccess(JobName, 0, sw.Elapsed);
             }
             catch (Exception ex)
             {
+                sw.Stop();
+                jobTracker.ReportError(JobName, ex);
                 logger.LogError(ex, "Error occurred executing TelegramDailyAlertService.");
             }
         }

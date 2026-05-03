@@ -11,8 +11,10 @@ public class TelegramThresholdAlertService(
     IServiceProvider serviceProvider,
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration,
+    BackgroundJobTracker jobTracker,
     ILogger<TelegramThresholdAlertService> logger) : BackgroundService
 {
+    private const string JobName = "TelegramThresholdAlertService";
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan CooldownPeriod = TimeSpan.FromHours(4); // 4 hours before sending another alert for the same config
     
@@ -21,16 +23,23 @@ public class TelegramThresholdAlertService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        jobTracker.RegisterJob(JobName, "Kiểm tra ngưỡng AQI và gửi cảnh báo Telegram theo cấu hình user", "1 phút");
         logger.LogInformation("TelegramThresholdAlertService is starting.");
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
+                jobTracker.ReportStart(JobName);
                 await DoWorkAsync(stoppingToken);
+                sw.Stop();
+                jobTracker.ReportSuccess(JobName, 0, sw.Elapsed);
             }
             catch (Exception ex)
             {
+                sw.Stop();
+                jobTracker.ReportError(JobName, ex);
                 logger.LogError(ex, "Error occurred executing TelegramThresholdAlertService.");
             }
 
