@@ -153,31 +153,37 @@ public class AuthController(
         }
 
         var user = await dbContext.Users.FirstOrDefaultAsync(x => x.Email.ToLower() == email);
-        if (user is not null && user.Status == 1)
+        if (user is null)
         {
-            var token = GeneratePasswordResetToken(user);
-            var resetUrl = $"{Request.Scheme}://{Request.Host}/reset-password?token={Uri.EscapeDataString(token)}";
-
-            var emailBody = $@"
-                <html>
-                <body style='font-family: Arial, sans-serif;'>
-                    <h2>Đặt lại mật khẩu EcoAir</h2>
-                    <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>
-                    <p>Nhấn vào nút bên dưới để tạo mật khẩu mới (liên kết có hiệu lực trong 15 phút):</p>
-                    <p style='margin: 24px 0;'>
-                        <a href='{resetUrl}'
-                           style='background:#16a34a;color:white;text-decoration:none;padding:12px 18px;border-radius:8px;display:inline-block;font-weight:600;'>
-                            Đặt lại mật khẩu
-                        </a>
-                    </p>
-                    <p>Nếu bạn không thực hiện yêu cầu này, có thể bỏ qua email này.</p>
-                </body>
-                </html>";
-
-            await emailService.SendEmailAsync(email, "EcoAir - Đặt lại mật khẩu", emailBody);
+            return BadRequest(new { message = "Email không tồn tại trong hệ thống." });
+        }
+        if (user.Status != 1)
+        {
+            return BadRequest(new { message = "Tài khoản chưa được kích hoạt hoặc đã bị khóa." });
         }
 
-        return Ok(new { message = "Nếu email tồn tại trong hệ thống, chúng tôi đã gửi liên kết đặt lại mật khẩu." });
+        var token = GeneratePasswordResetToken(user);
+        var resetUrl = $"{Request.Scheme}://{Request.Host}/reset-password?token={Uri.EscapeDataString(token)}";
+
+        var emailBody = $@"
+            <html>
+            <body style='font-family: Arial, sans-serif;'>
+                <h2>Đặt lại mật khẩu EcoAir</h2>
+                <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>
+                <p>Nhấn vào nút bên dưới để tạo mật khẩu mới (liên kết có hiệu lực trong 15 phút):</p>
+                <p style='margin: 24px 0;'>
+                    <a href='{resetUrl}'
+                       style='background:#16a34a;color:white;text-decoration:none;padding:12px 18px;border-radius:8px;display:inline-block;font-weight:600;'>
+                        Đặt lại mật khẩu
+                    </a>
+                </p>
+                <p>Nếu bạn không thực hiện yêu cầu này, có thể bỏ qua email này.</p>
+            </body>
+            </html>";
+
+        await emailService.SendEmailAsync(email, "EcoAir - Đặt lại mật khẩu", emailBody);
+
+        return Ok(new { message = "Đã gửi liên kết đặt lại mật khẩu đến email của bạn." });
     }
 
     [AllowAnonymous]

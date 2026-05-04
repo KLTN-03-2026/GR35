@@ -159,6 +159,11 @@ public class UserManagementController(ApplicationDbContext dbContext) : Controll
             return NotFound(new { message = "Không tìm thấy người dùng." });
         }
 
+        if (user.Role.RoleName.ToLower() == "super admin")
+        {
+            return BadRequest(new { message = "Không thể khóa tài khoản Super Admin." });
+        }
+
         user.Status = request.IsLocked ? 0 : 1;
         await dbContext.SaveChangesAsync();
 

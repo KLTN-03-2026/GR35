@@ -20,12 +20,27 @@ public class StationMonitorController(ApplicationDbContext dbContext) : Controll
         var now = DateTime.UtcNow;
         var onlineThreshold = now.AddHours(-2);
 
+        int? searchStationId = null;
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var cleanKeyword = keyword;
+            if (cleanKeyword.StartsWith("ST-", StringComparison.OrdinalIgnoreCase))
+            {
+                cleanKeyword = cleanKeyword.Substring(3);
+            }
+            if (int.TryParse(cleanKeyword, out int parsedId))
+            {
+                searchStationId = parsedId;
+            }
+        }
+
         var rawStations = await dbContext.Stations
             .AsNoTracking()
             .Where(s => string.IsNullOrWhiteSpace(keyword)
                         || EF.Functions.Like(s.StationName, $"%{keyword}%")
                         || EF.Functions.Like(s.City, $"%{keyword}%")
-                        || EF.Functions.Like(s.Provider, $"%{keyword}%"))
+                        || EF.Functions.Like(s.Provider, $"%{keyword}%")
+                        || (searchStationId.HasValue && s.StationId == searchStationId.Value))
             .Select(s => new
             {
                 s.StationId,

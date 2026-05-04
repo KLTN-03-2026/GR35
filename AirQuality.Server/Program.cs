@@ -154,8 +154,9 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+try
 {
+    using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await SeedData.EnsureSeedRolesAsync(dbContext);
 
@@ -163,16 +164,17 @@ using (var scope = app.Services.CreateScope())
     var embeddingService = scope.ServiceProvider.GetRequiredService<EmbeddingService>();
     await KnowledgeBaseSeeder.SeedAsync(dbContext, embeddingService);
 }
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Lỗi khi seed dữ liệu khởi động. App vẫn tiếp tục chạy.");
+}
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 

@@ -6,6 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>AirQuality.Server-5744ae98-661d-4184-b6ab-63f5cd9d5c26</UserSecretsId>
     <SpaRoot>..\airquality.client</SpaRoot>
+  </PropertyGroup>
+
+  <!-- SpaProxy chỉ dùng khi Debug/Development -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
     <SpaProxyServerUrl>https://localhost:62226</SpaProxyServerUrl>
   </PropertyGroup>
@@ -40,10 +44,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
-    <PackageReference Include="Microsoft.AspNetCore.SpaProxy">
+    <PackageReference Include="Microsoft.AspNetCore.SpaProxy" Condition="'$(Configuration)' == 'Debug'">
       <Version>8.*-*</Version>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.7" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 

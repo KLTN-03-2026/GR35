@@ -235,14 +235,12 @@ export default function AirQualityDataPage() {
     }, [validStations]);
 
     const highestAqi = useMemo(() => {
-        const sorted = [...validStations].sort((a, b) => Number(b.calculatedAqi ?? 0) - Number(a.calculatedAqi ?? 0));
-        return sorted[0] ?? null;
-    }, [validStations]);
+        return rankings.polluted.length > 0 ? rankings.polluted[0] : null;
+    }, [rankings.polluted]);
 
     const cleanestAqi = useMemo(() => {
-        const sorted = [...validStations].sort((a, b) => Number(a.calculatedAqi ?? 0) - Number(b.calculatedAqi ?? 0));
-        return sorted[0] ?? null;
-    }, [validStations]);
+        return rankings.cleanest.length > 0 ? rankings.cleanest[0] : null;
+    }, [rankings.cleanest]);
 
     const childImpacts = [
         {
@@ -370,13 +368,13 @@ export default function AirQualityDataPage() {
                         <StatCard title="AQI trung bình" value={averageAqi} sub="Toàn bộ trạm quan trắc" tone="default" />
                         <StatCard
                             title="Ô nhiễm cao nhất"
-                            value={highestAqi?.calculatedAqi ?? "--"}
+                            value={highestAqi?.aqi ?? "--"}
                             sub={highestAqi?.city || "Chưa có dữ liệu"}
                             tone="danger"
                         />
                         <StatCard
                             title="Trong lành nhất"
-                            value={cleanestAqi?.calculatedAqi ?? "--"}
+                            value={cleanestAqi?.aqi ?? "--"}
                             sub={cleanestAqi?.city || "Chưa có dữ liệu"}
                             tone="good"
                         />
