@@ -153,6 +153,7 @@ export default function Navbar({ activePage = "Trang chủ" }) {
                                 borderBottom: isActive ? `2px solid ${theme.green}` : "2px solid transparent",
                                 paddingBottom: 2,
                                 whiteSpace: "nowrap",
+                                transition: "all 0.3s ease",
                             }}
                         >
                             {item.label}

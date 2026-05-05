@@ -194,6 +194,12 @@ export default function ProfileHealthTab({ onProfileUpdated, isMobile }) {
 
     function toggleCondition(condition) {
         if (!handleProCheck()) return;
+        if (!healthConditions.includes(condition) && healthConditions.length >= 10) {
+            setError("Chỉ giới hạn 10 tình trạng bệnh, không cho phép thứ 11.");
+            setMessage("");
+            return;
+        }
+        setError("");
         setHealthConditions((prev) =>
             prev.includes(condition) ? prev.filter((x) => x !== condition) : [...prev, condition],
         );
@@ -207,8 +213,14 @@ export default function ProfileHealthTab({ onProfileUpdated, isMobile }) {
             setCustomCondition("");
             return;
         }
+        if (healthConditions.length >= 10) {
+            setError("Chỉ giới hạn 10 tình trạng bệnh, không cho phép thứ 11.");
+            setMessage("");
+            return;
+        }
 
-        setHealthConditions((prev) => [...prev, value].slice(0, 10));
+        setError("");
+        setHealthConditions((prev) => [...prev, value]);
         setCustomCondition("");
     }
 
@@ -262,6 +274,10 @@ export default function ProfileHealthTab({ onProfileUpdated, isMobile }) {
 
     async function handleChangePassword(e) {
         e.preventDefault();
+        if (passwordForm.currentPassword === passwordForm.newPassword) {
+            setError("Mật khẩu mới phải khác mật khẩu cũ.");
+            return;
+        }
         if (passwordForm.newPassword !== passwordForm.confirmPassword) {
             setError("Mật khẩu mới và xác nhận không khớp.");
             return;
@@ -660,8 +676,8 @@ export default function ProfileHealthTab({ onProfileUpdated, isMobile }) {
                         fontSize: 13,
                         fontWeight: 600,
                         padding: "9px 14px",
-                        cursor: changingPassword ? "default" : "pointer",
-                        opacity: changingPassword || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword ? 0.7 : 1,
+                        cursor: (changingPassword || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) ? "not-allowed" : "pointer",
+                        opacity: (changingPassword || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) ? 0.5 : 1,
                     }}
                 >
                     {changingPassword ? "Đang xử lý..." : "Đổi mật khẩu"}

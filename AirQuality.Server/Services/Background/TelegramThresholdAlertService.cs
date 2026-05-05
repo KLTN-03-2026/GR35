@@ -4,6 +4,10 @@ using System.Text.Json;
 using AirQuality.Server.Data;
 using AirQuality.Server.Models.Entites;
 using Microsoft.EntityFrameworkCore;
+using AirQuality.Server.Models.Enums;
+using Microsoft.AspNetCore.SignalR;
+using AirQuality.Server.Hubs;
+using AirQuality.Server.Models.Entities;
 
 namespace AirQuality.Server.Services.Background;
 
@@ -123,16 +127,42 @@ public class TelegramThresholdAlertService(
             {
                 _lastAlertsCache[config.ConfigId] = DateTime.UtcNow; // Update cache
 
+                // Add to AppNotification
+                var notification = new AppNotification
+                {
+                    UserId = config.UserId,
+                    Title = "Cảnh báo AQI",
+                    Message = $"Trạm {config.Station.StationName} ghi nhận AQI {aqi}, vượt ngưỡng {config.AqiThreshold} của bạn.",
+                    Type = NotificationType.AqiAlert,
+                    CreatedAt = DateTime.UtcNow,
+                    IsRead = false,
+                    RelatedLink = "/ban-do"
+                };
+                dbContext.AppNotifications.Add(notification);
+
                 // Optionally, log history
                 dbContext.Set<NotificationHistory>().Add(new NotificationHistory
                 {
                     UserId = config.UserId,
                     PlatformId = telegramPlatform.PlatformId,
-                    MessageContent = $"[EcoAir] Cảnh báo AQI. Ngưỡng mức tại {config.Station.StationName}: {aqi}.",
+                    MessageContent = $"[EcoAir] Cảnh báo AQI. Trạm {config.Station.StationName} ghi nhận AQI {aqi}, vượt ngưỡng {config.AqiThreshold} của bạn.",
                     SentAt = DateTime.UtcNow,
                     Status = "sent"
                 });
                 await dbContext.SaveChangesAsync(stoppingToken);
+
+                // Notify frontend via SignalR
+                var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<NotificationHub>>();
+                await hubContext.Clients.Group($"User_{config.UserId}").SendAsync("ReceiveNotification", new
+                {
+                    id = notification.Id,
+                    title = notification.Title,
+                    message = notification.Message,
+                    type = notification.Type.ToString(),
+                    createdAt = notification.CreatedAt,
+                    isRead = false,
+                    relatedLink = notification.RelatedLink
+                }, stoppingToken);
             }
         }
     }

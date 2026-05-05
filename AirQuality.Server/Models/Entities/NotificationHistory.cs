@@ -12,7 +12,7 @@ public class NotificationHistory
     public int NotificationId { get; set; }
 
     [Required]
-    [Column("message_content", TypeName = "text")]
+    [Column("message_content")]
     public string MessageContent { get; set; } = string.Empty;
 
     [Required]
