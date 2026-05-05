@@ -121,132 +121,135 @@ export default function ContactPage() {
                         <Grid size={{ xs: 12, md: 5 }}>
                             <Box
                                 sx={{
-                                borderRadius: 16,
-                                background: "linear-gradient(145deg, #065f46, #16a34a)",
+                                    borderRadius: 16,
+                                    background: "linear-gradient(145deg, #065f46, #16a34a)",
                                     p: "24px 22px",
-                                color: "white",
-                                minHeight: 420,
-                                boxShadow: "0 12px 30px rgba(16, 185, 129, 0.2)",
-                            }}
-                        >
-                            <Typography component="h2" sx={{ mt: 0, mb: 1.2, fontSize: 28, fontWeight: 700 }}>Tư vấn nhanh</Typography>
-                            <Typography sx={{ mt: 0, mb: 2.75, lineHeight: 1.65, color: "rgba(255,255,255,0.9)" }}>
-                                Để lại thông tin để nhận tư vấn giải pháp phù hợp cho gia đình, doanh nghiệp hoặc tích hợp API.
-                            </Typography>
+                                    color: "white",
+                                    minHeight: 420,
+                                    boxShadow: "0 12px 30px rgba(16, 185, 129, 0.2)",
+                                }}
+                            >
+                                <Typography component="h2" sx={{ mt: 0, mb: 1.2, fontSize: 28, fontWeight: 700 }}>Tư vấn nhanh</Typography>
+                                <Typography sx={{ mt: 0, mb: 2.75, lineHeight: 1.65, color: "rgba(255,255,255,0.9)" }}>
+                                    Để lại thông tin để nhận tư vấn giải pháp phù hợp cho gia đình, doanh nghiệp hoặc tích hợp API.
+                                </Typography>
 
-                            <Stack spacing={1.5}>
-                                <div style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, padding: "12px 14px" }}>
-                                    <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 3 }}>Thời gian phản hồi</div>
-                                    <div style={{ fontWeight: 700 }}>Dưới 24 giờ làm việc</div>
-                                </div>
-                                <div style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, padding: "12px 14px" }}>
-                                    <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 3 }}>Hỗ trợ ưu tiên</div>
-                                    <div style={{ fontWeight: 700 }}>Khách hàng Pro & Doanh nghiệp</div>
-                                </div>
-                                <div style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, padding: "12px 14px" }}>
-                                    <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 3 }}>Khung giờ hỗ trợ</div>
-                                    <div style={{ fontWeight: 700 }}>08:00 - 22:00, Thứ 2 - Chủ nhật</div>
-                                </div>
-                            </Stack>
+                                <Stack spacing={1.5}>
+                                    <div style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, padding: "12px 14px" }}>
+                                        <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 3 }}>Thời gian phản hồi</div>
+                                        <div style={{ fontWeight: 700 }}>Dưới 24 giờ làm việc</div>
+                                    </div>
+                                    <div style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, padding: "12px 14px" }}>
+                                        <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 3 }}>Hỗ trợ ưu tiên</div>
+                                        <div style={{ fontWeight: 700 }}>Khách hàng Pro & Doanh nghiệp</div>
+                                    </div>
+                                    <div style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, padding: "12px 14px" }}>
+                                        <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 3 }}>Khung giờ hỗ trợ</div>
+                                        <div style={{ fontWeight: 700 }}>08:00 - 22:00, Thứ 2 - Chủ nhật</div>
+                                    </div>
+                                </Stack>
                             </Box>
                         </Grid>
 
                         <Grid size={{ xs: 12, md: 7 }}>
                             <Box
-                            component="form"
-                            onSubmit={handleSubmit}
-                            sx={{
-                                borderRadius: 16,
-                                border: "1px solid #dbe3ef",
-                                background: "#ffffff",
-                                p: "22px",
-                                boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)",
-                            }}
-                        >
-                            <h2 style={{ marginTop: 0, marginBottom: 6, fontSize: 30, color: "#0f172a" }}>Gửi yêu cầu hỗ trợ</h2>
-                            <p style={{ marginTop: 0, marginBottom: 18, color: theme.textMuted, fontSize: 14 }}>
-                                Điền thông tin của bạn, chúng tôi sẽ liên hệ lại sớm.
-                            </p>
-
-                            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5, mb: 1.5 }}>
-                                <InputField
-                                    label="Họ và tên"
-                                    name="fullName"
-                                    value={formData.fullName}
-                                    onChange={handleChange}
-                                    placeholder="Nguyễn Văn A"
-                                    required
-                                />
-                                <InputField
-                                    label="Email"
-                                    name="email"
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    placeholder="ban@ecoair.vn"
-                                    required
-                                />
-                            </Box>
-
-                            <div style={{ marginBottom: 12 }}>
-                                <InputField
-                                    label="Tiêu đề"
-                                    name="subject"
-                                    value={formData.subject}
-                                    onChange={handleChange}
-                                    placeholder="Vấn đề bạn cần hỗ trợ..."
-                                    required
-                                />
-                            </div>
-
-                            <div style={{ marginBottom: 14 }}>
-                                <label style={{ display: "block", marginBottom: 7, fontSize: 13, fontWeight: 600, color: "#334155" }}>
-                                    Nội dung
-                                </label>
-                                <textarea
-                                    name="message"
-                                    value={formData.message}
-                                    onChange={handleChange}
-                                    placeholder="Mô tả yêu cầu của bạn..."
-                                    required
-                                    rows={6}
-                                    style={{
-                                        width: "100%",
-                                        borderRadius: 12,
-                                        border: "1px solid #cbd5e1",
-                                        padding: "12px 13px",
-                                        fontSize: 14,
-                                        outline: "none",
-                                        resize: "vertical",
-                                        boxSizing: "border-box",
-                                        fontFamily: "inherit",
-                                    }}
-                                />
-                            </div>
-
-                            {successMessage && (
-                                <div style={{ background: "#ecfdf3", border: "1px solid #86efac", color: "#166534", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: 14 }}>
-                                    {successMessage}
-                                </div>
-                            )}
-
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                style={{
-                                    width: "100%",
-                                    height: 46,
-                                    border: "none",
-                                    borderRadius: 999,
-                                    background: submitting ? "#94a3b8" : "linear-gradient(135deg, #047857, #22c55e)",
-                                    color: "white",
-                                    fontWeight: 700,
-                                    fontSize: 15,
-                                    cursor: submitting ? "not-allowed" : "pointer",
+                                component="form"
+                                onSubmit={handleSubmit}
+                                sx={{
+                                    borderRadius: 16,
+                                    border: "1px solid #dbe3ef",
+                                    background: "#ffffff",
+                                    p: "22px",
+                                    boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)",
                                 }}
                             >
-                                {submitting ? "Đang gửi..." : "Gửi liên hệ"}
-                            </button>
+                                <h2 style={{ marginTop: 0, marginBottom: 6, fontSize: 30, color: "#0f172a" }}>Gửi yêu cầu hỗ trợ</h2>
+                                <p style={{ marginTop: 0, marginBottom: 18, color: theme.textMuted, fontSize: 14 }}>
+                                    Điền thông tin của bạn, chúng tôi sẽ liên hệ lại sớm.
+                                </p>
+
+                                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5, mb: 1.5 }}>
+                                    <InputField
+                                        label="Họ và tên"
+                                        name="fullName"
+                                        value={formData.fullName}
+                                        onChange={handleChange}
+                                        placeholder="Nguyễn Văn A"
+                                        required
+                                    />
+                                    <InputField
+                                        label="Email"
+                                        name="email"
+                                        type="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        placeholder="ban@ecoair.vn"
+                                        required
+                                        pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                                        onInvalid={(e) => e.target.setCustomValidity("Vui lòng nhập địa chỉ email hợp lệ.")}
+                                        onInput={(e) => e.target.setCustomValidity("")}
+                                    />
+                                </Box>
+
+                                <div style={{ marginBottom: 12 }}>
+                                    <InputField
+                                        label="Tiêu đề"
+                                        name="subject"
+                                        value={formData.subject}
+                                        onChange={handleChange}
+                                        placeholder="Vấn đề bạn cần hỗ trợ..."
+                                        required
+                                    />
+                                </div>
+
+                                <div style={{ marginBottom: 14 }}>
+                                    <label style={{ display: "block", marginBottom: 7, fontSize: 13, fontWeight: 600, color: "#334155" }}>
+                                        Nội dung
+                                    </label>
+                                    <textarea
+                                        name="message"
+                                        value={formData.message}
+                                        onChange={handleChange}
+                                        placeholder="Mô tả yêu cầu của bạn..."
+                                        required
+                                        rows={6}
+                                        style={{
+                                            width: "100%",
+                                            borderRadius: 12,
+                                            border: "1px solid #cbd5e1",
+                                            padding: "12px 13px",
+                                            fontSize: 14,
+                                            outline: "none",
+                                            resize: "vertical",
+                                            boxSizing: "border-box",
+                                            fontFamily: "inherit",
+                                        }}
+                                    />
+                                </div>
+
+                                {successMessage && (
+                                    <div style={{ background: "#ecfdf3", border: "1px solid #86efac", color: "#166534", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: 14 }}>
+                                        {successMessage}
+                                    </div>
+                                )}
+
+                                <button
+                                    type="submit"
+                                    disabled={submitting}
+                                    style={{
+                                        width: "100%",
+                                        height: 46,
+                                        border: "none",
+                                        borderRadius: 999,
+                                        background: submitting ? "#94a3b8" : "linear-gradient(135deg, #047857, #22c55e)",
+                                        color: "white",
+                                        fontWeight: 700,
+                                        fontSize: 15,
+                                        cursor: submitting ? "not-allowed" : "pointer",
+                                    }}
+                                >
+                                    {submitting ? "Đang gửi..." : "Gửi liên hệ"}
+                                </button>
                             </Box>
                         </Grid>
                     </Grid>
@@ -256,7 +259,7 @@ export default function ContactPage() {
     );
 }
 
-function InputField({ label, name, type = "text", value, onChange, placeholder, required = false }) {
+function InputField({ label, name, type = "text", value, onChange, placeholder, required = false, ...props }) {
     return (
         <div>
             <label style={{ display: "block", marginBottom: 7, fontSize: 13, fontWeight: 600, color: "#334155" }}>
@@ -279,6 +282,7 @@ function InputField({ label, name, type = "text", value, onChange, placeholder, 
                     boxSizing: "border-box",
                     fontFamily: "inherit",
                 }}
+                {...props}
             />
         </div>
     );

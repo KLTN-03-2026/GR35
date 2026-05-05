@@ -219,7 +219,8 @@ function AqiInfoSection({ isMobile }) {
                   color: isActive ? "#3fa9ff" : "rgba(255,255,255,0.7)",
                   fontSize: 14,
                   fontWeight: isActive ? 600 : 500,
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  transition: "all 0.3s ease"
                 }}
               >
                 {tab}

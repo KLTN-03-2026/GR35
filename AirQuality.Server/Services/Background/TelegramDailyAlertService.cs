@@ -62,6 +62,29 @@ public class TelegramDailyAlertService(
         using var scope = serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+        // Tự động xóa thông báo cũ hơn 30 ngày (Giải phóng bộ nhớ)
+        try
+        {
+            var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+            
+            // Note: Since this is EF Core, ExecuteDeleteAsync is even faster if available,
+            // but we'll stick to a robust approach using Where
+            var oldNotifications = await dbContext.AppNotifications
+                .Where(n => n.CreatedAt < thirtyDaysAgo)
+                .ToListAsync(stoppingToken);
+
+            if (oldNotifications.Count > 0)
+            {
+                dbContext.AppNotifications.RemoveRange(oldNotifications);
+                await dbContext.SaveChangesAsync(stoppingToken);
+                logger.LogInformation($"Cleaned up {oldNotifications.Count} old notifications.");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to clean up old notifications.");
+        }
+
         var botToken = configuration["Telegram:BotToken"];
         if (string.IsNullOrEmpty(botToken))
         {

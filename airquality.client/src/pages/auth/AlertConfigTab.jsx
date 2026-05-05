@@ -116,15 +116,22 @@ export default function AlertConfigTab({ isMobile }) {
 
     // ── Telegram Link ─────────────────────────────────────────────────────────
     async function handleLinkTelegram() {
-        if (!chatIdInput.trim()) { setErr("Chat ID không được để trống."); return; }
+        if (!chatIdInput.trim()) { setErr("Chat ID không được để trống."); setMsg(""); return; }
+        const cleanChatId = chatIdInput.trim();
+        if (!/^-?\d+$/.test(cleanChatId)) {
+            setErr("Chat ID không hợp lệ.");
+            setMsg("");
+            return;
+        }
+
         setSaving(true); setErr(""); setMsg("");
         try {
             const res = await fetch("/api/alert-config/telegram/link", {
-                method: "POST", headers, body: JSON.stringify({ chatId: chatIdInput.trim() }),
+                method: "POST", headers, body: JSON.stringify({ chatId: cleanChatId }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || "Lỗi");
-            setTelegramChatId(chatIdInput.trim());
+            setTelegramChatId(cleanChatId);
             setTelegramConnected(true);
             setMsg(data.message);
         } catch (e) { setErr(e.message); } finally { setSaving(false); }
@@ -144,7 +151,12 @@ export default function AlertConfigTab({ isMobile }) {
 
     // ── Create Alert Config ───────────────────────────────────────────────────
     async function handleCreateConfig() {
-        if (!newStationId) { setErr("Vui lòng chọn trạm quan trắc."); return; }
+        if (!newStationId) { setErr("Vui lòng chọn trạm quan trắc."); setMsg(""); return; }
+        if (alertConfigs.some(c => c.stationId === parseInt(newStationId))) {
+            setErr("Bạn đã có cấu hình cảnh báo cho trạm này.");
+            setMsg("");
+            return;
+        }
         setSaving(true); setErr(""); setMsg("");
         try {
             const res = await fetch("/api/alert-config", {
@@ -174,13 +186,34 @@ export default function AlertConfigTab({ isMobile }) {
 
     // ── Toggle Active ─────────────────────────────────────────────────────────
     async function handleToggleActive(config) {
+        // Optimistic UI update
+        setAlertConfigs((prev) =>
+            prev.map((c) =>
+                c.configId === config.configId ? { ...c, isActive: !c.isActive } : c
+            )
+        );
+
         try {
             const res = await fetch("/api/alert-config", {
                 method: "POST", headers,
                 body: JSON.stringify({ configId: config.configId, stationId: config.stationId, aqiThreshold: config.aqiThreshold, isActive: !config.isActive }),
             });
-            if (res.ok) load();
-        } catch { /* silent */ }
+            if (!res.ok) {
+                // Revert if failed
+                setAlertConfigs((prev) =>
+                    prev.map((c) =>
+                        c.configId === config.configId ? { ...c, isActive: config.isActive } : c
+                    )
+                );
+            }
+        } catch {
+            // Revert on exception
+            setAlertConfigs((prev) =>
+                prev.map((c) =>
+                    c.configId === config.configId ? { ...c, isActive: config.isActive } : c
+                )
+            );
+        }
     }
 
     if (!isPro) {
@@ -347,7 +380,7 @@ export default function AlertConfigTab({ isMobile }) {
                                 Chưa có thông báo nào.
                             </div>
                         ) : (
-                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto", paddingRight: 4 }}>
                                 {history.map((h) => (
                                     <div key={h.notificationId} style={{
                                         display: "flex", alignItems: "center", gap: 10,
@@ -357,7 +390,7 @@ export default function AlertConfigTab({ isMobile }) {
                                             width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
                                             background: h.status === "sent" ? C.greenLight : C.red,
                                         }} />
-                                        <div style={{ flex: 1, fontSize: 12.5, color: C.text }}>{h.messageContent}</div>
+                                        <div style={{ flex: 1, fontSize: 12.5, color: C.text, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{h.messageContent}</div>
                                         <div style={{ fontSize: 11, color: C.textLight, whiteSpace: "nowrap" }}>
                                             {new Date(h.sentAt + (!h.sentAt.endsWith("Z") ? "Z" : "")).toLocaleString("vi-VN")}
                                         </div>
@@ -533,7 +566,10 @@ export default function AlertConfigTab({ isMobile }) {
                                             onMouseLeave={(e) => (e.currentTarget.style.color = C.textLight)}
                                             title="Xóa quy tắc"
                                         >
-                                            ✕
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M3 6h18"></path>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            </svg>
                                         </button>
                                     </div>
                                 ))}
